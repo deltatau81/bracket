@@ -10,7 +10,7 @@ fi
 # Replace the statically built placeholder literals from Dockerfile with run-time
 # the value of the `NEXT_PUBLIC_WEBAPP_URL` environment variable
 replace_placeholder() {
-  find .next public -type f |
+  find .next/static .next/server public -type f |
   while read file; do
       sed -i "s|$1|$2|g" "$file" || true
   done
