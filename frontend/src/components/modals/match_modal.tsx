@@ -137,6 +137,7 @@ function MatchModalForm({
   const team1Name = formatMatchInput1(t, stageItemsLookup, matchesLookup, match);
   const team2Name = formatMatchInput2(t, stageItemsLookup, matchesLookup, match);
 
+  const currentMatch = match;
   async function changeStatus(status: MatchStatus) {
     const startTime = combineStartDateAndTime(
       form.values.start_time_date,
@@ -144,11 +145,11 @@ function MatchModalForm({
     );
 
     const updatedMatch: MatchBodyInterface = {
-      id: match.id,
-      round_id: match.round_id,
+      id: currentMatch.id,
+      round_id: currentMatch.round_id,
       stage_item_input1_score: form.values.stage_item_input1_score,
       stage_item_input2_score: form.values.stage_item_input2_score,
-      court_id: match.court_id,
+      court_id: currentMatch.court_id,
       start_time: startTime,
       custom_duration_minutes: customDurationEnabled
         ? form.values.custom_duration_minutes
@@ -156,7 +157,7 @@ function MatchModalForm({
       custom_margin_minutes: customMarginEnabled ? form.values.custom_margin_minutes : null,
       status,
     };
-    await updateMatch(tournamentData.id, match.id, updatedMatch);
+    await updateMatch(tournamentData.id, currentMatch.id, updatedMatch);
     await swrStagesResponse.mutate();
     if (swrUpcomingMatchesResponse != null) await swrUpcomingMatchesResponse.mutate();
     setOpened(false);
