@@ -27,6 +27,7 @@ from bracket.routes.models import (
     SuccessResponse,
     CompetitionRankedResultsResponse,
     CompetitionResultsResponse,
+    TournamentOverallStandingsResponse,
 )
 from bracket.routes.util import disallow_archived_tournament
 from bracket.sql.competitions import (
@@ -46,6 +47,7 @@ from bracket.sql.competitions import (
     get_result,
     upsert_result,
     update_result_place,
+    get_tournament_overall_standings,
 )
 from bracket.utils.id_types import (
      CompetitionDisciplineId,
@@ -54,6 +56,19 @@ from bracket.utils.id_types import (
 )
 from bracket.competition_logic import rank_results
 router = APIRouter()
+
+
+@router.get(
+    "/tournaments/{tournament_id}/overall_standings",
+    response_model=TournamentOverallStandingsResponse,
+)
+async def get_overall_standings(
+    tournament_id: TournamentId,
+    _: UserPublic | None = Depends(user_authenticated_or_public_dashboard),
+) -> TournamentOverallStandingsResponse:
+    return TournamentOverallStandingsResponse(
+        data=await get_tournament_overall_standings(tournament_id)
+    )
 
 
 def competition_not_found() -> HTTPException:

@@ -2,6 +2,8 @@ import { Translator } from '../components/utils/types';
 import { Court } from './court';
 import { StageItemInput, formatStageItemInput } from './stage_item_input';
 
+export type MatchStatus = 'PLANNED' | 'RUNNING' | 'FINISHED';
+
 export interface MatchInterface {
   id: number;
   round_id: number;
@@ -22,6 +24,7 @@ export interface MatchInterface {
   custom_margin_minutes: number | null;
   stage_item_input1_conflict: boolean;
   stage_item_input2_conflict: boolean;
+  status: MatchStatus;
 }
 
 export interface MatchBodyInterface {
@@ -32,6 +35,7 @@ export interface MatchBodyInterface {
   court_id: number | null;
   custom_duration_minutes: number | null;
   custom_margin_minutes: number | null;
+  status: MatchStatus;
 }
 
 export interface MatchRescheduleInterface {

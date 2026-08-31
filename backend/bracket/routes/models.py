@@ -24,6 +24,7 @@ from bracket.models.db.competition import (
     CompetitionScoring,
     CompetitionResult,
     CompetitionRankedResult,
+    TournamentOverallStanding,
 )
 
 DataT = TypeVar("DataT")
@@ -151,5 +152,11 @@ class CompetitionResultsResponse(
 
 class CompetitionRankedResultsResponse(
     DataResponse[list[CompetitionRankedResult]]
+):
+    pass
+
+
+class TournamentOverallStandingsResponse(
+    DataResponse[list[TournamentOverallStanding]]
 ):
     pass

@@ -1,4 +1,4 @@
-import { Button, Center, Checkbox, Divider, Grid, Modal, NumberInput, Text } from '@mantine/core';
+import { Badge, Button, Center, Checkbox, Divider, Grid, Group, Modal, NumberInput, Text } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useTranslation } from 'next-i18next';
 import React, { useState } from 'react';
@@ -7,6 +7,7 @@ import { SWRResponse } from 'swr';
 import {
   MatchBodyInterface,
   MatchInterface,
+  MatchStatus,
   formatMatchInput1,
   formatMatchInput2,
 } from '../../interfaces/match';
@@ -94,8 +95,49 @@ function MatchModalForm({
   const team1Name = formatMatchInput1(t, stageItemsLookup, matchesLookup, match);
   const team2Name = formatMatchInput2(t, stageItemsLookup, matchesLookup, match);
 
+  async function changeStatus(status: MatchStatus) {
+    const updatedMatch: MatchBodyInterface = {
+      id: match.id,
+      round_id: match.round_id,
+      stage_item_input1_score: form.values.stage_item_input1_score,
+      stage_item_input2_score: form.values.stage_item_input2_score,
+      court_id: match.court_id,
+      custom_duration_minutes: customDurationEnabled
+        ? form.values.custom_duration_minutes
+        : null,
+      custom_margin_minutes: customMarginEnabled ? form.values.custom_margin_minutes : null,
+      status,
+    };
+    await updateMatch(tournamentData.id, match.id, updatedMatch);
+    await swrStagesResponse.mutate();
+    if (swrUpcomingMatchesResponse != null) await swrUpcomingMatchesResponse.mutate();
+    setOpened(false);
+  }
+
+  const statusLabel = {
+    PLANNED: 'Geplant',
+    RUNNING: 'Läuft',
+    FINISHED: 'Beendet',
+  }[match.status];
+
   return (
     <>
+      <Group justify="space-between" mb="lg">
+        <Badge variant="light">{statusLabel}</Badge>
+        {match.status === 'PLANNED' ? (
+          <Button onClick={() => changeStatus('RUNNING')}>Spiel starten</Button>
+        ) : null}
+        {match.status === 'RUNNING' ? (
+          <Button color="green" onClick={() => changeStatus('FINISHED')}>
+            Spiel beenden
+          </Button>
+        ) : null}
+        {match.status === 'FINISHED' ? (
+          <Button variant="light" onClick={() => changeStatus('RUNNING')}>
+            Spiel wieder öffnen
+          </Button>
+        ) : null}
+      </Group>
       <form
         onSubmit={form.onSubmit(async (values) => {
           const updatedMatch: MatchBodyInterface = {
@@ -106,6 +148,7 @@ function MatchModalForm({
             court_id: match.court_id,
             custom_duration_minutes: customDurationEnabled ? values.custom_duration_minutes : null,
             custom_margin_minutes: customMarginEnabled ? values.custom_margin_minutes : null,
+            status: match.status,
           };
           await updateMatch(tournamentData.id, match.id, updatedMatch);
           await swrStagesResponse.mutate();
@@ -117,6 +160,7 @@ function MatchModalForm({
           withAsterisk
           label={`${t('score_of_label')} ${team1Name}`}
           placeholder={`${t('score_of_label')} ${team1Name}`}
+          disabled={match.status === 'PLANNED'}
           {...form.getInputProps('stage_item_input1_score')}
         />
         <NumberInput
@@ -124,6 +168,7 @@ function MatchModalForm({
           mt="lg"
           label={`${t('score_of_label')} ${team2Name}`}
           placeholder={`${t('score_of_label')} ${team2Name}`}
+          disabled={match.status === 'PLANNED'}
           {...form.getInputProps('stage_item_input2_score')}
         />
         <Divider mt="lg" />

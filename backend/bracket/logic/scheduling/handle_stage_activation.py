@@ -6,6 +6,7 @@ from starlette import status
 
 from bracket.logic.ranking.calculation import (
     determine_team_ranking_for_stage_item,
+    recalculate_ranking_for_stage_item,
 )
 from bracket.logic.ranking.statistics import TeamStatistics
 from bracket.models.db.stage_item_inputs import (
@@ -22,6 +23,7 @@ from bracket.sql.stage_item_inputs import (
     sql_set_team_id_for_stage_item_input,
 )
 from bracket.sql.stages import get_full_tournament_details
+from bracket.sql.stage_items import get_stage_item
 from bracket.utils.id_types import (
     StageId,
     StageItemId,
@@ -147,6 +149,9 @@ async def update_matches_in_deactivated_stage(
     """
     for stage_item in deactivated_stage.stage_items:
         await clear_scores_for_matches_in_stage_item(tournament_id, stage_item.id)
+
+        refreshed_stage_item = await get_stage_item(tournament_id, stage_item.id)
+        await recalculate_ranking_for_stage_item(tournament_id, refreshed_stage_item)
 
         for stage_item_input in stage_item.inputs:
             if stage_item_input.winner_from_stage_item_id is not None:

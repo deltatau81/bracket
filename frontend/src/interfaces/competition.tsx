@@ -59,3 +59,11 @@ export interface CompetitionRankedResultInterface {
   points: number;
   tied: boolean;
 }
+
+export interface TournamentOverallStandingInterface {
+  team_id: number;
+  team_name: string;
+  game_points: number;
+  competition_points: number;
+  total_points: number;
+}

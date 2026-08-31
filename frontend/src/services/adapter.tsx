@@ -145,7 +145,8 @@ export function getCompetitions(tournament_id: number | null): SWRResponse {
     tournament_id == null
       ? null
       : `tournaments/${tournament_id}/competitions`,
-    fetcher
+    fetcher,
+    { refreshInterval: 5_000 }
   );
 }
 
@@ -157,7 +158,8 @@ export function getCompetitionDisciplines(
     tournament_id == null || competition_id == null
       ? null
       : `tournaments/${tournament_id}/competitions/${competition_id}/disciplines`,
-    fetcher
+    fetcher,
+    { refreshInterval: 5_000 }
   );
 }
 
@@ -170,7 +172,8 @@ export function getCompetitionResults(
     tournament_id == null || competition_id == null || discipline_id == null
       ? null
       : `tournaments/${tournament_id}/competitions/${competition_id}/disciplines/${discipline_id}/results`,
-    fetcher
+    fetcher,
+    { refreshInterval: 5_000 }
   );
 }
 
@@ -182,7 +185,8 @@ export function getCompetitionScoring(
     tournament_id == null || competition_id == null
       ? null
       : `tournaments/${tournament_id}/competitions/${competition_id}/scoring`,
-    fetcher
+    fetcher,
+    { refreshInterval: 5_000 }
   );
 }
 

@@ -118,6 +118,7 @@ class CompetitionStanding(BaseModelORM):
 
 class TournamentOverallStanding(BaseModelORM):
     team_id: TeamId
+    team_name: str
     game_points: Decimal
     competition_points: Decimal
     total_points: Decimal

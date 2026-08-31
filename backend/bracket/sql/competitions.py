@@ -1,3 +1,5 @@
+from sqlalchemy import Numeric, cast, func, select
+
 from bracket.database import database
 from bracket.models.db.competition import (
     Competition,
@@ -11,12 +13,15 @@ from bracket.models.db.competition import (
     CompetitionResult,
     CompetitionResultBody,
     CompetitionResultInsertable,
+    TournamentOverallStanding,
 )
 from bracket.schema import (
     competition_disciplines,
     competition_scoring,
     competitions,
     competition_results,
+    stage_item_inputs,
+    teams,
 )
 from bracket.utils.db import fetch_all_parsed, fetch_one_parsed
 from bracket.utils.id_types import (
@@ -306,4 +311,88 @@ async def update_result_place(
         competition_results.update()
         .where(competition_results.c.id == result_id)
         .values(place=place)
+    )
+
+
+async def get_tournament_overall_standings(
+    tournament_id: TournamentId,
+) -> list[TournamentOverallStanding]:
+    numeric_points = Numeric(12, 2)
+    zero = cast(0, numeric_points)
+
+    game_totals = (
+        select(
+            stage_item_inputs.c.team_id.label("team_id"),
+            func.sum(cast(stage_item_inputs.c.points, numeric_points)).label(
+                "game_points"
+            ),
+            func.min(stage_item_inputs.c.id).label("hockey_order"),
+        )
+        .where(
+            (stage_item_inputs.c.tournament_id == tournament_id)
+            & stage_item_inputs.c.team_id.is_not(None)
+        )
+        .group_by(stage_item_inputs.c.team_id)
+        .subquery()
+    )
+
+    competition_totals = (
+        select(
+            competition_results.c.team_id.label("team_id"),
+            func.sum(competition_scoring.c.points).label("competition_points"),
+        )
+        .select_from(
+            competition_results.join(
+                competition_disciplines,
+                competition_disciplines.c.id
+                == competition_results.c.discipline_id,
+            )
+            .join(
+                competitions,
+                competitions.c.id == competition_disciplines.c.competition_id,
+            )
+            .join(
+                competition_scoring,
+                (competition_scoring.c.competition_id == competitions.c.id)
+                & (competition_scoring.c.place == competition_results.c.place),
+            )
+        )
+        .where(competitions.c.tournament_id == tournament_id)
+        .group_by(competition_results.c.team_id)
+        .subquery()
+    )
+
+    game_points = func.coalesce(game_totals.c.game_points, zero)
+    competition_points = func.coalesce(
+        competition_totals.c.competition_points,
+        zero,
+    )
+    total_points = game_points + competition_points
+
+    query = (
+        select(
+            teams.c.id.label("team_id"),
+            teams.c.name.label("team_name"),
+            game_points.label("game_points"),
+            competition_points.label("competition_points"),
+            total_points.label("total_points"),
+        )
+        .outerjoin(game_totals, game_totals.c.team_id == teams.c.id)
+        .outerjoin(
+            competition_totals,
+            competition_totals.c.team_id == teams.c.id,
+        )
+        .where(teams.c.tournament_id == tournament_id)
+        .order_by(
+            total_points.desc(),
+            game_points.desc(),
+            game_totals.c.hockey_order.asc().nullslast(),
+            teams.c.id,
+        )
+    )
+
+    return await fetch_all_parsed(
+        database,
+        TournamentOverallStanding,
+        query,
     )

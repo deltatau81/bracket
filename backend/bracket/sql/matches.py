@@ -92,7 +92,8 @@ async def sql_update_match(match_id: MatchId, match: MatchBody, tournament: Tour
             custom_duration_minutes = :custom_duration_minutes,
             custom_margin_minutes = :custom_margin_minutes,
             duration_minutes = :duration_minutes,
-            margin_minutes = :margin_minutes
+            margin_minutes = :margin_minutes,
+            status = COALESCE(:status, status)
         WHERE matches.id = :match_id
         RETURNING *
         """
@@ -111,7 +112,8 @@ async def sql_update_match(match_id: MatchId, match: MatchBody, tournament: Tour
         query=query,
         values={
             "match_id": match_id,
-            **match.model_dump(),
+            **match.model_dump(exclude={"status"}),
+            "status": match.status.value if match.status is not None else None,
             "duration_minutes": duration_minutes,
             "margin_minutes": margin_minutes,
         },
@@ -232,7 +234,8 @@ async def clear_scores_for_matches_in_stage_item(
     query = """
         UPDATE matches
         SET stage_item_input1_score = 0,
-            stage_item_input2_score = 0
+            stage_item_input2_score = 0,
+            status = 'PLANNED'
         FROM rounds
         JOIN stage_items ON rounds.stage_item_id = stage_items.id
         JOIN stages ON stages.id = stage_items.stage_id

@@ -1,4 +1,5 @@
 from decimal import Decimal
+from enum import auto
 
 from heliclockter import datetime_utc, timedelta
 from pydantic import BaseModel
@@ -7,7 +8,13 @@ from bracket.models.db.court import Court
 from bracket.models.db.shared import BaseModelORM
 from bracket.models.db.stage_item_inputs import StageItemInput
 from bracket.utils.id_types import CourtId, MatchId, RoundId, StageItemInputId
-from bracket.utils.types import assert_some
+from bracket.utils.types import EnumAutoStr, assert_some
+
+
+class MatchStatus(EnumAutoStr):
+    PLANNED = auto()
+    RUNNING = auto()
+    FINISHED = auto()
 
 
 class MatchBaseInsertable(BaseModelORM):
@@ -24,6 +31,7 @@ class MatchBaseInsertable(BaseModelORM):
     court_id: CourtId | None = None
     stage_item_input1_conflict: bool
     stage_item_input2_conflict: bool
+    status: MatchStatus = MatchStatus.PLANNED
 
     @property
     def end_time(self) -> datetime_utc:
@@ -44,6 +52,9 @@ class Match(MatchInsertable):
     stage_item_input2: StageItemInput | None = None
 
     def get_winner(self) -> StageItemInput | None:
+        if self.status != MatchStatus.FINISHED:
+            return None
+
         if self.stage_item_input1_score > self.stage_item_input2_score:
             return self.stage_item_input1
         if self.stage_item_input1_score < self.stage_item_input2_score:
@@ -93,6 +104,7 @@ class MatchBody(BaseModelORM):
     court_id: CourtId | None = None
     custom_duration_minutes: int | None = None
     custom_margin_minutes: int | None = None
+    status: MatchStatus | None = None
 
 
 class MatchCreateBodyFrontend(BaseModelORM):

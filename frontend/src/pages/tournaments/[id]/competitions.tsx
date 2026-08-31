@@ -156,7 +156,7 @@ export default function Competitions() {
     getCompetitions(tournamentData.id);
   const swrTeamsResponse =
     getTeams(tournamentData.id);
-  const [competitionPointsByCompetition, setCompetitionPointsByCompetition] = useState<
+  const [, setCompetitionPointsByCompetition] = useState<
     Record<number, Record<number, number>>
   >({});
   const updateCompetitionPoints = useCallback(
@@ -168,15 +168,7 @@ export default function Competitions() {
     },
     []
   );
-  const tournamentCompetitionPoints = Object.values(competitionPointsByCompetition).reduce<
-    Record<number, number>
-  >((totals, pointsByTeam) => {
-    Object.entries(pointsByTeam).forEach(([teamId, points]) => {
-      const numericTeamId = Number(teamId);
-      totals[numericTeamId] = (totals[numericTeamId] ?? 0) + points;
-    });
-    return totals;
-  }, {});
+
 
   if (swrCompetitionsResponse.error != null ||
       swrTeamsResponse.error != null) {
@@ -339,11 +331,7 @@ export default function Competitions() {
           )}
         </Stack>
       )}
-      <TournamentOverallStandings
-        tournamentId={tournamentData.id}
-        teams={teams}
-        competitionPointsByTeam={tournamentCompetitionPoints}
-      />
+      <TournamentOverallStandings tournamentId={tournamentData.id} />
     </TournamentLayout>
   );
 }

@@ -23,6 +23,7 @@ from bracket.models.db.match import (
     MatchCreateBodyFrontend,
     MatchFilter,
     MatchRescheduleBody,
+    MatchStatus,
 )
 from bracket.models.db.stage_item import StageType
 from bracket.models.db.tournament import Tournament
@@ -162,6 +163,19 @@ async def update_match_by_id(
     match: Match = Depends(match_dependency),
 ) -> SuccessResponse:
     await check_foreign_keys_belong_to_tournament(match_body, tournament_id)
+
+    if match_body.status is not None:
+        allowed_transitions = {
+            MatchStatus.PLANNED: {MatchStatus.PLANNED, MatchStatus.RUNNING},
+            MatchStatus.RUNNING: {MatchStatus.RUNNING, MatchStatus.FINISHED},
+            MatchStatus.FINISHED: {MatchStatus.FINISHED, MatchStatus.RUNNING},
+        }
+        if match_body.status not in allowed_transitions[match.status]:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid match status transition: {match.status} -> {match_body.status}",
+            )
+
     tournament = await sql_get_tournament(tournament_id)
 
     await sql_update_match(match_id, match_body, tournament)

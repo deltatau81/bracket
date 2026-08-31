@@ -1,83 +1,74 @@
-import { Card, Table, Title } from '@mantine/core';
+import { Alert, Card, Loader, Table, Text, Title } from '@mantine/core';
 import React from 'react';
 
-import { StageWithStageItems } from '../../interfaces/stage';
-import { TeamInterface } from '../../interfaces/team';
-import { getStages } from '../../services/adapter';
-import { responseIsValid } from '../utils/util';
-import { TeamInterface } from '../../interfaces/team';
+import { TournamentOverallStandingInterface } from '../../interfaces/competition';
+import { getTournamentOverallStandings } from '../../services/competition';
+
+const pointsFormatter = new Intl.NumberFormat('de-DE', {
+  maximumFractionDigits: 2,
+});
 
 export default function TournamentOverallStandings({
   tournamentId,
-  teams,
-  competitionPointsByTeam,
 }: {
-  tournamentId: number;
-  teams: TeamInterface[];
-  competitionPointsByTeam: Record<number, number>;
+  tournamentId: number | null;
 }) {
-  const swrStagesResponse = getStages(tournamentId);
-  const stages: StageWithStageItems[] = responseIsValid(swrStagesResponse)
-    ? swrStagesResponse.data.data
-    : [];
-  const gamePointsByTeam = stages
-    .flatMap((stage) => stage.stage_items)
-    .flatMap((stageItem) => stageItem.inputs)
-    .reduce<Record<number, number>>((totals, input) => {
-      if (input.team_id != null) {
-        totals[input.team_id] = (totals[input.team_id] ?? 0) + Number(input.points ?? 0);
-      }
-      return totals;
-    }, {});
-  const teamList: TeamInterface[] = Array.isArray(teams)
-    ? teams
-  : (teams as any)?.teams ?? [];
-  const standings = teamList
-    .map((team) => {
-      const gamePoints = gamePointsByTeam[team.id] ?? 0;
-      const competitionPoints = competitionPointsByTeam[team.id] ?? 0;
-      return {
-        team,
-        gamePoints,
-        competitionPoints,
-        totalPoints: gamePoints + competitionPoints,
-      };
-    })
-    .sort(
-      (a, b) =>
-        b.totalPoints - a.totalPoints ||
-        b.gamePoints - a.gamePoints ||
-        b.competitionPoints - a.competitionPoints ||
-        a.team.name.localeCompare(b.team.name)
+  const swrStandingsResponse = getTournamentOverallStandings(tournamentId);
+
+  if (swrStandingsResponse.error != null) {
+    return (
+      <Alert color="red" title="Fehler" mt="lg">
+        Die Gesamtwertung konnte nicht geladen werden.
+      </Alert>
     );
+  }
+
+  if (swrStandingsResponse.data == null) {
+    return <Loader mt="lg" />;
+  }
+
+  const standings: TournamentOverallStandingInterface[] =
+    swrStandingsResponse.data.data;
 
   return (
-    <Card withBorder padding="md" radius="md">
-      <Title order={4} mb="sm">
-        Turnier-Gesamtwertung
+    <Card withBorder padding="md" radius="md" mt="lg">
+      <Title order={3} mb="sm">
+        Gesamtwertung
       </Title>
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Rang</Table.Th>
-            <Table.Th>Team</Table.Th>
-            <Table.Th>Spielpunkte</Table.Th>
-            <Table.Th>Competition-Punkte</Table.Th>
-            <Table.Th>Gesamtpunkte</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {standings.map(({ team, gamePoints, competitionPoints, totalPoints }, index) => (
-            <Table.Tr key={team.id}>
-              <Table.Td>{index + 1}</Table.Td>
-              <Table.Td>{team.name}</Table.Td>
-              <Table.Td>{gamePoints}</Table.Td>
-              <Table.Td>{competitionPoints}</Table.Td>
-              <Table.Td>{totalPoints}</Table.Td>
+      {standings.length === 0 ? (
+        <Text c="dimmed">Noch keine Mannschaften vorhanden.</Text>
+      ) : (
+        <Table striped highlightOnHover>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Platz</Table.Th>
+              <Table.Th>Mannschaft</Table.Th>
+              <Table.Th ta="right">Hockey</Table.Th>
+              <Table.Th ta="right">Technik</Table.Th>
+              <Table.Th ta="right">Gesamt</Table.Th>
             </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+          </Table.Thead>
+          <Table.Tbody>
+            {standings.map((standing, index) => (
+              <Table.Tr key={standing.team_id}>
+                <Table.Td>{index + 1}</Table.Td>
+                <Table.Td>{standing.team_name}</Table.Td>
+                <Table.Td ta="right">
+                  {pointsFormatter.format(standing.game_points)}
+                </Table.Td>
+                <Table.Td ta="right">
+                  {pointsFormatter.format(standing.competition_points)}
+                </Table.Td>
+                <Table.Td ta="right">
+                  <Text component="span" fw={700} c="blue">
+                    {pointsFormatter.format(standing.total_points)}
+                  </Text>
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      )}
     </Card>
   );
 }

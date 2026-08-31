@@ -7,6 +7,7 @@ import React from 'react';
 import { SWRResponse } from 'swr';
 
 import NotFoundTitle from '../../../404';
+import TournamentOverallStandings from '../../../../components/competition/tournament_overall_standings';
 import { DashboardFooter } from '../../../../components/dashboard/footer';
 import { DoubleHeader, TournamentHeadTitle } from '../../../../components/dashboard/layout';
 import { NoContent } from '../../../../components/no_content/empty_table_info';
@@ -100,6 +101,7 @@ export default function Standings() {
             fontSizeInPixels={16}
             maxTeamsToDisplay={100}
           />
+          <TournamentOverallStandings tournamentId={tournamentId} />
         </Container>
       </Container>
       <DashboardFooter />

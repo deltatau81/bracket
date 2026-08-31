@@ -1,4 +1,17 @@
-import { Alert, Badge, Card, Center, Flex, Grid, Group, Stack, Text } from '@mantine/core';
+import {
+  Alert,
+  Badge,
+  Box,
+  Card,
+  Center,
+  Container,
+  Flex,
+  Grid,
+  Group,
+  Stack,
+  Tabs,
+  Text,
+} from '@mantine/core';
 import { AiOutlineHourglass } from '@react-icons/all-files/ai/AiOutlineHourglass';
 import { IconAlertCircle } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
@@ -6,14 +19,23 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import Head from 'next/head';
 import React from 'react';
 
+import TournamentOverallStandings from '../../../../components/competition/tournament_overall_standings';
 import { DashboardFooter } from '../../../../components/dashboard/footer';
+import TournamentTimeline from '../../../../components/dashboard/tournament_timeline';
 import { DoubleHeader, TournamentHeadTitle } from '../../../../components/dashboard/layout';
 import { NoContent } from '../../../../components/no_content/empty_table_info';
 import { Time, compareDateTime, formatTime } from '../../../../components/utils/datetime';
 import { Translator } from '../../../../components/utils/types';
 import { responseIsValid } from '../../../../components/utils/util';
+import { CompetitionInterface } from '../../../../interfaces/competition';
 import { formatMatchInput1, formatMatchInput2 } from '../../../../interfaces/match';
-import { getCourtsLive, getStagesLive } from '../../../../services/adapter';
+import { TeamInterface } from '../../../../interfaces/team';
+import {
+  getCompetitions,
+  getCourtsLive,
+  getStagesLive,
+  getTeamsLive,
+} from '../../../../services/adapter';
 import { getMatchLookup, getStageItemLookup, stringToColour } from '../../../../services/lookups';
 import { getTournamentResponseByEndpointName } from '../../../../services/tournament';
 
@@ -203,6 +225,8 @@ export default function SchedulePage() {
 
   const swrStagesResponse = getStagesLive(tournamentId);
   const swrCourtsResponse = getCourtsLive(tournamentId);
+  const swrCompetitionsResponse = getCompetitions(tournamentId);
+  const swrTeamsResponse = getTeamsLive(tournamentId);
 
   const stageItemsLookup = responseIsValid(swrStagesResponse)
     ? getStageItemLookup(swrStagesResponse)
@@ -211,6 +235,23 @@ export default function SchedulePage() {
 
   if (!responseIsValid(swrStagesResponse)) return null;
   if (!responseIsValid(swrCourtsResponse)) return null;
+  if (!responseIsValid(swrCompetitionsResponse)) return null;
+  if (!responseIsValid(swrTeamsResponse)) return null;
+
+  const competitions: CompetitionInterface[] = swrCompetitionsResponse.data.data;
+  const teamsData = swrTeamsResponse.data.data;
+  const teams: TeamInterface[] = Array.isArray(teamsData) ? teamsData : teamsData.teams;
+  const timeline = (
+    <TournamentTimeline
+      tournamentId={tournamentId}
+      t={t}
+      competitions={competitions}
+      teams={teams}
+      matchesLookup={matchesLookup}
+      stageItemsLookup={stageItemsLookup}
+    />
+  );
+  const overallStandings = <TournamentOverallStandings tournamentId={tournamentId} />;
 
   return (
     <>
@@ -218,11 +259,22 @@ export default function SchedulePage() {
         <TournamentHeadTitle tournamentDataFull={tournamentDataFull} />
       </Head>
       <DoubleHeader tournamentData={tournamentDataFull} />
-      <Center>
-        <Group style={{ maxWidth: '48rem', width: '100%' }} px="1rem">
-          <Schedule t={t} matchesLookup={matchesLookup} stageItemsLookup={stageItemsLookup} />
-        </Group>
-      </Center>
+      <Container size="xl" mt="lg" px="md">
+        <Grid visibleFrom="md" gutter="xl" align="flex-start">
+          <Grid.Col span={8}>{timeline}</Grid.Col>
+          <Grid.Col span={4}>
+            <Box style={{ position: 'sticky', top: '1rem' }}>{overallStandings}</Box>
+          </Grid.Col>
+        </Grid>
+        <Tabs hiddenFrom="md" defaultValue="timeline">
+          <Tabs.List grow mb="md">
+            <Tabs.Tab value="timeline">Ablauf &amp; Ergebnisse</Tabs.Tab>
+            <Tabs.Tab value="standings">Gesamtwertung</Tabs.Tab>
+          </Tabs.List>
+          <Tabs.Panel value="timeline">{timeline}</Tabs.Panel>
+          <Tabs.Panel value="standings">{overallStandings}</Tabs.Panel>
+        </Tabs>
+      </Container>
       <DashboardFooter />
     </>
   );
