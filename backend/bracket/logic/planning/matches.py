@@ -84,14 +84,19 @@ async def reorder_matches_for_court(
 
     last_start_time = tournament.start_time
     for i, match_pos in enumerate(matches_this_court):
+        # If match already has a start_time set, respect it and use it as the base for the next match
+        start_time_for_this_match = (
+            match_pos.match.start_time if match_pos.match.start_time is not None else last_start_time
+        )
+
         await sql_reschedule_match_and_determine_duration_and_margin(
             court_id,
-            last_start_time,
+            start_time_for_this_match,
             position_in_schedule=i,
             match=match_pos.match,
             tournament=tournament,
         )
-        last_start_time = last_start_time + timedelta(
+        last_start_time = start_time_for_this_match + timedelta(
             minutes=match_pos.match.duration_minutes + match_pos.match.margin_minutes
         )
 

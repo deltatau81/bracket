@@ -31,6 +31,7 @@ import { getCompetitions, getTeams } from '../../../services/adapter';
 import {
   createCompetition,
   deleteCompetition,
+  updateCompetition,
 } from '../../../services/competition';
 import TournamentLayout from '../_tournament_layout';
 
@@ -142,6 +143,122 @@ function CompetitionCreateModal({
 
       <Button onClick={open}>
         + Competition anlegen
+      </Button>
+    </>
+  );
+}
+
+
+function CompetitionEditModal({
+  tournament_id,
+  competition,
+  swrCompetitionsResponse,
+}: {
+  tournament_id: number;
+  competition: CompetitionInterface;
+  swrCompetitionsResponse: any;
+}) {
+  const [opened, { open, close }] = useDisclosure(false);
+
+  const form = useForm({
+    initialValues: {
+      name: competition.name,
+      description: competition.description || '',
+      start_time: new Date(competition.start_time),
+      duration_minutes: competition.duration_minutes,
+    },
+
+    validate: {
+      name: (value) =>
+        value.trim().length < 1
+          ? 'Name ist erforderlich'
+          : null,
+
+      duration_minutes: (value) =>
+        value < 1
+          ? 'Dauer muss mindestens 1 Minute betragen'
+          : null,
+    },
+  });
+
+  async function submit(values: typeof form.values) {
+    await updateCompetition(
+      tournament_id,
+      competition.id,
+      {
+        name: values.name,
+        description:
+          values.description.trim() === ''
+            ? null
+            : values.description,
+        start_time: values.start_time.toISOString(),
+        duration_minutes: values.duration_minutes,
+        court_id: competition.court_id,
+      }
+    );
+
+    await swrCompetitionsResponse.mutate();
+
+    close();
+  }
+
+  return (
+    <>
+      <Modal
+        opened={opened}
+        onClose={close}
+        title="Competition bearbeiten"
+        size="lg"
+      >
+        <form
+          onSubmit={form.onSubmit(submit)}
+        >
+          <Stack>
+            <TextInput
+              label="Name"
+              placeholder="Skills Competition"
+              required
+              {...form.getInputProps('name')}
+            />
+
+            <Textarea
+              label="Beschreibung"
+              placeholder="Technikwettbewerbe während des Turniers"
+              minRows={3}
+              {...form.getInputProps('description')}
+            />
+
+            <DateTimePicker
+              label="Startzeit"
+              required
+              {...form.getInputProps('start_time')}
+            />
+
+            <NumberInput
+              label="Dauer in Minuten"
+              min={1}
+              required
+              {...form.getInputProps('duration_minutes')}
+            />
+
+            <Group justify="flex-end">
+              <Button
+                variant="default"
+                onClick={close}
+              >
+                Abbrechen
+              </Button>
+
+              <Button type="submit">
+                Competition speichern
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </Modal>
+
+      <Button onClick={open} variant="light">
+        Bearbeiten
       </Button>
     </>
   );
@@ -294,10 +411,19 @@ export default function Competitions() {
                     </Text>
                   </div>
 
-                  <Button
-                    color="red"
-                    variant="light"
-                    onClick={async () => {
+                  <Group>
+                    <CompetitionEditModal
+                      tournament_id={tournamentData.id}
+                      competition={competition}
+                      swrCompetitionsResponse={
+                        swrCompetitionsResponse
+                      }
+                    />
+
+                    <Button
+                      color="red"
+                      variant="light"
+                      onClick={async () => {
                       if (
                         !window.confirm(
                           `Competition "${competition.name}" wirklich löschen?`
@@ -316,6 +442,7 @@ export default function Competitions() {
                   >
                     Löschen
                   </Button>
+                  </Group>
                 </Group>
 
                 <Stack mt="lg">

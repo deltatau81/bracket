@@ -33,6 +33,7 @@ export interface MatchBodyInterface {
   stage_item_input1_score: number;
   stage_item_input2_score: number;
   court_id: number | null;
+  start_time?: string | null;
   custom_duration_minutes: number | null;
   custom_margin_minutes: number | null;
   status: MatchStatus;

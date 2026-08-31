@@ -89,6 +89,7 @@ async def sql_update_match(match_id: MatchId, match: MatchBody, tournament: Tour
             stage_item_input1_score = :stage_item_input1_score,
             stage_item_input2_score = :stage_item_input2_score,
             court_id = :court_id,
+            start_time = COALESCE(:start_time, start_time),
             custom_duration_minutes = :custom_duration_minutes,
             custom_margin_minutes = :custom_margin_minutes,
             duration_minutes = :duration_minutes,

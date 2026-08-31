@@ -1,8 +1,10 @@
-import { Badge, Button, Center, Checkbox, Divider, Grid, Group, Modal, NumberInput, Text } from '@mantine/core';
+import { Badge, Button, Center, Checkbox, Divider, Grid, Group, Modal, NumberInput, Text, TextInput } from '@mantine/core';
+import { DatePickerInput, TimeInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { useTranslation } from 'next-i18next';
 import React, { useState } from 'react';
 import { SWRResponse } from 'swr';
+import { format, parseISO } from 'date-fns';
 
 import {
   MatchBodyInterface,
@@ -16,6 +18,38 @@ import { TournamentMinimal } from '../../interfaces/tournament';
 import { getMatchLookup, getStageItemLookup } from '../../services/lookups';
 import { deleteMatch, updateMatch } from '../../services/match';
 import DeleteButton from '../buttons/delete';
+
+function combineStartDateAndTime(date: Date | null, time: string): string | null {
+  if (date == null || Number.isNaN(date.getTime()) || time.trim() === '') return null;
+
+  const [hoursValue, minutesValue, secondsValue = '0'] = time.split(':');
+  const hours = Number(hoursValue);
+  const minutes = Number(minutesValue);
+  const seconds = Number(secondsValue);
+
+  if (
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes) ||
+    !Number.isInteger(seconds) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59 ||
+    seconds < 0 ||
+    seconds > 59
+  ) {
+    return null;
+  }
+
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    hours,
+    minutes,
+    seconds
+  ).toISOString();
+}
 
 function MatchDeleteButton({
   tournamentData,
@@ -64,10 +98,18 @@ function MatchModalForm({
   }
 
   const { t } = useTranslation();
+
+  // Parse start_time for initial values
+  const parsedStartTime = match.start_time ? parseISO(match.start_time) : null;
+  const startTimeDate =
+    parsedStartTime != null && !Number.isNaN(parsedStartTime.getTime()) ? parsedStartTime : null;
+
   const form = useForm({
     initialValues: {
       stage_item_input1_score: match.stage_item_input1_score,
       stage_item_input2_score: match.stage_item_input2_score,
+      start_time_date: startTimeDate,
+      start_time_time: startTimeDate ? format(startTimeDate, 'HH:mm') : '',
       custom_duration_minutes: match.custom_duration_minutes,
       custom_margin_minutes: match.custom_margin_minutes,
     },
@@ -96,12 +138,18 @@ function MatchModalForm({
   const team2Name = formatMatchInput2(t, stageItemsLookup, matchesLookup, match);
 
   async function changeStatus(status: MatchStatus) {
+    const startTime = combineStartDateAndTime(
+      form.values.start_time_date,
+      form.values.start_time_time
+    );
+
     const updatedMatch: MatchBodyInterface = {
       id: match.id,
       round_id: match.round_id,
       stage_item_input1_score: form.values.stage_item_input1_score,
       stage_item_input2_score: form.values.stage_item_input2_score,
       court_id: match.court_id,
+      start_time: startTime,
       custom_duration_minutes: customDurationEnabled
         ? form.values.custom_duration_minutes
         : null,
@@ -140,12 +188,18 @@ function MatchModalForm({
       </Group>
       <form
         onSubmit={form.onSubmit(async (values) => {
+          const startTime = combineStartDateAndTime(
+            values.start_time_date,
+            values.start_time_time
+          );
+
           const updatedMatch: MatchBodyInterface = {
             id: match.id,
             round_id: match.round_id,
             stage_item_input1_score: values.stage_item_input1_score,
             stage_item_input2_score: values.stage_item_input2_score,
             court_id: match.court_id,
+            start_time: startTime,
             custom_duration_minutes: customDurationEnabled ? values.custom_duration_minutes : null,
             custom_margin_minutes: customMarginEnabled ? values.custom_margin_minutes : null,
             status: match.status,
@@ -171,6 +225,28 @@ function MatchModalForm({
           disabled={match.status === 'PLANNED'}
           {...form.getInputProps('stage_item_input2_score')}
         />
+        <Divider mt="lg" />
+
+        <Text size="sm" mt="lg">
+          Startzeit
+        </Text>
+        <Grid>
+          <Grid.Col span={{ sm: 6 }}>
+            <DatePickerInput
+              label="Datum"
+              placeholder="Wähle Datum"
+              valueFormat="dd.MM.yyyy"
+              {...form.getInputProps('start_time_date')}
+            />
+          </Grid.Col>
+          <Grid.Col span={{ sm: 6 }}>
+            <TimeInput
+              label="Uhrzeit"
+              placeholder="HH:mm"
+              {...form.getInputProps('start_time_time')}
+            />
+          </Grid.Col>
+        </Grid>
         <Divider mt="lg" />
 
         <Text size="sm" mt="lg">

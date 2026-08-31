@@ -184,9 +184,15 @@ async def update_match_by_id(
     stage_item = await get_stage_item(tournament_id, round_.stage_item_id)
     await recalculate_ranking_for_stage_item(tournament_id, stage_item)
 
+    # Only reorder matches that do not have a fixed start_time.
+    # Once a start_time exists, matches are scheduled independently.
     if (
-        match_body.custom_duration_minutes != match.custom_duration_minutes
-        or match_body.custom_margin_minutes != match.custom_margin_minutes
+        match.start_time is None
+        and match_body.start_time is None
+        and (
+            match_body.custom_duration_minutes != match.custom_duration_minutes
+            or match_body.custom_margin_minutes != match.custom_margin_minutes
+        )
     ):
         tournament = await sql_get_tournament(tournament_id)
         scheduled_matches = get_scheduled_matches(await get_full_tournament_details(tournament_id))

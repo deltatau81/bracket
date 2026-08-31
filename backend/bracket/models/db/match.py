@@ -102,6 +102,7 @@ class MatchBody(BaseModelORM):
     stage_item_input1_score: int = 0
     stage_item_input2_score: int = 0
     court_id: CourtId | None = None
+    start_time: datetime_utc | None = None
     custom_duration_minutes: int | None = None
     custom_margin_minutes: int | None = None
     status: MatchStatus | None = None
