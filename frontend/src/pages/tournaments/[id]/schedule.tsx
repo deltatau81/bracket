@@ -13,7 +13,13 @@ import {
   Title,
 } from '@mantine/core';
 import { AiFillWarning } from '@react-icons/all-files/ai/AiFillWarning';
-import { IconAlertCircle, IconCalendarPlus, IconDots, IconTrash } from '@tabler/icons-react';
+import {
+  IconAlertCircle,
+  IconCalendarPlus,
+  IconDots,
+  IconTrash,
+  IconTrophy,
+} from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import React, { useState } from 'react';
@@ -25,10 +31,14 @@ import { NoContent } from '../../../components/no_content/empty_table_info';
 import { Time } from '../../../components/utils/datetime';
 import { Translator } from '../../../components/utils/types';
 import { getTournamentIdFromRouter, responseIsValid } from '../../../components/utils/util';
+import {
+  CompetitionDisciplineInterface,
+  CompetitionInterface,
+} from '../../../interfaces/competition';
 import { Court } from '../../../interfaces/court';
 import { MatchInterface, formatMatchInput1, formatMatchInput2 } from '../../../interfaces/match';
 import { TournamentMinimal } from '../../../interfaces/tournament';
-import { getCourts, getStages } from '../../../services/adapter';
+import { getCompetitionDisciplines, getCompetitions, getCourts, getStages } from '../../../services/adapter';
 import { deleteCourt } from '../../../services/court';
 import {
   getMatchLookup,
@@ -39,6 +49,63 @@ import {
 } from '../../../services/lookups';
 import { rescheduleMatch, scheduleMatches } from '../../../services/match';
 import TournamentLayout from '../_tournament_layout';
+
+function CompetitionCard({
+  competition,
+  tournamentId,
+}: {
+  competition: CompetitionInterface;
+  tournamentId: number;
+}) {
+  const swrDisciplinesResponse = getCompetitionDisciplines(tournamentId, competition.id);
+  const disciplines: CompetitionDisciplineInterface[] = responseIsValid(swrDisciplinesResponse)
+    ? swrDisciplinesResponse.data.data
+    : [];
+
+  return (
+    <Card shadow="sm" padding="lg" radius="md" withBorder mt="md">
+      <Grid>
+        <Grid.Col span="auto">
+          <Group gap="xs">
+            <IconTrophy size="1.25rem" />
+            <Text fw={700}>{competition.name}</Text>
+            <Badge variant="light">Competition</Badge>
+          </Group>
+
+          {competition.description != null && competition.description !== '' ? (
+            <Text size="sm" c="dimmed" mt="xs">
+              {competition.description}
+            </Text>
+          ) : null}
+
+          {disciplines.length > 0 ? (
+            <Stack gap={4} mt="sm">
+              {disciplines.map((discipline) => (
+                <Group key={discipline.id} gap="xs" justify="space-between" wrap="nowrap">
+                  <Text size="sm">{discipline.name}</Text>
+                  <Badge size="xs" variant="light">
+                    {discipline.metric_type}
+                  </Badge>
+                </Group>
+              ))}
+            </Stack>
+          ) : null}
+        </Grid.Col>
+
+        <Grid.Col span="content">
+          <Stack gap="xs" align="end">
+            <Badge variant="default" size="lg">
+              <Time datetime={competition.start_time} />
+            </Badge>
+            <Text size="sm" c="dimmed">
+              {competition.duration_minutes} Min.
+            </Text>
+          </Stack>
+        </Grid.Col>
+      </Grid>
+    </Card>
+  );
+}
 
 function ScheduleRow({
   index,
@@ -109,6 +176,7 @@ function ScheduleColumn({
   tournamentId,
   court,
   matches,
+  competitions,
   openMatchModal,
   stageItemsLookup,
   swrCourtsResponse,
@@ -117,22 +185,57 @@ function ScheduleColumn({
   tournamentId: number;
   court: Court;
   matches: MatchInterface[];
+  competitions: CompetitionInterface[];
   openMatchModal: any;
   stageItemsLookup: any;
   swrCourtsResponse: SWRResponse;
   matchesLookup: any;
 }) {
   const { t } = useTranslation();
-  const rows = matches.map((match: MatchInterface, index: number) => (
-    <ScheduleRow
-      index={index}
-      stageItemsLookup={stageItemsLookup}
-      matchesLookup={matchesLookup}
-      match={match}
-      openMatchModal={openMatchModal}
-      key={match.id}
-    />
-  ));
+  const sortedCompetitions = [...competitions].sort(
+    (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+  );
+  let competitionIndex = 0;
+  const rows: React.ReactNode[] = [];
+
+  matches.forEach((match: MatchInterface, matchIndex: number) => {
+    while (
+      competitionIndex < sortedCompetitions.length &&
+      new Date(sortedCompetitions[competitionIndex].start_time).getTime() <=
+        new Date(match.start_time as string).getTime()
+    ) {
+      const competition = sortedCompetitions[competitionIndex];
+      rows.push(
+        <CompetitionCard
+          key={`competition-${competition.id}`}
+          competition={competition}
+          tournamentId={tournamentId}
+        />
+      );
+      competitionIndex += 1;
+    }
+
+    rows.push(
+      <ScheduleRow
+        index={matchIndex}
+        stageItemsLookup={stageItemsLookup}
+        matchesLookup={matchesLookup}
+        match={match}
+        openMatchModal={openMatchModal}
+        key={match.id}
+      />
+    );
+  });
+
+  sortedCompetitions.slice(competitionIndex).forEach((competition) => {
+    rows.push(
+      <CompetitionCard
+        key={`competition-${competition.id}`}
+        competition={competition}
+        tournamentId={tournamentId}
+      />
+    );
+  });
 
   const noItemsAlert =
     matches.length < 1 ? (
@@ -194,6 +297,7 @@ function Schedule({
   stageItemsLookup,
   matchesLookup,
   schedule,
+  competitions,
   openMatchModal,
 }: {
   t: Translator;
@@ -202,6 +306,7 @@ function Schedule({
   stageItemsLookup: any;
   matchesLookup: any;
   schedule: { court: Court; matches: MatchInterface[] }[];
+  competitions: CompetitionInterface[];
   openMatchModal: CallableFunction;
 }) {
   const columns = schedule.map((item) => (
@@ -213,6 +318,7 @@ function Schedule({
       key={item.court.id}
       court={item.court}
       matches={item.matches}
+      competitions={competitions.filter((competition) => competition.court_id === item.court.id)}
       openMatchModal={openMatchModal}
     />
   ));
@@ -254,6 +360,7 @@ export default function SchedulePage() {
   const { tournamentData } = getTournamentIdFromRouter();
   const swrStagesResponse = getStages(tournamentData.id);
   const swrCourtsResponse = getCourts(tournamentData.id);
+  const swrCompetitionsResponse = getCompetitions(tournamentData.id);
 
   const stageItemsLookup = responseIsValid(swrStagesResponse)
     ? getStageItemLookup(swrStagesResponse)
@@ -270,6 +377,12 @@ export default function SchedulePage() {
 
   if (!responseIsValid(swrStagesResponse)) return null;
   if (!responseIsValid(swrCourtsResponse)) return null;
+  if (!responseIsValid(swrCompetitionsResponse)) return null;
+
+  const competitions: CompetitionInterface[] = swrCompetitionsResponse.data.data;
+  const tournamentCompetitions = competitions
+    .filter((competition) => competition.court_id == null)
+    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
 
   function openMatchModal(matchToOpen: MatchInterface) {
     setMatch(matchToOpen);
@@ -289,6 +402,7 @@ export default function SchedulePage() {
           round={null}
         />
       ) : null}
+
       <Grid grow>
         <Grid.Col span={6}>
           <Title>{t('planning_title')}</Title>
@@ -313,6 +427,13 @@ export default function SchedulePage() {
           )}
         </Grid.Col>
       </Grid>
+      {tournamentCompetitions.map((competition) => (
+        <CompetitionCard
+          key={`competition-${competition.id}`}
+          competition={competition}
+          tournamentId={tournamentData.id}
+        />
+      ))}
       <Group grow mt="1rem">
         <DragDropContext
           onDragEnd={async ({ destination, source, draggableId: matchId }) => {
@@ -331,6 +452,7 @@ export default function SchedulePage() {
             tournament={tournamentData}
             swrCourtsResponse={swrCourtsResponse}
             schedule={data}
+            competitions={competitions}
             stageItemsLookup={stageItemsLookup}
             matchesLookup={matchesLookup}
             openMatchModal={openMatchModal}

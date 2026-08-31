@@ -13,6 +13,7 @@ import {
   IconTrophy,
   IconUser,
   IconUsers,
+  IconMedal,
 } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
 import Link from 'next/link';
@@ -128,6 +129,11 @@ export function TournamentLinks({ tournament_id }: any) {
       icon: IconUsers,
       label: capitalize(t('teams_title')),
       link: `${tm_prefix}/teams`,
+    },
+    {
+       icon: IconMedal,
+       label: 'Competitions',
+       link: `${tm_prefix}/competitions`,
     },
     {
       icon: IconCalendar,

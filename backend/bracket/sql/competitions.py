@@ -1,0 +1,309 @@
+from bracket.database import database
+from bracket.models.db.competition import (
+    Competition,
+    CompetitionBody,
+    CompetitionDiscipline,
+    CompetitionDisciplineBody,
+    CompetitionDisciplineInsertable,
+    CompetitionInsertable,
+    CompetitionScoring,
+    CompetitionScoringBody,
+    CompetitionResult,
+    CompetitionResultBody,
+    CompetitionResultInsertable,
+)
+from bracket.schema import (
+    competition_disciplines,
+    competition_scoring,
+    competitions,
+    competition_results,
+)
+from bracket.utils.db import fetch_all_parsed, fetch_one_parsed
+from bracket.utils.id_types import (
+    CompetitionDisciplineId,
+    CompetitionId,
+    TournamentId,
+    CompetitionResultId,
+)
+
+
+# ---------------------------------------------------------------------------
+# Competitions
+# ---------------------------------------------------------------------------
+
+async def get_competitions_in_tournament(
+    tournament_id: TournamentId,
+) -> list[Competition]:
+    return await fetch_all_parsed(
+        database,
+        Competition,
+        competitions.select()
+        .where(competitions.c.tournament_id == tournament_id)
+        .order_by(competitions.c.start_time, competitions.c.id),
+    )
+
+
+async def get_competition(
+    tournament_id: TournamentId,
+    competition_id: CompetitionId,
+) -> Competition | None:
+    return await fetch_one_parsed(
+        database,
+        Competition,
+        competitions.select().where(
+            (competitions.c.id == competition_id)
+            & (competitions.c.tournament_id == tournament_id)
+        ),
+    )
+
+
+async def create_competition(
+    competition: CompetitionInsertable,
+) -> CompetitionId:
+    new_id = await database.execute(
+        competitions.insert(),
+        values=competition.model_dump(),
+    )
+    return CompetitionId(new_id)
+
+
+async def update_competition(
+    tournament_id: TournamentId,
+    competition_id: CompetitionId,
+    body: CompetitionBody,
+) -> None:
+    await database.execute(
+        competitions.update()
+        .where(
+            (competitions.c.id == competition_id)
+            & (competitions.c.tournament_id == tournament_id)
+        )
+        .values(**body.model_dump())
+    )
+
+
+async def delete_competition(
+    tournament_id: TournamentId,
+    competition_id: CompetitionId,
+) -> None:
+    await database.execute(
+        competitions.delete().where(
+            (competitions.c.id == competition_id)
+            & (competitions.c.tournament_id == tournament_id)
+        )
+    )
+
+
+# ---------------------------------------------------------------------------
+# Disciplines
+# ---------------------------------------------------------------------------
+
+async def get_disciplines(
+    competition_id: CompetitionId,
+) -> list[CompetitionDiscipline]:
+    return await fetch_all_parsed(
+        database,
+        CompetitionDiscipline,
+        competition_disciplines.select()
+        .where(
+            competition_disciplines.c.competition_id == competition_id
+        )
+        .order_by(
+            competition_disciplines.c.sort_order,
+            competition_disciplines.c.id,
+        ),
+    )
+
+
+async def get_discipline(
+    competition_id: CompetitionId,
+    discipline_id: CompetitionDisciplineId,
+) -> CompetitionDiscipline | None:
+    return await fetch_one_parsed(
+        database,
+        CompetitionDiscipline,
+        competition_disciplines.select().where(
+            (competition_disciplines.c.id == discipline_id)
+            & (
+                competition_disciplines.c.competition_id
+                == competition_id
+            )
+        ),
+    )
+
+
+async def create_discipline(
+    discipline: CompetitionDisciplineInsertable,
+) -> CompetitionDisciplineId:
+    new_id = await database.execute(
+        competition_disciplines.insert(),
+        values={
+            **discipline.model_dump(),
+            "metric_type": discipline.metric_type.value,
+        },
+    )
+    return CompetitionDisciplineId(new_id)
+
+
+async def update_discipline(
+    competition_id: CompetitionId,
+    discipline_id: CompetitionDisciplineId,
+    body: CompetitionDisciplineBody,
+) -> None:
+    await database.execute(
+        competition_disciplines.update()
+        .where(
+            (competition_disciplines.c.id == discipline_id)
+            & (
+                competition_disciplines.c.competition_id
+                == competition_id
+            )
+        )
+        .values(
+            **{
+              **body.model_dump(),
+              "metric_type": body.metric_type.value,
+            }
+        )
+    )
+
+
+async def delete_discipline(
+    competition_id: CompetitionId,
+    discipline_id: CompetitionDisciplineId,
+) -> None:
+    await database.execute(
+        competition_disciplines.delete().where(
+            (competition_disciplines.c.id == discipline_id)
+            & (
+                competition_disciplines.c.competition_id
+                == competition_id
+            )
+        )
+    )
+
+
+# ---------------------------------------------------------------------------
+# Scoring
+# ---------------------------------------------------------------------------
+
+async def get_scoring(
+    competition_id: CompetitionId,
+) -> list[CompetitionScoring]:
+    return await fetch_all_parsed(
+        database,
+        CompetitionScoring,
+        competition_scoring.select()
+        .where(
+            competition_scoring.c.competition_id == competition_id
+        )
+        .order_by(competition_scoring.c.place),
+    )
+
+
+async def replace_scoring(
+    competition_id: CompetitionId,
+    scoring: list[CompetitionScoringBody],
+) -> None:
+    async with database.transaction():
+        await database.execute(
+            competition_scoring.delete().where(
+                competition_scoring.c.competition_id == competition_id
+            )
+        )
+
+        if scoring:
+            await database.execute_many(
+                competition_scoring.insert(),
+                values=[
+                    {
+                        "competition_id": competition_id,
+                        "place": item.place,
+                        "points": item.points,
+                    }
+                    for item in scoring
+                ],
+            )
+# ---------------------------------------------------------------------------
+# Results
+# ---------------------------------------------------------------------------
+
+async def get_results(
+    discipline_id: CompetitionDisciplineId,
+) -> list[CompetitionResult]:
+    return await fetch_all_parsed(
+        database,
+        CompetitionResult,
+        competition_results.select()
+        .where(
+            competition_results.c.discipline_id == discipline_id
+        )
+        .order_by(
+            competition_results.c.place.asc().nullslast(),
+            competition_results.c.id,
+        ),
+    )
+
+
+async def get_result(
+    discipline_id: CompetitionDisciplineId,
+    result_id: CompetitionResultId,
+) -> CompetitionResult | None:
+    return await fetch_one_parsed(
+        database,
+        CompetitionResult,
+        competition_results.select().where(
+            (competition_results.c.id == result_id)
+            & (
+                competition_results.c.discipline_id
+                == discipline_id
+            )
+        ),
+    )
+
+
+async def upsert_result(
+    result: CompetitionResultInsertable,
+) -> CompetitionResultId:
+    existing = await fetch_one_parsed(
+        database,
+        CompetitionResult,
+        competition_results.select().where(
+            (
+                competition_results.c.discipline_id
+                == result.discipline_id
+            )
+            & (
+                competition_results.c.team_id
+                == result.team_id
+            )
+        ),
+    )
+
+    values = result.model_dump()
+
+    if existing is not None:
+        await database.execute(
+            competition_results.update()
+            .where(competition_results.c.id == existing.id)
+            .values(**values)
+        )
+        return existing.id
+
+    new_id = await database.execute(
+        competition_results.insert(),
+        values=values,
+    )
+
+    return CompetitionResultId(new_id)
+
+
+async def update_result_place(
+    result_id: CompetitionResultId,
+    place: int | None,
+) -> None:
+    await database.execute(
+        competition_results.update()
+        .where(competition_results.c.id == result_id)
+        .values(place=place)
+    )

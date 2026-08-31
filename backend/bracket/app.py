@@ -28,6 +28,7 @@ from bracket.routes import (
     teams,
     tournaments,
     users,
+    competitions,
 )
 from bracket.utils.alembic import alembic_run_migrations
 from bracket.utils.asyncio import AsyncioTasksManager
@@ -74,6 +75,7 @@ routers = {
     "Teams": teams.router,
     "Tournaments": tournaments.router,
     "Users": users.router,
+    "Competitions": competitions.router,
 }
 
 table_of_contents = "\n\n".join(

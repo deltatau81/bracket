@@ -140,6 +140,52 @@ export function getTeams(tournament_id: number | null): SWRResponse {
   );
 }
 
+export function getCompetitions(tournament_id: number | null): SWRResponse {
+  return useSWR(
+    tournament_id == null
+      ? null
+      : `tournaments/${tournament_id}/competitions`,
+    fetcher
+  );
+}
+
+export function getCompetitionDisciplines(
+  tournament_id: number | null,
+  competition_id: number | null
+): SWRResponse {
+  return useSWR(
+    tournament_id == null || competition_id == null
+      ? null
+      : `tournaments/${tournament_id}/competitions/${competition_id}/disciplines`,
+    fetcher
+  );
+}
+
+export function getCompetitionResults(
+  tournament_id: number | null,
+  competition_id: number | null,
+  discipline_id: number | null
+): SWRResponse {
+  return useSWR(
+    tournament_id == null || competition_id == null || discipline_id == null
+      ? null
+      : `tournaments/${tournament_id}/competitions/${competition_id}/disciplines/${discipline_id}/results`,
+    fetcher
+  );
+}
+
+export function getCompetitionScoring(
+  tournament_id: number | null,
+  competition_id: number | null
+): SWRResponse {
+  return useSWR(
+    tournament_id == null || competition_id == null
+      ? null
+      : `tournaments/${tournament_id}/competitions/${competition_id}/scoring`,
+    fetcher
+  );
+}
+
 export function getTeamsPaginated(tournament_id: number, pagination: Pagination): SWRResponse {
   return useSWR(
     `tournaments/${tournament_id}/teams?limit=${pagination.limit}&offset=${pagination.offset}&sort_by=${pagination.sort_by}&sort_direction=${pagination.sort_direction}`,

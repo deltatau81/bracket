@@ -1,4 +1,14 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Table, UniqueConstraint, func
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Table,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import declarative_base  # type: ignore[attr-defined]
 from sqlalchemy.sql.sqltypes import BigInteger, Boolean, DateTime, Enum, Float, Text
 
@@ -237,4 +247,162 @@ rankings = Table(
     Column("draw_points", Float, nullable=False),
     Column("loss_points", Float, nullable=False),
     Column("add_score_points", Boolean, nullable=False),
+)
+
+competitions = Table(
+    "competitions",
+    metadata,
+    Column("id", BigInteger, primary_key=True, index=True, autoincrement=True),
+    Column(
+        "tournament_id",
+        BigInteger,
+        ForeignKey("tournaments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    ),
+    Column("name", String, nullable=False),
+    Column("description", Text, nullable=True),
+    Column("start_time", DateTimeTZ, nullable=False, index=True),
+    Column("duration_minutes", Integer, nullable=False, server_default="60"),
+    Column(
+        "court_id",
+        BigInteger,
+        ForeignKey("courts.id", ondelete="SET NULL"),
+        nullable=True,
+    ),
+    Column("created", DateTimeTZ, nullable=False, server_default=func.now()),
+    CheckConstraint(
+        "duration_minutes > 0",
+        name="ck_competitions_duration_positive",
+    ),
+)
+
+competition_disciplines = Table(
+    "competition_disciplines",
+    metadata,
+    Column("id", BigInteger, primary_key=True, index=True, autoincrement=True),
+    Column(
+        "competition_id",
+        BigInteger,
+        ForeignKey("competitions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    ),
+    Column("name", String, nullable=False),
+    Column("description", Text, nullable=True),
+    Column("metric_type", String(20), nullable=False, server_default="MANUAL"),
+    Column("sort_order", Integer, nullable=False, server_default="0"),
+    Column("created", DateTimeTZ, nullable=False, server_default=func.now()),
+    CheckConstraint(
+        "metric_type IN ('TIME', 'COUNT', 'RATIO', 'MANUAL')",
+        name="ck_competition_discipline_metric_type",
+    ),
+)
+
+competition_scoring = Table(
+    "competition_scoring",
+    metadata,
+    Column("id", BigInteger, primary_key=True, index=True, autoincrement=True),
+    Column(
+        "competition_id",
+        BigInteger,
+        ForeignKey("competitions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    ),
+    Column("place", Integer, nullable=False),
+    Column("points", Numeric(8, 2), nullable=False),
+    CheckConstraint(
+        "place > 0",
+        name="ck_competition_scoring_place_positive",
+    ),
+    CheckConstraint(
+        "points >= 0",
+        name="ck_competition_scoring_points_positive",
+    ),
+    UniqueConstraint(
+        "competition_id",
+        "place",
+        name="uq_competition_scoring_place",
+    ),
+)
+
+competition_results = Table(
+    "competition_results",
+    metadata,
+    Column("id", BigInteger, primary_key=True, index=True, autoincrement=True),
+    Column(
+        "discipline_id",
+        BigInteger,
+        ForeignKey("competition_disciplines.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    ),
+    Column(
+        "team_id",
+        BigInteger,
+        ForeignKey("teams.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    ),
+    Column("place", Integer, nullable=True),
+    Column("time_ms", BigInteger, nullable=True),
+    Column("attempts", Integer, nullable=True),
+    Column("successes", Integer, nullable=True),
+    Column("notes", Text, nullable=True),
+    Column("updated", DateTimeTZ, nullable=False, server_default=func.now()),
+    CheckConstraint(
+        "place IS NULL OR place > 0",
+        name="ck_competition_results_place_positive",
+    ),
+    CheckConstraint(
+        "time_ms IS NULL OR time_ms >= 0",
+        name="ck_competition_results_time_positive",
+    ),
+    CheckConstraint(
+        "attempts IS NULL OR attempts >= 0",
+        name="ck_competition_results_attempts_positive",
+    ),
+    CheckConstraint(
+        "successes IS NULL OR successes >= 0",
+        name="ck_competition_results_successes_positive",
+    ),
+    CheckConstraint(
+        "attempts IS NULL OR successes IS NULL OR successes <= attempts",
+        name="ck_competition_results_successes_lte_attempts",
+    ),
+    UniqueConstraint(
+        "discipline_id",
+        "team_id",
+        name="uq_competition_result_team",
+    ),
+)
+
+competition_pairings = Table(
+    "competition_pairings",
+    metadata,
+    Column("id", BigInteger, primary_key=True, index=True, autoincrement=True),
+    Column(
+        "discipline_id",
+        BigInteger,
+        ForeignKey("competition_disciplines.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    ),
+    Column(
+        "shooter_team_id",
+        BigInteger,
+        ForeignKey("teams.id", ondelete="CASCADE"),
+        nullable=True,
+    ),
+    Column(
+        "goalkeeper_team_id",
+        BigInteger,
+        ForeignKey("teams.id", ondelete="CASCADE"),
+        nullable=True,
+    ),
+    Column("shooter_name", String, nullable=True),
+    Column("goalkeeper_name", String, nullable=True),
+    Column("sort_order", Integer, nullable=False, server_default="0"),
+    Column("notes", Text, nullable=True),
 )
