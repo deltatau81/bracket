@@ -251,7 +251,12 @@ export default function SchedulePage() {
       stageItemsLookup={stageItemsLookup}
     />
   );
-  const overallStandings = <TournamentOverallStandings tournamentId={tournamentId} />;
+  const overallStandings = ( 
+    <TournamentOverallStandings
+      tournamentId={tournamentId}
+      teams={teams}
+    />
+  );
 
   return (
     <>

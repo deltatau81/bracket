@@ -1,8 +1,6 @@
-import { Badge, Card, Center, Group, Stack, Text } from '@mantine/core';
+import { Badge, Card, Center, Group, Image, Stack, Text } from '@mantine/core';
 import React from 'react';
 
-import { formatTime } from '../utils/datetime';
-import { Translator } from '../utils/types';
 import { CompetitionInterface } from '../../interfaces/competition';
 import {
   formatMatchInput1,
@@ -10,7 +8,10 @@ import {
   MatchInterface,
 } from '../../interfaces/match';
 import { TeamInterface } from '../../interfaces/team';
+import { getBaseApiUrl } from '../../services/adapter';
 import CompetitionTimelineItem from '../competition/competition_timeline_item';
+import { formatTime } from '../utils/datetime';
+import { Translator } from '../utils/types';
 
 interface MatchTimelineEvent {
   kind: 'match';
@@ -29,6 +30,38 @@ interface CompetitionTimelineEvent {
 
 type TimelineEvent = MatchTimelineEvent | CompetitionTimelineEvent;
 
+function TeamLogo({ team }: { team: TeamInterface | null | undefined }) {
+  if (team == null || team.logo_path == null || team.logo_path === '') {
+    return null;
+  }
+
+  return (
+    <Image
+      src={`${getBaseApiUrl()}/static/team-logos/${team.logo_path}`}
+      alt={`Logo ${team.name}`}
+      w={32}
+      h={32}
+      fit="contain"
+      style={{ flexShrink: 0 }}
+    />
+  );
+}
+
+function MatchTeamRow({
+  team,
+  name,
+}: {
+  team: TeamInterface | null | undefined;
+  name: string;
+}) {
+  return (
+    <Group gap="sm" wrap="nowrap">
+      <TeamLogo team={team} />
+      <Text fw={500}>{name}</Text>
+    </Group>
+  );
+}
+
 function MatchTimelineItem({
   event,
   t,
@@ -41,11 +74,26 @@ function MatchTimelineItem({
   matchesLookup: any;
 }) {
   const { match } = event;
+
   const status = {
     PLANNED: { label: 'Geplant', color: 'gray' },
     RUNNING: { label: 'Läuft', color: 'orange' },
     FINISHED: { label: 'Beendet', color: 'green' },
   }[match.status];
+
+  const team1Name = formatMatchInput1(
+    t,
+    stageItemsLookup,
+    matchesLookup,
+    match
+  );
+
+  const team2Name = formatMatchInput2(
+    t,
+    stageItemsLookup,
+    matchesLookup,
+    match
+  );
 
   return (
     <Card withBorder radius="md" padding="md">
@@ -58,6 +106,7 @@ function MatchTimelineItem({
             </Text>
           ) : null}
         </div>
+
         <Group gap="xs">
           <Badge color={status.color} variant="light">
             {status.label}
@@ -65,11 +114,20 @@ function MatchTimelineItem({
           <Badge variant="outline">{event.stageItem.name}</Badge>
         </Group>
       </Group>
+
       <Group justify="space-between" wrap="nowrap">
-        <Stack gap={4} style={{ flex: 1 }}>
-          <Text fw={500}>{formatMatchInput1(t, stageItemsLookup, matchesLookup, match)}</Text>
-          <Text fw={500}>{formatMatchInput2(t, stageItemsLookup, matchesLookup, match)}</Text>
+        <Stack gap="sm" style={{ flex: 1, minWidth: 0 }}>
+          <MatchTeamRow
+            team={match.stage_item_input1?.team}
+            name={team1Name}
+          />
+
+          <MatchTeamRow
+            team={match.stage_item_input2?.team}
+            name={team2Name}
+          />
         </Stack>
+
         <Text fw={800} size="lg" style={{ whiteSpace: 'nowrap' }}>
           {match.status === 'PLANNED'
             ? '– : –'
@@ -104,15 +162,20 @@ export default function TournamentTimeline({
       stageItem: data.stageItem,
     }))
     .filter((event) => event.startTime != null);
-  const competitionEvents: CompetitionTimelineEvent[] = competitions.map((competition) => ({
-    kind: 'competition',
-    id: competition.id,
-    startTime: competition.start_time,
-    competition,
-  }));
+
+  const competitionEvents: CompetitionTimelineEvent[] = competitions.map(
+    (competition) => ({
+      kind: 'competition',
+      id: competition.id,
+      startTime: competition.start_time,
+      competition,
+    })
+  );
+
   const events: TimelineEvent[] = [...matchEvents, ...competitionEvents].sort(
     (first, second) =>
-      new Date(first.startTime).getTime() - new Date(second.startTime).getTime() ||
+      new Date(first.startTime).getTime() -
+        new Date(second.startTime).getTime() ||
       first.kind.localeCompare(second.kind) ||
       first.id - second.id
   );
@@ -130,19 +193,20 @@ export default function TournamentTimeline({
               {formatTime(event.startTime)}
             </Text>
           </Center>
+
           {event.kind === 'match' ? (
-              <MatchTimelineItem
-                event={event}
-                t={t}
-                stageItemsLookup={stageItemsLookup}
-                matchesLookup={matchesLookup}
-              />
-            ) : (
-              <CompetitionTimelineItem
-                tournamentId={tournamentId}
-                competition={event.competition}
-                teams={teams}
-              />
+            <MatchTimelineItem
+              event={event}
+              t={t}
+              stageItemsLookup={stageItemsLookup}
+              matchesLookup={matchesLookup}
+            />
+          ) : (
+            <CompetitionTimelineItem
+              tournamentId={tournamentId}
+              competition={event.competition}
+              teams={teams}
+            />
           )}
         </React.Fragment>
       ))}
