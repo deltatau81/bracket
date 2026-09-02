@@ -62,6 +62,82 @@ function MatchTeamRow({
   );
 }
 
+function segmentPoints(score1: number, score2: number, winPoints: number, drawPoints: number) {
+  if (score1 > score2) {
+    return [winPoints, 0];
+  }
+
+  if (score2 > score1) {
+    return [0, winPoints];
+  }
+
+  return [drawPoints, drawPoints];
+}
+
+function getGamePoints(match: MatchInterface) {
+  const half1 = segmentPoints(
+    match.stage_item_input1_half1_score,
+    match.stage_item_input2_half1_score,
+    2,
+    1
+  );
+
+  const half2 = segmentPoints(
+    match.stage_item_input1_half2_score,
+    match.stage_item_input2_half2_score,
+    2,
+    1
+  );
+
+  const penalty = segmentPoints(
+    match.stage_item_input1_penalty_score,
+    match.stage_item_input2_penalty_score,
+    1,
+    0.5
+  );
+
+  return [
+    half1[0] + half2[0] + penalty[0],
+    half1[1] + half2[1] + penalty[1],
+  ];
+}
+
+function formatPoints(points: number) {
+  return Number.isInteger(points) ? `${points}` : points.toFixed(1).replace('.', ',');
+}
+
+function ScoreRow({
+  label,
+  score1,
+  score2,
+  bold = false,
+}: {
+  label: string;
+  score1: number | string;
+  score2: number | string;
+  bold?: boolean;
+}) {
+  return (
+    <Group justify="space-between" gap="md" wrap="nowrap">
+      <Text size="sm" c={bold ? undefined : 'dimmed'} fw={bold ? 700 : 400}>
+        {label}
+      </Text>
+
+      <Text
+        size="sm"
+        fw={bold ? 800 : 600}
+        style={{
+          minWidth: '4.5rem',
+          textAlign: 'right',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {score1} : {score2}
+      </Text>
+    </Group>
+  );
+}
+
 function MatchTimelineItem({
   event,
   t,
@@ -95,11 +171,15 @@ function MatchTimelineItem({
     match
   );
 
+  const gamePoints = getGamePoints(match);
+  const showScores = match.status !== 'PLANNED';
+
   return (
     <Card withBorder radius="md" padding="md">
       <Group justify="space-between" align="flex-start" mb="sm">
         <div>
           <Badge variant="light">Hockeyspiel</Badge>
+
           {match.court != null ? (
             <Text size="sm" c="dimmed" mt={4}>
               {match.court.name}
@@ -111,29 +191,80 @@ function MatchTimelineItem({
           <Badge color={status.color} variant="light">
             {status.label}
           </Badge>
+
           <Badge variant="outline">{event.stageItem.name}</Badge>
         </Group>
       </Group>
 
-      <Group justify="space-between" wrap="nowrap">
-        <Stack gap="sm" style={{ flex: 1, minWidth: 0 }}>
-          <MatchTeamRow
-            team={match.stage_item_input1?.team}
-            name={team1Name}
-          />
+      <Stack gap="sm">
+        <MatchTeamRow
+          team={match.stage_item_input1?.team}
+          name={team1Name}
+        />
 
-          <MatchTeamRow
-            team={match.stage_item_input2?.team}
-            name={team2Name}
-          />
-        </Stack>
+        <MatchTeamRow
+          team={match.stage_item_input2?.team}
+          name={team2Name}
+        />
+      </Stack>
 
-        <Text fw={800} size="lg" style={{ whiteSpace: 'nowrap' }}>
-          {match.status === 'PLANNED'
-            ? '– : –'
-            : `${match.stage_item_input1_score} : ${match.stage_item_input2_score}`}
-        </Text>
-      </Group>
+      <Card
+        withBorder
+        radius="sm"
+        padding="sm"
+        mt="md"
+        style={{ backgroundColor: 'var(--mantine-color-default-hover)' }}
+      >
+        {showScores ? (
+          <Stack gap={5}>
+            <ScoreRow
+              label="1. Halbzeit"
+              score1={match.stage_item_input1_half1_score}
+              score2={match.stage_item_input2_half1_score}
+            />
+
+            <ScoreRow
+              label="2. Halbzeit"
+              score1={match.stage_item_input1_half2_score}
+              score2={match.stage_item_input2_half2_score}
+            />
+
+            <ScoreRow
+              label="Penalty"
+              score1={match.stage_item_input1_penalty_score}
+              score2={match.stage_item_input2_penalty_score}
+            />
+
+            <div
+              style={{
+                borderTop: '1px solid var(--mantine-color-default-border)',
+                marginTop: '0.25rem',
+                paddingTop: '0.35rem',
+              }}
+            >
+              <Stack gap={5}>
+                <ScoreRow
+                  label="Gesamttore"
+                  score1={match.stage_item_input1_score}
+                  score2={match.stage_item_input2_score}
+                  bold
+                />
+
+                <ScoreRow
+                  label="Spielpunkte"
+                  score1={formatPoints(gamePoints[0])}
+                  score2={formatPoints(gamePoints[1])}
+                  bold
+                />
+              </Stack>
+            </div>
+          </Stack>
+        ) : (
+          <Center>
+            <Text fw={800}>– : –</Text>
+          </Center>
+        )}
+      </Card>
     </Card>
   );
 }
