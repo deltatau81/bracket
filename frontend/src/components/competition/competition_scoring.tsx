@@ -50,7 +50,7 @@ function CompetitionScoringForm({
         <div>
           <Title order={4}>Punkteschema</Title>
           <Text size="sm" c="dimmed">
-            Dieses Schema gilt f?r alle Disziplinen der Competition.
+            Dieses Schema gilt für alle Disziplinen der Competition.
           </Text>
         </div>
         <Group gap="sm" align="end">
@@ -105,3 +105,4 @@ export default function CompetitionScoring({
     />
   );
 }
+

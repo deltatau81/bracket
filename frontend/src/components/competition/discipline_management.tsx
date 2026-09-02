@@ -14,9 +14,9 @@ import {
 } from '../../services/competition';
 
 const metricTypeOptions = [
-  { value: 'TIME', label: 'Zeit \u2013 niedrigste Zeit gewinnt' },
-  { value: 'COUNT', label: 'Anzahl \u2013 h\u00f6chste Anzahl gewinnt' },
-  { value: 'RATIO', label: 'Quote \u2013 h\u00f6chste Erfolgsquote gewinnt' },
+  { value: 'TIME', label: 'Zeit – niedrigste Zeit gewinnt' },
+  { value: 'COUNT', label: 'Anzahl – höchste Anzahl gewinnt' },
+  { value: 'RATIO', label: 'Quote – höchste Erfolgsquote gewinnt' },
   { value: 'MANUAL', label: 'Manuelle Platzierung' },
 ];
 
@@ -86,12 +86,12 @@ function DisciplineModal({
   return (
     <>
       <Button size="xs" variant={discipline == null ? 'filled' : 'light'} onClick={openModal}>
-        {discipline == null ? 'Disziplin hinzuf\u00fcgen' : 'Bearbeiten'}
+        {discipline == null ? 'Disziplin hinzufügen' : 'Bearbeiten'}
       </Button>
       <Modal
         opened={opened}
         onClose={close}
-        title={discipline == null ? 'Disziplin hinzuf\u00fcgen' : 'Disziplin bearbeiten'}
+        title={discipline == null ? 'Disziplin hinzufügen' : 'Disziplin bearbeiten'}
       >
         <form onSubmit={form.onSubmit(submit)}>
           <Stack>
@@ -163,7 +163,7 @@ export function DisciplineActions({
   const [deleting, setDeleting] = useState(false);
 
   async function remove() {
-    if (!window.confirm(`Disziplin "${discipline.name}" wirklich l\u00f6schen?`)) return;
+    if (!window.confirm(`Disziplin "${discipline.name}" wirklich löschen?`)) return;
     setDeleting(true);
     try {
       await deleteCompetitionDiscipline(tournamentId, competitionId, discipline.id);
@@ -183,8 +183,9 @@ export function DisciplineActions({
         mutateDisciplines={mutateDisciplines}
       />
       <Button size="xs" color="red" variant="light" loading={deleting} onClick={remove}>
-        L\u00f6schen
+        Löschen
       </Button>
     </Group>
   );
 }
+
