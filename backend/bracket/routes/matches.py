@@ -179,6 +179,7 @@ async def update_match_by_id(
     tournament = await sql_get_tournament(tournament_id)
 
     await sql_update_match(match_id, match_body, tournament)
+    await handle_conflicts(await get_full_tournament_details(tournament_id))
 
     round_ = await get_round_by_id(tournament_id, match.round_id)
     stage_item = await get_stage_item(tournament_id, round_.stage_item_id)
