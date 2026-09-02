@@ -27,6 +27,50 @@ import { getCourts, getStages } from '../../../services/adapter';
 import { getMatchLookup, getStageItemLookup, stringToColour } from '../../../services/lookups';
 import TournamentLayout from '../_tournament_layout';
 
+function segmentPoints(score1: number, score2: number, winPoints: number, drawPoints: number) {
+  if (score1 > score2) {
+    return [winPoints, 0];
+  }
+
+  if (score2 > score1) {
+    return [0, winPoints];
+  }
+
+  return [drawPoints, drawPoints];
+}
+
+function getGamePoints(match: MatchInterface) {
+  const half1 = segmentPoints(
+    match.stage_item_input1_half1_score,
+    match.stage_item_input2_half1_score,
+    2,
+    1
+  );
+
+  const half2 = segmentPoints(
+    match.stage_item_input1_half2_score,
+    match.stage_item_input2_half2_score,
+    2,
+    1
+  );
+
+  const penalty = segmentPoints(
+    match.stage_item_input1_penalty_score,
+    match.stage_item_input2_penalty_score,
+    1,
+    0.5
+  );
+
+  return [
+    half1[0] + half2[0] + penalty[0],
+    half1[1] + half2[1] + penalty[1],
+  ];
+}
+
+function formatPoints(points: number) {
+  return Number.isInteger(points) ? `${points}` : points.toFixed(1).replace('.', ',');
+}
+
 function ScheduleRow({
   data,
   openMatchModal,
@@ -42,16 +86,20 @@ function ScheduleRow({
   const winColor = '#2a8f37';
   const drawColor = '#656565';
   const loseColor = '#af4034';
+
+  const gamePoints = getGamePoints(data.match);
+
   const team1_color =
-    data.match.stage_item_input1_score > data.match.stage_item_input2_score
+    gamePoints[0] > gamePoints[1]
       ? winColor
-      : data.match.stage_item_input1_score === data.match.stage_item_input2_score
+      : gamePoints[0] === gamePoints[1]
         ? drawColor
         : loseColor;
+
   const team2_color =
-    data.match.stage_item_input2_score > data.match.stage_item_input1_score
+    gamePoints[1] > gamePoints[0]
       ? winColor
-      : data.match.stage_item_input1_score === data.match.stage_item_input2_score
+      : gamePoints[0] === gamePoints[1]
         ? drawColor
         : loseColor;
 
@@ -74,13 +122,17 @@ function ScheduleRow({
                 {data.match.court.name}
               </Text>
             </Grid.Col>
+
             <Grid.Col mb="0rem" span={4}>
               <Center>
                 <Text mt="sm" fw={800}>
-                  {data.match.start_time != null ? <Time datetime={data.match.start_time} /> : null}
+                  {data.match.start_time != null ? (
+                    <Time datetime={data.match.start_time} />
+                  ) : null}
                 </Text>
               </Center>
             </Grid.Col>
+
             <Grid.Col mb="0rem" span={4}>
               <Flex justify="right">
                 <Badge
@@ -96,6 +148,7 @@ function ScheduleRow({
             </Grid.Col>
           </Grid>
         </Card.Section>
+
         <Stack pt="sm">
           <Grid>
             <Grid.Col span="auto" pb="0rem">
@@ -103,39 +156,46 @@ function ScheduleRow({
                 {formatMatchInput1(t, stageItemsLookup, matchesLookup, data.match)}
               </Text>
             </Grid.Col>
+
             <Grid.Col span="content" pb="0rem">
               <div
                 style={{
                   backgroundColor: team1_color,
                   borderRadius: '0.5rem',
-                  paddingLeft: '1rem',
-                  paddingRight: '1rem',
+                  paddingLeft: '0.75rem',
+                  paddingRight: '0.75rem',
                   color: 'white',
                   fontWeight: 800,
+                  minWidth: '8rem',
+                  textAlign: 'center',
                 }}
               >
-                {data.match.stage_item_input1_score}
+                {data.match.stage_item_input1_score} Tore / {formatPoints(gamePoints[0])} Pkt.
               </div>
             </Grid.Col>
           </Grid>
+
           <Grid mb="0rem">
             <Grid.Col span="auto" pb="0rem">
               <Text fw={500}>
                 {formatMatchInput2(t, stageItemsLookup, matchesLookup, data.match)}
               </Text>
             </Grid.Col>
+
             <Grid.Col span="content" pb="0rem">
               <div
                 style={{
                   backgroundColor: team2_color,
                   borderRadius: '0.5rem',
-                  paddingLeft: '1rem',
-                  paddingRight: '1rem',
+                  paddingLeft: '0.75rem',
+                  paddingRight: '0.75rem',
                   color: 'white',
                   fontWeight: 800,
+                  minWidth: '8rem',
+                  textAlign: 'center',
                 }}
               >
-                {data.match.stage_item_input2_score}
+                {data.match.stage_item_input2_score} Tore / {formatPoints(gamePoints[1])} Pkt.
               </div>
             </Grid.Col>
           </Grid>
@@ -157,6 +217,7 @@ function Schedule({
   matchesLookup: any;
 }) {
   const matches: any[] = Object.values(matchesLookup);
+
   const sortedMatches = matches
     .filter((m1: any) => m1.match.start_time != null)
     .sort((m1: any, m2: any) => (m1.match.court?.name > m2.match.court?.name ? 1 : -1))
@@ -230,13 +291,17 @@ export default function SchedulePage() {
 
   const { t } = useTranslation();
   const { tournamentData } = getTournamentIdFromRouter();
+
   const swrStagesResponse = getStages(tournamentData.id);
   const swrCourtsResponse = getCourts(tournamentData.id);
 
   const stageItemsLookup = responseIsValid(swrStagesResponse)
     ? getStageItemLookup(swrStagesResponse)
     : [];
-  const matchesLookup = responseIsValid(swrStagesResponse) ? getMatchLookup(swrStagesResponse) : [];
+
+  const matchesLookup = responseIsValid(swrStagesResponse)
+    ? getMatchLookup(swrStagesResponse)
+    : [];
 
   if (!responseIsValid(swrStagesResponse)) return null;
   if (!responseIsValid(swrCourtsResponse)) return null;
@@ -250,6 +315,7 @@ export default function SchedulePage() {
     if (!opened) {
       setMatch(null);
     }
+
     modalSetOpened(opened);
   }
 
@@ -264,7 +330,9 @@ export default function SchedulePage() {
         setOpened={modalSetOpenedAndUpdateMatch}
         round={null}
       />
+
       <Title>{t('results_title')}</Title>
+
       <Center mt="1rem">
         <Schedule
           t={t}
