@@ -18,6 +18,53 @@ D = 400
 
 TeamIdOrPlayerId = TypeVar("TeamIdOrPlayerId", bound=PlayerId | TeamId)
 
+def get_part_points(team_score: int, opponent_score: int, win_points: Decimal, draw_points: Decimal) -> Decimal:
+    if team_score > opponent_score:
+        return win_points
+    if team_score == opponent_score:
+        return draw_points
+    return Decimal("0.0")
+
+
+def get_hockey_match_points(
+    match: MatchWithDetailsDefinitive,
+    is_team1: bool,
+) -> Decimal:
+    if is_team1:
+        half1_team = match.stage_item_input1_half1_score
+        half1_opponent = match.stage_item_input2_half1_score
+        half2_team = match.stage_item_input1_half2_score
+        half2_opponent = match.stage_item_input2_half2_score
+        penalty_team = match.stage_item_input1_penalty_score
+        penalty_opponent = match.stage_item_input2_penalty_score
+    else:
+        half1_team = match.stage_item_input2_half1_score
+        half1_opponent = match.stage_item_input1_half1_score
+        half2_team = match.stage_item_input2_half2_score
+        half2_opponent = match.stage_item_input1_half2_score
+        penalty_team = match.stage_item_input2_penalty_score
+        penalty_opponent = match.stage_item_input1_penalty_score
+
+    return (
+        get_part_points(
+            half1_team,
+            half1_opponent,
+            Decimal("2.0"),
+            Decimal("1.0"),
+        )
+        + get_part_points(
+            half2_team,
+            half2_opponent,
+            Decimal("2.0"),
+            Decimal("1.0"),
+        )
+        + get_part_points(
+            penalty_team,
+            penalty_opponent,
+            Decimal("1.0"),
+            Decimal("0.5"),
+        )
+    )
 
 def set_statistics_for_stage_item_input(
     team_index: int,
@@ -36,15 +83,22 @@ def set_statistics_for_stage_item_input(
 
     if has_won:
         stats[stage_item_input_id].wins += 1
-        swiss_score_diff = ranking.win_points
     elif was_draw:
         stats[stage_item_input_id].draws += 1
-        swiss_score_diff = ranking.draw_points
     else:
         stats[stage_item_input_id].losses += 1
-        swiss_score_diff = ranking.loss_points
 
-    if ranking.add_score_points:
+    if stage_item.type == StageType.ROUND_ROBIN:
+        swiss_score_diff = get_hockey_match_points(match, is_team1)
+    else:
+        if has_won:
+            swiss_score_diff = ranking.win_points
+        elif was_draw:
+            swiss_score_diff = ranking.draw_points
+        else:
+            swiss_score_diff = ranking.loss_points
+
+    if ranking.add_score_points and stage_item.type != StageType.ROUND_ROBIN:
         swiss_score_diff += (
             match.stage_item_input1_score if is_team1 else match.stage_item_input2_score
         )

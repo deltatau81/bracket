@@ -10,6 +10,12 @@ export interface MatchInterface {
   created: string;
   stage_item_input1_score: number;
   stage_item_input2_score: number;
+  stage_item_input1_half1_score: number;
+  stage_item_input2_half1_score: number;
+  stage_item_input1_half2_score: number;
+  stage_item_input2_half2_score: number;
+  stage_item_input1_penalty_score: number;
+  stage_item_input2_penalty_score: number;
   stage_item_input1: StageItemInput | null;
   stage_item_input2: StageItemInput | null;
   stage_item_input1_winner_from_match_id: number | null;
@@ -30,8 +36,12 @@ export interface MatchInterface {
 export interface MatchBodyInterface {
   id: number;
   round_id: number;
-  stage_item_input1_score: number;
-  stage_item_input2_score: number;
+  stage_item_input1_half1_score: number;
+  stage_item_input2_half1_score: number;
+  stage_item_input1_half2_score: number;
+  stage_item_input2_half2_score: number;
+  stage_item_input1_penalty_score: number;
+  stage_item_input2_penalty_score: number;  
   court_id: number | null;
   start_time?: string | null;
   custom_duration_minutes: number | null;

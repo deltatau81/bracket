@@ -28,6 +28,12 @@ class MatchBaseInsertable(BaseModelORM):
     round_id: RoundId
     stage_item_input1_score: int
     stage_item_input2_score: int
+    stage_item_input1_half1_score: int = 0
+    stage_item_input2_half1_score: int = 0
+    stage_item_input1_half2_score: int = 0
+    stage_item_input2_half2_score: int = 0
+    stage_item_input1_penalty_score: int = 0
+    stage_item_input2_penalty_score: int = 0
     court_id: CourtId | None = None
     stage_item_input1_conflict: bool
     stage_item_input2_conflict: bool
@@ -99,8 +105,12 @@ class MatchWithDetailsDefinitive(Match):
 
 class MatchBody(BaseModelORM):
     round_id: RoundId
-    stage_item_input1_score: int = 0
-    stage_item_input2_score: int = 0
+    stage_item_input1_half1_score: int = 0
+    stage_item_input2_half1_score: int = 0
+    stage_item_input1_half2_score: int = 0
+    stage_item_input2_half2_score: int = 0
+    stage_item_input1_penalty_score: int = 0
+    stage_item_input2_penalty_score: int = 0
     court_id: CourtId | None = None
     start_time: datetime_utc | None = None
     custom_duration_minutes: int | None = None

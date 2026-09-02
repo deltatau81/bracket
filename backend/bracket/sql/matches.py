@@ -86,8 +86,18 @@ async def sql_update_match(match_id: MatchId, match: MatchBody, tournament: Tour
     query = """
         UPDATE matches
         SET round_id = :round_id,
-            stage_item_input1_score = :stage_item_input1_score,
-            stage_item_input2_score = :stage_item_input2_score,
+            stage_item_input1_score =
+                CAST(:stage_item_input1_half1_score AS INTEGER)
+                + CAST(:stage_item_input1_half2_score AS INTEGER),
+            stage_item_input2_score =
+                CAST(:stage_item_input2_half1_score AS INTEGER)
+                + CAST(:stage_item_input2_half2_score AS INTEGER),
+            stage_item_input1_half1_score = :stage_item_input1_half1_score,
+            stage_item_input2_half1_score = :stage_item_input2_half1_score,
+            stage_item_input1_half2_score = :stage_item_input1_half2_score,
+            stage_item_input2_half2_score = :stage_item_input2_half2_score,
+            stage_item_input1_penalty_score = :stage_item_input1_penalty_score,
+            stage_item_input2_penalty_score = :stage_item_input2_penalty_score,
             court_id = :court_id,
             start_time = COALESCE(:start_time, start_time),
             custom_duration_minutes = :custom_duration_minutes,
@@ -236,6 +246,12 @@ async def clear_scores_for_matches_in_stage_item(
         UPDATE matches
         SET stage_item_input1_score = 0,
             stage_item_input2_score = 0,
+            stage_item_input1_half1_score = 0,
+            stage_item_input2_half1_score = 0,
+            stage_item_input1_half2_score = 0,
+            stage_item_input2_half2_score = 0,
+            stage_item_input1_penalty_score = 0,
+            stage_item_input2_penalty_score = 0,
             status = 'PLANNED'
         FROM rounds
         JOIN stage_items ON rounds.stage_item_id = stage_items.id

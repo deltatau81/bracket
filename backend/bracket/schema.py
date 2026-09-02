@@ -148,6 +148,12 @@ matches = Table(
     Column("court_id", BigInteger, ForeignKey("courts.id"), nullable=True),
     Column("stage_item_input1_score", Integer, nullable=False),
     Column("stage_item_input2_score", Integer, nullable=False),
+    Column("stage_item_input1_half1_score", Integer, nullable=False, server_default="0"),
+    Column("stage_item_input2_half1_score", Integer, nullable=False, server_default="0"),
+    Column("stage_item_input1_half2_score", Integer, nullable=False, server_default="0"),
+    Column("stage_item_input2_half2_score", Integer, nullable=False, server_default="0"),
+    Column("stage_item_input1_penalty_score", Integer, nullable=False, server_default="0"),
+    Column("stage_item_input2_penalty_score", Integer, nullable=False, server_default="0"), 
     Column("status", String(20), nullable=False, server_default="PLANNED"),
     CheckConstraint(
         "status IN ('PLANNED', 'RUNNING', 'FINISHED')",

@@ -51,6 +51,36 @@ function combineStartDateAndTime(date: Date | null, time: string): string | null
   ).toISOString();
 }
 
+function getPartPoints(
+  teamScore: number,
+  opponentScore: number,
+  winPoints: number,
+  drawPoints: number
+): number {
+  if (teamScore > opponentScore) return winPoints;
+  if (teamScore === opponentScore) return drawPoints;
+  return 0;
+}
+
+function getHockeyPoints(
+  half1Team: number,
+  half1Opponent: number,
+  half2Team: number,
+  half2Opponent: number,
+  penaltyTeam: number,
+  penaltyOpponent: number
+): number {
+  return (
+    getPartPoints(half1Team, half1Opponent, 2, 1) +
+    getPartPoints(half2Team, half2Opponent, 2, 1) +
+    getPartPoints(penaltyTeam, penaltyOpponent, 1, 0.5)
+  );
+}
+
+function formatHockeyPoints(points: number): string {
+  return Number.isInteger(points) ? `${points}` : points.toFixed(1).replace('.', ',');
+}
+
 function MatchDeleteButton({
   tournamentData,
   match,
@@ -106,8 +136,12 @@ function MatchModalForm({
 
   const form = useForm({
     initialValues: {
-      stage_item_input1_score: match.stage_item_input1_score,
-      stage_item_input2_score: match.stage_item_input2_score,
+      stage_item_input1_half1_score: match.stage_item_input1_half1_score,
+      stage_item_input2_half1_score: match.stage_item_input2_half1_score,
+      stage_item_input1_half2_score: match.stage_item_input1_half2_score,
+      stage_item_input2_half2_score: match.stage_item_input2_half2_score,
+      stage_item_input1_penalty_score: match.stage_item_input1_penalty_score,
+      stage_item_input2_penalty_score: match.stage_item_input2_penalty_score,     
       start_time_date: startTimeDate,
       start_time_time: startTimeDate ? format(startTimeDate, 'HH:mm') : '',
       custom_duration_minutes: match.custom_duration_minutes,
@@ -115,8 +149,18 @@ function MatchModalForm({
     },
 
     validate: {
-      stage_item_input1_score: (value) => (value >= 0 ? null : t('negative_score_validation')),
-      stage_item_input2_score: (value) => (value >= 0 ? null : t('negative_score_validation')),
+      stage_item_input1_half1_score: (value) =>
+        value >= 0 ? null : t('negative_score_validation'),
+      stage_item_input2_half1_score: (value) =>
+        value >= 0 ? null : t('negative_score_validation'),
+      stage_item_input1_half2_score: (value) =>
+        value >= 0 ? null : t('negative_score_validation'),
+      stage_item_input2_half2_score: (value) =>
+        value >= 0 ? null : t('negative_score_validation'),
+      stage_item_input1_penalty_score: (value) =>
+        value >= 0 ? null : t('negative_score_validation'),
+      stage_item_input2_penalty_score: (value) =>
+        value >= 0 ? null : t('negative_score_validation'),    
       custom_duration_minutes: (value) =>
         value == null || value >= 0 ? null : t('negative_match_duration_validation'),
       custom_margin_minutes: (value) =>
@@ -137,6 +181,32 @@ function MatchModalForm({
   const team1Name = formatMatchInput1(t, stageItemsLookup, matchesLookup, match);
   const team2Name = formatMatchInput2(t, stageItemsLookup, matchesLookup, match);
 
+  const totalScore1 =
+    form.values.stage_item_input1_half1_score +
+    form.values.stage_item_input1_half2_score;
+
+  const totalScore2 =
+    form.values.stage_item_input2_half1_score +
+    form.values.stage_item_input2_half2_score;
+
+  const hockeyPoints1 = getHockeyPoints(
+    form.values.stage_item_input1_half1_score,
+    form.values.stage_item_input2_half1_score,
+    form.values.stage_item_input1_half2_score,
+    form.values.stage_item_input2_half2_score,
+    form.values.stage_item_input1_penalty_score,
+    form.values.stage_item_input2_penalty_score
+  );
+
+  const hockeyPoints2 = getHockeyPoints(
+    form.values.stage_item_input2_half1_score,
+    form.values.stage_item_input1_half1_score,
+    form.values.stage_item_input2_half2_score,
+    form.values.stage_item_input1_half2_score,
+    form.values.stage_item_input2_penalty_score,
+    form.values.stage_item_input1_penalty_score
+  );
+
   const currentMatch = match;
   async function changeStatus(status: MatchStatus) {
     const startTime = combineStartDateAndTime(
@@ -147,8 +217,12 @@ function MatchModalForm({
     const updatedMatch: MatchBodyInterface = {
       id: currentMatch.id,
       round_id: currentMatch.round_id,
-      stage_item_input1_score: form.values.stage_item_input1_score,
-      stage_item_input2_score: form.values.stage_item_input2_score,
+      stage_item_input1_half1_score: form.values.stage_item_input1_half1_score,
+      stage_item_input2_half1_score: form.values.stage_item_input2_half1_score,
+      stage_item_input1_half2_score: form.values.stage_item_input1_half2_score,
+      stage_item_input2_half2_score: form.values.stage_item_input2_half2_score,
+      stage_item_input1_penalty_score: form.values.stage_item_input1_penalty_score,
+      stage_item_input2_penalty_score: form.values.stage_item_input2_penalty_score,
       court_id: currentMatch.court_id,
       start_time: startTime,
       custom_duration_minutes: customDurationEnabled
@@ -197,8 +271,12 @@ function MatchModalForm({
           const updatedMatch: MatchBodyInterface = {
             id: match.id,
             round_id: match.round_id,
-            stage_item_input1_score: values.stage_item_input1_score,
-            stage_item_input2_score: values.stage_item_input2_score,
+            stage_item_input1_half1_score: values.stage_item_input1_half1_score,
+            stage_item_input2_half1_score: values.stage_item_input2_half1_score,
+            stage_item_input1_half2_score: values.stage_item_input1_half2_score,
+            stage_item_input2_half2_score: values.stage_item_input2_half2_score,
+            stage_item_input1_penalty_score: values.stage_item_input1_penalty_score,
+            stage_item_input2_penalty_score: values.stage_item_input2_penalty_score,        
             court_id: match.court_id,
             start_time: startTime,
             custom_duration_minutes: customDurationEnabled ? values.custom_duration_minutes : null,
@@ -211,26 +289,139 @@ function MatchModalForm({
           setOpened(false);
         })}
       >
-        <NumberInput
-          withAsterisk
-          label={`${t('score_of_label')} ${team1Name}`}
-          placeholder={`${t('score_of_label')} ${team1Name}`}
-          disabled={match.status === 'PLANNED'}
-          {...form.getInputProps('stage_item_input1_score')}
-        />
-        <NumberInput
-          withAsterisk
-          mt="lg"
-          label={`${t('score_of_label')} ${team2Name}`}
-          placeholder={`${t('score_of_label')} ${team2Name}`}
-          disabled={match.status === 'PLANNED'}
-          {...form.getInputProps('stage_item_input2_score')}
-        />
+        <Text fw={600} mb="sm">
+          Ergebnis
+        </Text>
+
+        <Grid align="end">
+          <Grid.Col span={4}>
+            <Text size="sm" fw={500}>
+              Abschnitt
+            </Text>
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+            <Text size="sm" fw={500} ta="center">
+              {team1Name}
+            </Text>
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+            <Text size="sm" fw={500} ta="center">
+              {team2Name}
+            </Text>
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+            <Text size="sm">1. Halbzeit</Text>
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+            <NumberInput
+              min={0}
+              hideControls
+              disabled={match.status === 'PLANNED'}
+              {...form.getInputProps('stage_item_input1_half1_score')}
+            />
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+            <NumberInput
+              min={0}
+              hideControls
+              disabled={match.status === 'PLANNED'}
+              {...form.getInputProps('stage_item_input2_half1_score')}
+            />
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+           <Text size="sm">2. Halbzeit</Text>
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+            <NumberInput
+              min={0}
+              hideControls
+              disabled={match.status === 'PLANNED'}
+              {...form.getInputProps('stage_item_input1_half2_score')}
+            />
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+            <NumberInput
+              min={0}
+              hideControls
+              disabled={match.status === 'PLANNED'}
+              {...form.getInputProps('stage_item_input2_half2_score')}
+            />
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+            <Text size="sm">Penalty</Text>
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+            <NumberInput
+              min={0}
+              hideControls
+              disabled={match.status === 'PLANNED'}
+              {...form.getInputProps('stage_item_input1_penalty_score')}
+            />
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+            <NumberInput
+              min={0}
+              hideControls
+              disabled={match.status === 'PLANNED'}
+              {...form.getInputProps('stage_item_input2_penalty_score')}
+            />
+          </Grid.Col>
+
+        </Grid>
+
+        <Divider my="lg" />
+
+        <Grid>
+          <Grid.Col span={4}>
+            <Text fw={600}>Gesamttore</Text>
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+            <Text fw={600} ta="center">
+              {totalScore1}
+            </Text>
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+            <Text fw={600} ta="center">
+              {totalScore2}
+            </Text>
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+            <Text fw={600}>Spielpunkte</Text>
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+            <Text fw={600} ta="center">
+              {formatHockeyPoints(hockeyPoints1)}
+            </Text>
+          </Grid.Col>
+
+          <Grid.Col span={4}>
+            <Text fw={600} ta="center">
+              {formatHockeyPoints(hockeyPoints2)}
+            </Text>
+          </Grid.Col>
+        </Grid>
+
         <Divider mt="lg" />
 
         <Text size="sm" mt="lg">
           Startzeit
         </Text>
+        
         <Grid>
           <Grid.Col span={{ sm: 6 }}>
             <DatePickerInput
