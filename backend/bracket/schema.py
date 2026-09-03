@@ -183,6 +183,8 @@ players = Table(
     metadata,
     Column("id", BigInteger, primary_key=True, index=True),
     Column("name", String, nullable=False, index=True),
+    Column("first_name", String, nullable=True),
+    Column("last_name", String, nullable=True),
     Column("created", DateTimeTZ, nullable=False, server_default=func.now()),
     Column("tournament_id", BigInteger, ForeignKey("tournaments.id"), index=True, nullable=False),
     Column("elo_score", Float, nullable=False),
@@ -236,6 +238,8 @@ players_x_teams = Table(
     Column("id", BigInteger, primary_key=True, index=True),
     Column("player_id", BigInteger, ForeignKey("players.id", ondelete="CASCADE"), nullable=False),
     Column("team_id", BigInteger, ForeignKey("teams.id", ondelete="CASCADE"), nullable=False),
+    Column("number", Integer, nullable=True),
+    Column("position", String, nullable=True),
 )
 
 courts = Table(

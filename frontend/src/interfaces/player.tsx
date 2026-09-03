@@ -1,6 +1,8 @@
 export interface Player {
   id: number;
   name: string;
+  first_name: string | null;
+  last_name: string | null;
   active: boolean;
   created: string;
   tournament_id: number;
@@ -9,4 +11,11 @@ export interface Player {
   wins: number;
   draws: number;
   losses: number;
+}
+
+export type PlayerPosition = 'GK' | 'D' | 'F';
+
+export interface TeamPlayer extends Player {
+  number: number | null;
+  position: PlayerPosition | null;
 }

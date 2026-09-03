@@ -11,6 +11,7 @@ from bracket.database import database
 from bracket.logic.subscriptions import check_requirement
 from bracket.logic.teams import get_team_logo_path
 from bracket.models.db.player import PlayerBody
+from bracket.models.db.player_x_team import PlayerTeamAssignmentBody
 from bracket.models.db.team import (
     FullTeamWithPlayers,
     Team,
@@ -55,16 +56,41 @@ router = APIRouter()
 
 
 async def update_team_members(
-    team_id: TeamId, tournament_id: TournamentId, player_ids: set[PlayerId]
+    team_id: TeamId,
+    tournament_id: TournamentId,
+    player_ids: set[PlayerId],
+    player_assignments: list[PlayerTeamAssignmentBody] | None = None,
 ) -> None:
     [team] = await get_teams_with_members(tournament_id, team_id=team_id)
+    assignments = {assignment.player_id: assignment for assignment in player_assignments or []}
+
+    def assignment_values(assignment: PlayerTeamAssignmentBody) -> dict[str, int | str | None]:
+        return {"number": assignment.number, "position": assignment.position}
 
     # Add members to the team
     for player_id in player_ids:
         if player_id not in team.player_ids:
             await database.execute(
                 query=players_x_teams.insert(),
-                values={"team_id": team_id, "player_id": player_id},
+                values={
+                    "team_id": team_id,
+                    "player_id": player_id,
+                    **assignment_values(
+                        assignments.get(
+                            player_id, PlayerTeamAssignmentBody(player_id=player_id)
+                        )
+                    ),
+                },
+            )
+
+    for player_id, assignment in assignments.items():
+        if player_id in team.player_ids:
+            await database.execute(
+                query=players_x_teams.update().where(
+                    (players_x_teams.c.player_id == player_id)
+                    & (players_x_teams.c.team_id == team_id)
+                ),
+                values=assignment_values(assignment),
             )
 
     # Remove old members from the team
@@ -104,9 +130,11 @@ async def update_team_by_id(
         query=teams.update().where(
             (teams.c.id == team.id) & (teams.c.tournament_id == tournament_id)
         ),
-        values=team_body.model_dump(exclude={"player_ids"}),
+        values=team_body.model_dump(exclude={"player_ids", "player_assignments"}),
     )
-    await update_team_members(team.id, tournament_id, team_body.player_ids)
+    await update_team_members(
+        team.id, tournament_id, team_body.player_ids, team_body.player_assignments
+    )
 
     return SingleTeamResponse(
         data=assert_some(
@@ -193,12 +221,17 @@ async def create_team(
     last_record_id = await database.execute(
         query=teams.insert(),
         values=TeamInsertable(
-            **team_to_insert.model_dump(exclude={"player_ids"}),
+            **team_to_insert.model_dump(exclude={"player_ids", "player_assignments"}),
             created=datetime_utc.now(),
             tournament_id=tournament_id,
         ).model_dump(),
     )
-    await update_team_members(last_record_id, tournament_id, team_to_insert.player_ids)
+    await update_team_members(
+        last_record_id,
+        tournament_id,
+        team_to_insert.player_ids,
+        team_to_insert.player_assignments,
+    )
 
     team_result = await get_team_by_id(last_record_id, tournament_id)
     assert team_result is not None

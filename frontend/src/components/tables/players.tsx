@@ -4,12 +4,12 @@ import React from 'react';
 import { SWRResponse } from 'swr';
 
 import { Player } from '../../interfaces/player';
+import { TeamInterface } from '../../interfaces/team';
 import { TournamentMinimal } from '../../interfaces/tournament';
 import { deletePlayer } from '../../services/player';
 import DeleteButton from '../buttons/delete';
 import PlayerUpdateModal from '../modals/player_update_modal';
 import { NoContent } from '../no_content/empty_table_info';
-import { DateTime } from '../utils/datetime';
 import RequestErrorAlert from '../utils/error_alert';
 import { TableSkeletonSingleColumn } from '../utils/skeletons';
 import TableLayout, { TableState, ThNotSortable, ThSortable, sortTableEntries } from './table';
@@ -38,59 +38,87 @@ export default function PlayersTable({
   tournamentData,
   tableState,
   playerCount,
+  swrTeamsResponse,
 }: {
   swrPlayersResponse: SWRResponse;
   tournamentData: TournamentMinimal;
   tableState: TableState;
   playerCount: number;
+  swrTeamsResponse: SWRResponse;
 }) {
   const { t } = useTranslation();
   const players: Player[] =
     swrPlayersResponse.data != null ? swrPlayersResponse.data.data.players : [];
+  const teams: TeamInterface[] =
+    swrTeamsResponse.data != null ? swrTeamsResponse.data.data.teams : [];
+  const positionLabels = { GK: 'Torhüter', D: 'Verteidiger', F: 'Stürmer' };
 
   // const minELOScore = Math.min(...players.map((player) => Number(player.elo_score)));
   // const maxELOScore = Math.max(...players.map((player) => Number(player.elo_score)));
   // const maxSwissScore = Math.max(...players.map((player) => Number(player.swiss_score)));
 
-  if (swrPlayersResponse.error) return <RequestErrorAlert error={swrPlayersResponse.error} />;
+  if (swrPlayersResponse.error || swrTeamsResponse.error) {
+    return <RequestErrorAlert error={swrPlayersResponse.error || swrTeamsResponse.error} />;
+  }
 
-  if (swrPlayersResponse.isLoading) {
+  if (swrPlayersResponse.isLoading || swrTeamsResponse.isLoading) {
     return <TableSkeletonSingleColumn />;
   }
 
   const rows = players
     .sort((p1: Player, p2: Player) => sortTableEntries(p1, p2, tableState))
-    .map((player) => (
-      <Table.Tr key={player.id}>
-        <Table.Td>
-          {player.active ? (
-            <Badge color="green">Active</Badge>
-          ) : (
-            <Badge color="red">Inactive</Badge>
-          )}
-        </Table.Td>
-        <Table.Td>
-          <Text>{player.name}</Text>
-        </Table.Td>
-        <Table.Td>
-          <DateTime datetime={player.created} />
-        </Table.Td>
-        <Table.Td>
-          <PlayerUpdateModal
-            swrPlayersResponse={swrPlayersResponse}
-            tournament_id={tournamentData.id}
-            player={player}
-          />
-          <DeleteButton
-            onClick={async () => {
-              await deletePlayer(tournamentData.id, player.id);
-              await swrPlayersResponse.mutate();
-            }}
-            title={t('delete_player_button')}
-          />
-        </Table.Td>
-      </Table.Tr>
-    ));
+    .map((player) => {
+      const team = teams.find((candidate) =>
+        candidate.players.some((member) => member.id === player.id)
+      );
+      const teamPlayer = team?.players.find((member) => member.id === player.id);
+      const firstName = player.first_name ?? (player.last_name == null ? player.name : '-');
+
+      return (
+        <Table.Tr key={player.id}>
+          <Table.Td>
+            <Text>{teamPlayer?.number ?? '-'}</Text>
+          </Table.Td>
+          <Table.Td>
+            <Text>{firstName}</Text>
+          </Table.Td>
+          <Table.Td>
+            <Text>{player.last_name ?? '-'}</Text>
+          </Table.Td>
+          <Table.Td>
+            <Text>{team?.name ?? '-'}</Text>
+          </Table.Td>
+          <Table.Td>
+            <Text>{teamPlayer?.position == null ? '-' : positionLabels[teamPlayer.position]}</Text>
+          </Table.Td>
+          <Table.Td>
+            {player.active ? (
+              <Badge color="green">{t('active')}</Badge>
+            ) : (
+              <Badge color="red">{t('inactive')}</Badge>
+            )}
+          </Table.Td>
+          <Table.Td>
+            <PlayerUpdateModal
+              swrPlayersResponse={swrPlayersResponse}
+              tournament_id={tournamentData.id}
+              player={player}
+              swrTeamsResponse={swrTeamsResponse}
+              teams={teams}
+              team={team ?? null}
+            />
+            <DeleteButton
+              onClick={async () => {
+                await deletePlayer(tournamentData.id, player.id);
+                await swrPlayersResponse.mutate();
+                await swrTeamsResponse.mutate();
+              }}
+              title={t('delete_player_button')}
+            />
+          </Table.Td>
+        </Table.Tr>
+      );
+    });
 
   if (rows.length < 1) return <NoContent title={t('no_players_title')} />;
 
@@ -99,14 +127,15 @@ export default function PlayersTable({
       <TableLayout miw={900}>
         <Table.Thead>
           <Table.Tr>
-            <ThSortable state={tableState} field="active">
-              {t('status')}
-            </ThSortable>
+            <ThNotSortable>Nr.</ThNotSortable>
             <ThSortable state={tableState} field="name">
-              {t('title')}
+              Vorname
             </ThSortable>
-            <ThSortable state={tableState} field="created">
-              {t('created')}
+            <ThNotSortable>Nachname</ThNotSortable>
+            <ThNotSortable>Mannschaft</ThNotSortable>
+            <ThNotSortable>Position</ThNotSortable>
+            <ThSortable state={tableState} field="active">
+              Aktiv
             </ThSortable>
             <ThNotSortable>{null}</ThNotSortable>
           </Table.Tr>

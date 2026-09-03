@@ -49,6 +49,9 @@ async def test_create_player(
     body = {"name": "Some new name", "active": True}
     response = await send_tournament_request(HTTPMethod.POST, "players", auth_context, json=body)
     assert response["success"] is True
+    assert response["data"]["name"] == body["name"]
+    assert response["data"]["first_name"] is None
+    assert response["data"]["last_name"] is None
     await assert_row_count_and_clear(players, 1)
 
 

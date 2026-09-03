@@ -67,6 +67,10 @@ class SinglePlayerResponse(DataResponse[Player]):
     pass
 
 
+class CreatedPlayerResponse(SinglePlayerResponse):
+    success: bool = True
+
+
 class StagesWithStageItemsResponse(DataResponse[list[StageWithStageItems]]):
     pass
 
