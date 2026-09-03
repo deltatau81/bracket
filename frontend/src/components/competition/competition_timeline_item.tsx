@@ -23,15 +23,12 @@ const numberFormatter = new Intl.NumberFormat('de-DE', {
 function formatTime(timeMs: number | null): string {
   if (timeMs == null) return '–';
 
-  const minutes = Math.floor(timeMs / 60_000);
-  const seconds = (timeMs % 60_000) / 1000;
-  const formattedSeconds = seconds.toLocaleString('de-DE', {
-    minimumIntegerDigits: minutes > 0 ? 2 : 1,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 3,
-  });
+  const totalHundredths = Math.round(timeMs / 10);
+  const minutes = Math.floor(totalHundredths / 6000);
+  const seconds = Math.floor((totalHundredths % 6000) / 100);
+  const hundredths = totalHundredths % 100;
 
-  return minutes > 0 ? `${minutes}:${formattedSeconds} min` : `${formattedSeconds} s`;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')},${String(hundredths).padStart(2, '0')}`;
 }
 
 function formatMetric(

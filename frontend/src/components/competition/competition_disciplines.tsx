@@ -10,6 +10,7 @@ import {
   Stack,
   Table,
   Text,
+  TextInput,
   Title,
 } from '@mantine/core';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -43,6 +44,28 @@ function asNumberOrNull(value: NumericValue): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
+function formatTimeInput(timeMs: number | null | undefined): string {
+  if (timeMs == null) return '';
+
+  const totalHundredths = Math.round(timeMs / 10);
+  const minutes = Math.floor(totalHundredths / 6000);
+  const seconds = Math.floor((totalHundredths % 6000) / 100);
+  const hundredths = totalHundredths % 100;
+
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')},${String(hundredths).padStart(2, '0')}`;
+}
+
+function parseTimeInput(value: string): number | null {
+  const match = value.trim().match(/^(\d+):([0-5]\d),(\d{2})$/);
+  if (match == null) return null;
+
+  const minutes = Number(match[1]);
+  const seconds = Number(match[2]);
+  const hundredths = Number(match[3]);
+
+  return minutes * 60_000 + seconds * 1000 + hundredths * 10;
+}
+
 function ResultInput({
   metricType,
   value,
@@ -61,18 +84,6 @@ function ResultInput({
     size: 'xs' as const,
     hideControls: true,
   };
-
-  if (metricType === 'TIME') {
-    return (
-      <NumberInput
-        {...commonProps}
-        aria-label="Zeit in Sekunden"
-        placeholder="Sekunden"
-        decimalScale={3}
-        suffix=" s"
-      />
-    );
-  }
 
   return (
     <NumberInput
@@ -99,9 +110,7 @@ function TeamResultRow({
   result?: CompetitionResultInterface;
   mutateResults: () => Promise<unknown>;
 }) {
-  const [timeSeconds, setTimeSeconds] = useState<NumericValue>(
-    result?.time_ms != null ? result.time_ms / 1000 : ''
-  );
+  const [timeInput, setTimeInput] = useState(formatTimeInput(result?.time_ms));
   const [attempts, setAttempts] = useState<NumericValue>(result?.attempts ?? '');
   const [successes, setSuccesses] = useState<NumericValue>(result?.successes ?? '');
   const [place, setPlace] = useState<NumericValue>(result?.place ?? '');
@@ -109,7 +118,7 @@ function TeamResultRow({
 
   const requiredValue =
     discipline.metric_type === 'TIME'
-      ? asNumberOrNull(timeSeconds)
+      ? parseTimeInput(timeInput)
       : discipline.metric_type === 'MANUAL'
         ? asNumberOrNull(place)
         : asNumberOrNull(successes);
@@ -121,8 +130,8 @@ function TeamResultRow({
       team_id: team.id,
       place: discipline.metric_type === 'MANUAL' ? asNumberOrNull(place) : null,
       time_ms:
-        discipline.metric_type === 'TIME' && asNumberOrNull(timeSeconds) != null
-          ? Math.round((asNumberOrNull(timeSeconds) as number) * 1000)
+        discipline.metric_type === 'TIME'
+          ? parseTimeInput(timeInput)
           : null,
       attempts:
         discipline.metric_type === 'COUNT' || discipline.metric_type === 'RATIO'
@@ -153,10 +162,12 @@ function TeamResultRow({
       </Table.Td>
       {discipline.metric_type === 'TIME' ? (
         <Table.Td>
-          <ResultInput
-            metricType={discipline.metric_type}
-            value={timeSeconds}
-            onChange={setTimeSeconds}
+          <TextInput
+            value={timeInput}
+            onChange={(event) => setTimeInput(event.currentTarget.value)}
+            aria-label="Zeit in Minuten, Sekunden und Hundertstelsekunden"
+            placeholder="mm:ss,ms"
+            size="xs"
           />
         </Table.Td>
       ) : null}
@@ -279,10 +290,10 @@ function DisciplineResults({
   const teamsById = Object.fromEntries(teams.map((team) => [team.id, team]));
   const valueHeaders =
     discipline.metric_type === 'COUNT'
-      ? ['Erfolge', 'Versuche']
+      ? ['Tore', 'Torschüsse']
       : discipline.metric_type === 'RATIO'
-        ? ['Versuche', 'Erfolge']
-        : [discipline.metric_type === 'TIME' ? 'Zeit' : 'Platz'];
+        ? ['Torschüsse', 'Gehalten']
+        : [discipline.metric_type === 'TIME' ? 'Zeit (mm:ss,ms)' : 'Platz'];
 
   return (
     <Stack gap="md">
