@@ -14,27 +14,24 @@ import {
   Title,
 } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
-import { useDisclosure } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
+import { useDisclosure } from '@mantine/hooks';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
-import React, { useCallback, useState } from 'react';
+import React from 'react';
 
 import CompetitionDisciplines from '../../../components/competition/competition_disciplines';
-import TournamentOverallStandings from '../../../components/competition/tournament_overall_standings';
 import {
   getTournamentIdFromRouter,
   responseIsValid,
 } from '../../../components/utils/util';
 import { CompetitionInterface } from '../../../interfaces/competition';
-import { TeamInterface } from '../../../interfaces/team';
-import { getCompetitions, getTeams } from '../../../services/adapter';
+import { getCompetitions } from '../../../services/adapter';
 import {
   createCompetition,
   deleteCompetition,
   updateCompetition,
 } from '../../../services/competition';
 import TournamentLayout from '../_tournament_layout';
-
 
 function CompetitionCreateModal({
   tournament_id,
@@ -94,9 +91,7 @@ function CompetitionCreateModal({
         title="Competition anlegen"
         size="lg"
       >
-        <form
-          onSubmit={form.onSubmit(submit)}
-        >
+        <form onSubmit={form.onSubmit(submit)}>
           <Stack>
             <TextInput
               label="Name"
@@ -147,7 +142,6 @@ function CompetitionCreateModal({
     </>
   );
 }
-
 
 function CompetitionEditModal({
   tournament_id,
@@ -210,9 +204,7 @@ function CompetitionEditModal({
         title="Competition bearbeiten"
         size="lg"
       >
-        <form
-          onSubmit={form.onSubmit(submit)}
-        >
+        <form onSubmit={form.onSubmit(submit)}>
           <Stack>
             <TextInput
               label="Name"
@@ -264,31 +256,14 @@ function CompetitionEditModal({
   );
 }
 
-
 export default function Competitions() {
   const { tournamentData } =
     getTournamentIdFromRouter();
 
   const swrCompetitionsResponse =
     getCompetitions(tournamentData.id);
-  const swrTeamsResponse =
-    getTeams(tournamentData.id);
-  const [, setCompetitionPointsByCompetition] = useState<
-    Record<number, Record<number, number>>
-  >({});
-  const updateCompetitionPoints = useCallback(
-    (competitionId: number, pointsByTeam: Record<number, number>) => {
-      setCompetitionPointsByCompetition((current) => ({
-        ...current,
-        [competitionId]: pointsByTeam,
-      }));
-    },
-    []
-  );
 
-
-  if (swrCompetitionsResponse.error != null ||
-      swrTeamsResponse.error != null) {
+  if (swrCompetitionsResponse.error != null) {
     return (
       <TournamentLayout
         tournament_id={tournamentData.id}
@@ -306,11 +281,7 @@ export default function Competitions() {
     );
   }
 
-  if (!responseIsValid(
-    swrCompetitionsResponse
-  ) || !responseIsValid(
-    swrTeamsResponse
-  )) {
+  if (!responseIsValid(swrCompetitionsResponse)) {
     return (
       <TournamentLayout
         tournament_id={tournamentData.id}
@@ -323,8 +294,6 @@ export default function Competitions() {
 
   const competitions: CompetitionInterface[] =
     swrCompetitionsResponse.data.data;
-  const teams: TeamInterface[] =
-    swrTeamsResponse.data.data;
 
   return (
     <TournamentLayout
@@ -377,16 +346,12 @@ export default function Competitions() {
                       {competition.name}
                     </Title>
 
-                    {competition.description !=
-                      null &&
-                      competition.description !==
-                        '' && (
-                        <Text mt="xs">
-                          {
-                            competition.description
-                          }
-                        </Text>
-                      )}
+                    {competition.description != null &&
+                    competition.description !== '' && (
+                      <Text mt="xs">
+                        {competition.description}
+                      </Text>
+                    )}
 
                     <Text
                       size="sm"
@@ -404,9 +369,7 @@ export default function Competitions() {
                       c="dimmed"
                     >
                       Dauer:{' '}
-                      {
-                        competition.duration_minutes
-                      }{' '}
+                      {competition.duration_minutes}{' '}
                       Minuten
                     </Text>
                   </div>
@@ -424,24 +387,24 @@ export default function Competitions() {
                       color="red"
                       variant="light"
                       onClick={async () => {
-                      if (
-                        !window.confirm(
-                          `Competition "${competition.name}" wirklich löschen?`
-                        )
-                      ) {
-                        return;
-                      }
+                        if (
+                          !window.confirm(
+                            `Competition "${competition.name}" wirklich löschen?`
+                          )
+                        ) {
+                          return;
+                        }
 
-                      await deleteCompetition(
-                        tournamentData.id,
-                        competition.id
-                      );
+                        await deleteCompetition(
+                          tournamentData.id,
+                          competition.id
+                        );
 
-                      await swrCompetitionsResponse.mutate();
-                    }}
-                  >
-                    Löschen
-                  </Button>
+                        await swrCompetitionsResponse.mutate();
+                      }}
+                    >
+                      Löschen
+                    </Button>
                   </Group>
                 </Group>
 
@@ -449,8 +412,7 @@ export default function Competitions() {
                   <CompetitionDisciplines
                     tournamentId={tournamentData.id}
                     competitionId={competition.id}
-                    teams={teams}
-                    onPointsChange={updateCompetitionPoints}
+                    mode="manage"
                   />
                 </Stack>
               </Card>
@@ -458,11 +420,9 @@ export default function Competitions() {
           )}
         </Stack>
       )}
-      <TournamentOverallStandings tournamentId={tournamentData.id} />
     </TournamentLayout>
   );
 }
-
 
 export const getServerSideProps =
   async ({

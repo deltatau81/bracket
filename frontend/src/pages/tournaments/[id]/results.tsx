@@ -17,17 +17,35 @@ import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import React, { useState } from 'react';
 
+import CompetitionDisciplines from '../../../components/competition/competition_disciplines';
+import TournamentOverallStandings from '../../../components/competition/tournament_overall_standings';
 import MatchModal from '../../../components/modals/match_modal';
 import { NoContent } from '../../../components/no_content/empty_table_info';
 import { Time, formatTime } from '../../../components/utils/datetime';
 import { Translator } from '../../../components/utils/types';
 import { getTournamentIdFromRouter, responseIsValid } from '../../../components/utils/util';
+import { CompetitionInterface } from '../../../interfaces/competition';
 import { MatchInterface, formatMatchInput1, formatMatchInput2 } from '../../../interfaces/match';
-import { getCourts, getStages } from '../../../services/adapter';
-import { getMatchLookup, getStageItemLookup, stringToColour } from '../../../services/lookups';
+import { TeamInterface } from '../../../interfaces/team';
+import {
+  getCompetitions,
+  getCourts,
+  getStages,
+  getTeams,
+} from '../../../services/adapter';
+import {
+  getMatchLookup,
+  getStageItemLookup,
+  stringToColour,
+} from '../../../services/lookups';
 import TournamentLayout from '../_tournament_layout';
 
-function segmentPoints(score1: number, score2: number, winPoints: number, drawPoints: number) {
+function segmentPoints(
+  score1: number,
+  score2: number,
+  winPoints: number,
+  drawPoints: number
+) {
   if (score1 > score2) {
     return [winPoints, 0];
   }
@@ -68,7 +86,9 @@ function getGamePoints(match: MatchInterface) {
 }
 
 function formatPoints(points: number) {
-  return Number.isInteger(points) ? `${points}` : points.toFixed(1).replace('.', ',');
+  return Number.isInteger(points)
+    ? `${points}`
+    : points.toFixed(1).replace('.', ',');
 }
 
 function ScheduleRow({
@@ -153,7 +173,12 @@ function ScheduleRow({
           <Grid>
             <Grid.Col span="auto" pb="0rem">
               <Text fw={500}>
-                {formatMatchInput1(t, stageItemsLookup, matchesLookup, data.match)}
+                {formatMatchInput1(
+                  t,
+                  stageItemsLookup,
+                  matchesLookup,
+                  data.match
+                )}
               </Text>
             </Grid.Col>
 
@@ -170,7 +195,8 @@ function ScheduleRow({
                   textAlign: 'center',
                 }}
               >
-                {data.match.stage_item_input1_score} Tore / {formatPoints(gamePoints[0])} Pkt.
+                {data.match.stage_item_input1_score} Tore /{' '}
+                {formatPoints(gamePoints[0])} Pkt.
               </div>
             </Grid.Col>
           </Grid>
@@ -178,7 +204,12 @@ function ScheduleRow({
           <Grid mb="0rem">
             <Grid.Col span="auto" pb="0rem">
               <Text fw={500}>
-                {formatMatchInput2(t, stageItemsLookup, matchesLookup, data.match)}
+                {formatMatchInput2(
+                  t,
+                  stageItemsLookup,
+                  matchesLookup,
+                  data.match
+                )}
               </Text>
             </Grid.Col>
 
@@ -195,7 +226,8 @@ function ScheduleRow({
                   textAlign: 'center',
                 }}
               >
-                {data.match.stage_item_input2_score} Tore / {formatPoints(gamePoints[1])} Pkt.
+                {data.match.stage_item_input2_score} Tore /{' '}
+                {formatPoints(gamePoints[1])} Pkt.
               </div>
             </Grid.Col>
           </Grid>
@@ -220,8 +252,12 @@ function Schedule({
 
   const sortedMatches = matches
     .filter((m1: any) => m1.match.start_time != null)
-    .sort((m1: any, m2: any) => (m1.match.court?.name > m2.match.court?.name ? 1 : -1))
-    .sort((m1: any, m2: any) => (m1.match.start_time > m2.match.start_time ? 1 : -1));
+    .sort((m1: any, m2: any) =>
+      m1.match.court?.name > m2.match.court?.name ? 1 : -1
+    )
+    .sort((m1: any, m2: any) =>
+      m1.match.start_time > m2.match.start_time ? 1 : -1
+    );
 
   const rows: React.JSX.Element[] = [];
 
@@ -231,7 +267,10 @@ function Schedule({
     if (c < 1 || sortedMatches[c - 1].match.start_time) {
       const startTime = formatTime(data.match.start_time);
 
-      if (c < 1 || startTime !== formatTime(sortedMatches[c - 1].match.start_time)) {
+      if (
+        c < 1 ||
+        startTime !== formatTime(sortedMatches[c - 1].match.start_time)
+      ) {
         rows.push(
           <Center mt="md" key={`time-${c}`}>
             <Text size="xl" fw={800}>
@@ -294,6 +333,8 @@ export default function SchedulePage() {
 
   const swrStagesResponse = getStages(tournamentData.id);
   const swrCourtsResponse = getCourts(tournamentData.id);
+  const swrCompetitionsResponse = getCompetitions(tournamentData.id);
+  const swrTeamsResponse = getTeams(tournamentData.id);
 
   const stageItemsLookup = responseIsValid(swrStagesResponse)
     ? getStageItemLookup(swrStagesResponse)
@@ -305,6 +346,14 @@ export default function SchedulePage() {
 
   if (!responseIsValid(swrStagesResponse)) return null;
   if (!responseIsValid(swrCourtsResponse)) return null;
+  if (!responseIsValid(swrCompetitionsResponse)) return null;
+  if (!responseIsValid(swrTeamsResponse)) return null;
+
+  const competitions: CompetitionInterface[] =
+    swrCompetitionsResponse.data.data;
+
+  const teams: TeamInterface[] =
+    swrTeamsResponse.data.data;
 
   function openMatchModal(matchToOpen: MatchInterface) {
     setMatch(matchToOpen);
@@ -341,11 +390,54 @@ export default function SchedulePage() {
           openMatchModal={openMatchModal}
         />
       </Center>
+
+      {competitions.length > 0 ? (
+        <Stack mt="xl" gap="lg">
+          <Title order={2}>
+            Technikwettbewerb
+          </Title>
+
+          {competitions.map((competition) => (
+            <Card
+              key={competition.id}
+              withBorder
+              radius="md"
+              padding="lg"
+            >
+              <Title order={3}>
+                {competition.name}
+              </Title>
+
+              {competition.description != null &&
+              competition.description !== '' ? (
+                <Text mt="xs" mb="md" c="dimmed">
+                  {competition.description}
+                </Text>
+              ) : null}
+
+              <CompetitionDisciplines
+                tournamentId={tournamentData.id}
+                competitionId={competition.id}
+                teams={teams}
+                mode="results"
+              />
+            </Card>
+          ))}
+
+          <TournamentOverallStandings
+            tournamentId={tournamentData.id}
+          />
+        </Stack>
+      ) : null}
     </TournamentLayout>
   );
 }
 
-export const getServerSideProps = async ({ locale }: { locale: string }) => ({
+export const getServerSideProps = async ({
+  locale,
+}: {
+  locale: string;
+}) => ({
   props: {
     ...(await serverSideTranslations(locale, ['common'])),
   },
