@@ -105,8 +105,16 @@ async def update_tournament_by_id(
     tournament_id: TournamentId,
     tournament_body: TournamentUpdateBody,
     _: UserPublic = Depends(user_authenticated_for_tournament),
-    __: Tournament = Depends(disallow_archived_tournament),
+    tournament: Tournament = Depends(disallow_archived_tournament),
 ) -> SuccessResponse:
+    if (
+        tournament_body.hockey_mode is not None
+        and tournament_body.hockey_mode is not tournament.hockey_mode
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Hockey mode cannot be changed after tournament creation",
+        )
     with check_unique_constraint_violation({UniqueIndex.ix_tournaments_dashboard_endpoint}):
         await sql_update_tournament(tournament_id, tournament_body)
 

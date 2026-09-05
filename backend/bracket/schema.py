@@ -37,6 +37,7 @@ tournaments = Table(
     Column("dashboard_endpoint", String, nullable=True, index=True, unique=True),
     Column("players_can_be_in_multiple_teams", Boolean, nullable=False, server_default="f"),
     Column("auto_assign_courts", Boolean, nullable=False, server_default="f"),
+    Column("hockey_mode", String(20), nullable=False, server_default="COMPETITION"),
     Column("duration_minutes", Integer, nullable=False, server_default="15"),
     Column("margin_minutes", Integer, nullable=False, server_default="5"),
     Column(
@@ -49,6 +50,10 @@ tournaments = Table(
         nullable=False,
         server_default="OPEN",
         index=True,
+    ),
+    CheckConstraint(
+        "hockey_mode IN ('COMPETITION', 'STANDARD')",
+        name="ck_tournaments_hockey_mode",
     ),
 )
 
@@ -240,6 +245,62 @@ players_x_teams = Table(
     Column("team_id", BigInteger, ForeignKey("teams.id", ondelete="CASCADE"), nullable=False),
     Column("number", Integer, nullable=True),
     Column("position", String, nullable=True),
+)
+
+match_events = Table(
+    "match_events",
+    metadata,
+    Column("id", BigInteger, primary_key=True, index=True),
+    Column(
+        "match_id",
+        BigInteger,
+        ForeignKey("matches.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    ),
+    Column("team_id", BigInteger, ForeignKey("teams.id"), nullable=False),
+    Column("event_type", String(20), nullable=False),
+    Column("period", String(20), nullable=False),
+    Column("game_time_seconds", Integer, nullable=False),
+    Column(
+        "player_id",
+        BigInteger,
+        ForeignKey("players.id", ondelete="SET NULL"),
+        nullable=True,
+    ),
+    Column("player_number", Integer, nullable=True),
+    Column("player_name", String, nullable=True),
+    Column(
+        "assist1_player_id",
+        BigInteger,
+        ForeignKey("players.id", ondelete="SET NULL"),
+        nullable=True,
+    ),
+    Column("assist1_number", Integer, nullable=True),
+    Column("assist1_name", String, nullable=True),
+    Column(
+        "assist2_player_id",
+        BigInteger,
+        ForeignKey("players.id", ondelete="SET NULL"),
+        nullable=True,
+    ),
+    Column("assist2_number", Integer, nullable=True),
+    Column("assist2_name", String, nullable=True),
+    Column("penalty_type", String, nullable=True),
+    Column("penalty_minutes", Integer, nullable=True),
+    Column("infraction", String, nullable=True),
+    Column("sort_order", Integer, nullable=False, server_default="0"),
+    Column("created", DateTimeTZ, nullable=False, server_default=func.now()),
+    CheckConstraint("event_type IN ('GOAL', 'PENALTY')", name="ck_match_events_event_type"),
+    CheckConstraint(
+        "period IN ('HALF1', 'HALF2', 'PERIOD1', 'PERIOD2', 'PERIOD3', 'OVERTIME')",
+        name="ck_match_events_period",
+    ),
+    CheckConstraint("game_time_seconds >= 0", name="ck_match_events_game_time_positive"),
+    CheckConstraint(
+        "penalty_minutes IS NULL OR penalty_minutes >= 0",
+        name="ck_match_events_penalty_minutes_positive",
+    ),
 )
 
 courts = Table(

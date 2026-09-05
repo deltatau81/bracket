@@ -1,4 +1,5 @@
 import { getTournamentEndpointFromRouter } from '../components/utils/util';
+import { HockeyMode } from '../interfaces/tournament';
 import { createAxios, getTournamentByEndpointName, handleRequestError } from './adapter';
 
 export async function createTournament(
@@ -10,7 +11,8 @@ export async function createTournament(
   auto_assign_courts: boolean,
   start_time: string,
   duration_minutes: number,
-  margin_minutes: number
+  margin_minutes: number,
+  hockey_mode: HockeyMode
 ) {
   return createAxios()
     .post('tournaments', {
@@ -23,6 +25,7 @@ export async function createTournament(
       start_time,
       duration_minutes,
       margin_minutes,
+      hockey_mode,
     })
     .catch((response: any) => handleRequestError(response));
 }

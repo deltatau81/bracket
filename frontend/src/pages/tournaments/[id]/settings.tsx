@@ -189,6 +189,21 @@ function GeneralTournamentForm({
         {...form.getInputProps('club_id')}
       />
 
+      <TextInput
+        label="Turniermodus"
+        description={
+          'Der Modus wird nach der Turniererstellung nur angezeigt, da ein Wechsel ' +
+          'bestehende Spiele und Ereignisse ungültig machen könnte.'
+        }
+        value={
+          tournament.hockey_mode === 'STANDARD'
+            ? 'Standard-Eishockey'
+            : 'Turnier mit Technikwettbewerb'
+        }
+        disabled
+        mt="lg"
+      />
+
       <Fieldset legend={t('planning_of_matches_legend')} mt="lg" radius="md">
         <Text fz="sm">{t('planning_of_matches_description')}</Text>
         <Grid>

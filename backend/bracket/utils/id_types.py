@@ -3,6 +3,7 @@ from typing import NewType
 ClubId = NewType("ClubId", int)
 CourtId = NewType("CourtId", int)
 MatchId = NewType("MatchId", int)
+MatchEventId = NewType("MatchEventId", int)
 PlayerId = NewType("PlayerId", int)
 PlayerXTeamId = NewType("PlayerXTeamId", int)
 RankingId = NewType("RankingId", int)

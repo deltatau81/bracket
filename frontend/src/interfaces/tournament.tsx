@@ -1,4 +1,5 @@
 export type TournamentStatus = 'OPEN' | 'ARCHIVED';
+export type HockeyMode = 'COMPETITION' | 'STANDARD';
 
 export type TournamentFilter = 'ALL' | TournamentStatus;
 
@@ -16,6 +17,7 @@ export interface Tournament {
   duration_minutes: number;
   margin_minutes: number;
   status: TournamentStatus;
+  hockey_mode: HockeyMode;
 }
 export interface TournamentMinimal {
   id: number;

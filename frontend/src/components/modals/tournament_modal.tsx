@@ -18,7 +18,7 @@ import React, { useState } from 'react';
 import { SWRResponse } from 'swr';
 
 import { Club } from '../../interfaces/club';
-import { Tournament } from '../../interfaces/tournament';
+import { HockeyMode, Tournament } from '../../interfaces/tournament';
 import { getBaseApiUrl, getClubs } from '../../services/adapter';
 import { createTournament } from '../../services/tournament';
 import SaveButton from '../buttons/save';
@@ -55,6 +55,7 @@ function GeneralTournamentForm({
       auto_assign_courts: true,
       duration_minutes: 10,
       margin_minutes: 5,
+      hockey_mode: 'COMPETITION' as HockeyMode,
     },
 
     validate: {
@@ -81,7 +82,8 @@ function GeneralTournamentForm({
           values.auto_assign_courts,
           values.start_time.toISOString(),
           values.duration_minutes,
-          values.margin_minutes
+          values.margin_minutes,
+          values.hockey_mode
         );
         await swrTournamentsResponse.mutate();
         setOpened(false);
@@ -103,6 +105,22 @@ function GeneralTournamentForm({
         limit={20}
         style={{ marginTop: 10 }}
         {...form.getInputProps('club_id')}
+      />
+
+      <Select
+        withAsterisk
+        label="Turniermodus"
+        description={
+          'Turnier mit Technikwettbewerb: 2 Halbzeiten + Penalty-Wertung + ' +
+          'Technikwettbewerb. Standard-Eishockey: 3 Drittel, später ' +
+          'Overtime/Penalty nach Spielregeln.'
+        }
+        data={[
+          { value: 'COMPETITION', label: 'Turnier mit Technikwettbewerb' },
+          { value: 'STANDARD', label: 'Standard-Eishockey' },
+        ]}
+        mt="lg"
+        {...form.getInputProps('hockey_mode')}
       />
 
       <TextInput

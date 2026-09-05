@@ -5,7 +5,7 @@ import pytest
 
 from bracket.database import database
 from bracket.logic.tournaments import sql_delete_tournament_completely
-from bracket.models.db.tournament import Tournament, TournamentStatus
+from bracket.models.db.tournament import HockeyMode, Tournament, TournamentStatus
 from bracket.schema import tournaments
 from bracket.sql.tournaments import sql_delete_tournament, sql_get_tournament_by_endpoint_name
 from bracket.utils.db import fetch_one_parsed_certain
@@ -41,6 +41,7 @@ async def test_tournaments_endpoint(
                 "duration_minutes": 10,
                 "margin_minutes": 5,
                 "status": "OPEN",
+                "hockey_mode": "COMPETITION",
             }
         ],
     }
@@ -67,6 +68,7 @@ async def test_tournament_endpoint(
             "duration_minutes": 10,
             "margin_minutes": 5,
             "status": "OPEN",
+            "hockey_mode": "COMPETITION",
         },
     }
 
@@ -94,6 +96,38 @@ async def test_create_tournament(
 
     # Cleanup
     tournament = assert_some(await sql_get_tournament_by_endpoint_name(dashboard_endpoint))
+    assert tournament.hockey_mode is HockeyMode.COMPETITION
+    await sql_delete_tournament_completely(tournament.id)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_create_standard_tournament(
+    startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext
+) -> None:
+    dashboard_endpoint = "standard-hockey-test"
+    body = {
+        "name": "Standard Hockey",
+        "start_time": DUMMY_MOCK_TIME.isoformat().replace("+00:00", "Z"),
+        "club_id": auth_context.club.id,
+        "dashboard_public": True,
+        "dashboard_endpoint": dashboard_endpoint,
+        "players_can_be_in_multiple_teams": True,
+        "auto_assign_courts": True,
+        "duration_minutes": 12,
+        "margin_minutes": 3,
+        "hockey_mode": "STANDARD",
+    }
+    assert (
+        await send_auth_request(HTTPMethod.POST, "tournaments", auth_context, json=body)
+        == SUCCESS_RESPONSE
+    )
+
+    tournament = assert_some(await sql_get_tournament_by_endpoint_name(dashboard_endpoint))
+    assert tournament.hockey_mode is HockeyMode.STANDARD
+    response = await send_auth_request(
+        HTTPMethod.GET, f"tournaments/{tournament.id}", auth_context, {}
+    )
+    assert response["data"]["hockey_mode"] == "STANDARD"
     await sql_delete_tournament_completely(tournament.id)
 
 
@@ -141,6 +175,82 @@ async def test_update_tournament(
     )
     assert updated_tournament.name == body["name"]
     assert updated_tournament.dashboard_public == body["dashboard_public"]
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_hockey_mode_cannot_be_changed_after_creation(
+    startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext
+) -> None:
+    update_body = {
+        "name": "Updated standard tournament",
+        "start_time": DUMMY_MOCK_TIME.isoformat().replace("+00:00", "Z"),
+        "dashboard_public": False,
+        "players_can_be_in_multiple_teams": True,
+        "auto_assign_courts": True,
+        "duration_minutes": 12,
+        "margin_minutes": 3,
+    }
+    async with inserted_tournament(
+        DUMMY_TOURNAMENT.model_copy(
+            update={
+                "club_id": auth_context.club.id,
+                "dashboard_endpoint": None,
+                "hockey_mode": HockeyMode.STANDARD,
+            }
+        )
+    ) as standard_tournament:
+        standard_context = auth_context.model_copy(update={"tournament": standard_tournament})
+
+        assert (
+            await send_tournament_request(
+                HTTPMethod.PUT, "", standard_context, json=update_body
+            )
+            == SUCCESS_RESPONSE
+        )
+        stored = await fetch_one_parsed_certain(
+            database,
+            Tournament,
+            tournaments.select().where(tournaments.c.id == standard_tournament.id),
+        )
+        assert stored.hockey_mode is HockeyMode.STANDARD
+
+        assert (
+            await send_tournament_request(
+                HTTPMethod.PUT,
+                "",
+                standard_context,
+                json=update_body | {"hockey_mode": "STANDARD"},
+            )
+            == SUCCESS_RESPONSE
+        )
+
+        response = await send_tournament_request(
+            HTTPMethod.PUT,
+            "",
+            standard_context,
+            json=update_body | {"hockey_mode": "COMPETITION"},
+        )
+        assert "cannot be changed" in response["detail"]
+        stored = await fetch_one_parsed_certain(
+            database,
+            Tournament,
+            tournaments.select().where(tournaments.c.id == standard_tournament.id),
+        )
+        assert stored.hockey_mode is HockeyMode.STANDARD
+
+    response = await send_tournament_request(
+        HTTPMethod.PUT,
+        "",
+        auth_context,
+        json=update_body | {"hockey_mode": "STANDARD"},
+    )
+    assert "cannot be changed" in response["detail"]
+    stored = await fetch_one_parsed_certain(
+        database,
+        Tournament,
+        tournaments.select().where(tournaments.c.id == auth_context.tournament.id),
+    )
+    assert stored.hockey_mode is HockeyMode.COMPETITION
 
 
 @pytest.mark.asyncio(loop_scope="session")

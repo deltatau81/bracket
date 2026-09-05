@@ -14,6 +14,11 @@ class TournamentStatus(EnumAutoStr):
     ARCHIVED = auto()
 
 
+class HockeyMode(EnumAutoStr):
+    COMPETITION = auto()
+    STANDARD = auto()
+
+
 class TournamentInsertable(BaseModelORM):
     club_id: ClubId
     name: str
@@ -27,6 +32,7 @@ class TournamentInsertable(BaseModelORM):
     players_can_be_in_multiple_teams: bool
     auto_assign_courts: bool
     status: TournamentStatus = TournamentStatus.OPEN
+    hockey_mode: HockeyMode = HockeyMode.COMPETITION
 
 
 class Tournament(TournamentInsertable):
@@ -42,6 +48,7 @@ class TournamentUpdateBody(BaseModelORM):
     auto_assign_courts: bool
     duration_minutes: int = Field(..., ge=1)
     margin_minutes: int = Field(..., ge=0)
+    hockey_mode: HockeyMode | None = None
 
 
 class TournamentChangeStatusBody(BaseModelORM):
