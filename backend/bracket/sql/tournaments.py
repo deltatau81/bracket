@@ -66,6 +66,82 @@ async def sql_delete_tournament(tournament_id: TournamentId) -> None:
     await database.fetch_one(query=query, values={"tournament_id": tournament_id})
 
 
+async def sql_delete_tournament_owned_data(tournament_id: TournamentId) -> None:
+    match_ids = """
+        SELECT matches.id
+        FROM matches
+        JOIN rounds ON rounds.id = matches.round_id
+        JOIN stage_items ON stage_items.id = rounds.stage_item_id
+        JOIN stages ON stages.id = stage_items.stage_id
+        WHERE stages.tournament_id = :tournament_id
+    """
+    values = {"tournament_id": tournament_id}
+
+    await database.execute(
+        query=f"""
+            UPDATE matches
+            SET
+                stage_item_input1_winner_from_match_id = CASE
+                    WHEN stage_item_input1_winner_from_match_id IN ({match_ids}) THEN NULL
+                    ELSE stage_item_input1_winner_from_match_id
+                END,
+                stage_item_input2_winner_from_match_id = CASE
+                    WHEN stage_item_input2_winner_from_match_id IN ({match_ids}) THEN NULL
+                    ELSE stage_item_input2_winner_from_match_id
+                END
+            WHERE stage_item_input1_winner_from_match_id IN ({match_ids})
+               OR stage_item_input2_winner_from_match_id IN ({match_ids})
+        """,
+        values=values,
+    )
+    await database.execute(
+        query=f"DELETE FROM matches WHERE matches.id IN ({match_ids})", values=values
+    )
+    await database.execute(
+        query="""
+            DELETE FROM rounds
+            WHERE rounds.stage_item_id IN (
+                SELECT stage_items.id
+                FROM stage_items
+                JOIN stages ON stages.id = stage_items.stage_id
+                WHERE stages.tournament_id = :tournament_id
+            )
+        """,
+        values=values,
+    )
+    await database.execute(
+        query="DELETE FROM stage_item_inputs WHERE tournament_id = :tournament_id",
+        values=values,
+    )
+    await database.execute(
+        query="""
+            DELETE FROM stage_items
+            WHERE stage_items.stage_id IN (
+                SELECT stages.id
+                FROM stages
+                WHERE stages.tournament_id = :tournament_id
+            )
+        """,
+        values=values,
+    )
+    await database.execute(
+        query="DELETE FROM stages WHERE tournament_id = :tournament_id", values=values
+    )
+    await database.execute(
+        query="DELETE FROM rankings WHERE tournament_id = :tournament_id", values=values
+    )
+    await database.execute(
+        query="DELETE FROM players WHERE tournament_id = :tournament_id", values=values
+    )
+    await database.execute(
+        query="DELETE FROM teams WHERE tournament_id = :tournament_id", values=values
+    )
+    await database.execute(
+        query="DELETE FROM courts WHERE tournament_id = :tournament_id", values=values
+    )
+    await sql_delete_tournament(tournament_id)
+
+
 async def sql_update_tournament(
     tournament_id: TournamentId, tournament: TournamentUpdateBody
 ) -> None:

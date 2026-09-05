@@ -1,3 +1,5 @@
+from contextlib import AsyncExitStack
+
 import aiofiles
 import aiofiles.os
 import aiohttp
@@ -12,10 +14,40 @@ from bracket.models.db.tournament import (
     Tournament,
     TournamentStatus,
 )
-from bracket.schema import tournaments
+from bracket.models.db.stage_item_inputs import StageItemInputInsertable
+from bracket.schema import (
+    competition_disciplines,
+    competition_pairings,
+    competition_results,
+    competition_scoring,
+    competitions,
+    courts,
+    match_events,
+    matches,
+    players,
+    players_x_teams,
+    rankings,
+    rounds,
+    stage_item_inputs,
+    stage_items,
+    stages,
+    teams,
+    tournaments,
+)
 from bracket.sql.tournaments import sql_delete_tournament, sql_get_tournament_by_endpoint_name
 from bracket.utils.db import fetch_one_parsed_certain
-from bracket.utils.dummy_records import DUMMY_MOCK_TIME, DUMMY_TOURNAMENT
+from bracket.utils.dummy_records import (
+    DUMMY_MATCH1,
+    DUMMY_MOCK_TIME,
+    DUMMY_COURT1,
+    DUMMY_PLAYER1,
+    DUMMY_RANKING1,
+    DUMMY_ROUND1,
+    DUMMY_STAGE1,
+    DUMMY_STAGE_ITEM1,
+    DUMMY_TEAM1,
+    DUMMY_TOURNAMENT,
+)
 from bracket.utils.http import HTTPMethod
 from bracket.utils.types import assert_some
 from tests.integration_tests.api.shared import (
@@ -24,7 +56,18 @@ from tests.integration_tests.api.shared import (
     send_tournament_request,
 )
 from tests.integration_tests.models import AuthContext
-from tests.integration_tests.sql import inserted_tournament
+from tests.integration_tests.sql import (
+    inserted_court,
+    inserted_match,
+    inserted_player_in_team,
+    inserted_ranking,
+    inserted_round,
+    inserted_stage,
+    inserted_stage_item,
+    inserted_stage_item_input,
+    inserted_team,
+    inserted_tournament,
+)
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -455,6 +498,310 @@ async def test_delete_tournament(
         )
 
     await sql_delete_tournament(tournament_inserted.id)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_delete_api_created_tournament_with_automatic_ranking(
+    startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext
+) -> None:
+    endpoint = "delete-fresh-tournament"
+    body = {
+        "name": "Delete fresh tournament",
+        "start_time": DUMMY_MOCK_TIME.isoformat().replace("+00:00", "Z"),
+        "club_id": auth_context.club.id,
+        "dashboard_public": True,
+        "dashboard_endpoint": endpoint,
+        "players_can_be_in_multiple_teams": True,
+        "auto_assign_courts": True,
+        "duration_minutes": 10,
+        "margin_minutes": 5,
+    }
+    assert (
+        await send_auth_request(HTTPMethod.POST, "tournaments", auth_context, json=body)
+        == SUCCESS_RESPONSE
+    )
+    tournament = assert_some(await sql_get_tournament_by_endpoint_name(endpoint))
+    ranking_rows = await database.fetch_all(
+        rankings.select().where(rankings.c.tournament_id == tournament.id)
+    )
+    assert len(ranking_rows) == 1
+
+    assert (
+        await send_tournament_request(
+            HTTPMethod.DELETE,
+            "",
+            auth_context.model_copy(update={"tournament": tournament}),
+        )
+        == SUCCESS_RESPONSE
+    )
+    assert await database.fetch_one(
+        tournaments.select().where(tournaments.c.id == tournament.id)
+    ) is None
+    assert await database.fetch_all(
+        rankings.select().where(rankings.c.tournament_id == tournament.id)
+    ) == []
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_delete_complete_tournament_preserves_other_tournament(
+    startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext
+) -> None:
+    tournament_data = DUMMY_TOURNAMENT.model_copy(
+        update={"club_id": auth_context.club.id, "dashboard_endpoint": None}
+    )
+    async with AsyncExitStack() as stack:
+        tournament = await stack.enter_async_context(inserted_tournament(tournament_data))
+        ranking = await stack.enter_async_context(
+            inserted_ranking(DUMMY_RANKING1.model_copy(update={"tournament_id": tournament.id}))
+        )
+        stage = await stack.enter_async_context(
+            inserted_stage(DUMMY_STAGE1.model_copy(update={"tournament_id": tournament.id}))
+        )
+        stage_item = await stack.enter_async_context(
+            inserted_stage_item(
+                DUMMY_STAGE_ITEM1.model_copy(
+                    update={"stage_id": stage.id, "ranking_id": ranking.id}
+                )
+            )
+        )
+        round_ = await stack.enter_async_context(
+            inserted_round(DUMMY_ROUND1.model_copy(update={"stage_item_id": stage_item.id}))
+        )
+        team = await stack.enter_async_context(
+            inserted_team(DUMMY_TEAM1.model_copy(update={"tournament_id": tournament.id}))
+        )
+        player = await stack.enter_async_context(
+            inserted_player_in_team(
+                DUMMY_PLAYER1.model_copy(update={"tournament_id": tournament.id}), team.id
+            )
+        )
+        court = await stack.enter_async_context(
+            inserted_court(DUMMY_COURT1.model_copy(update={"tournament_id": tournament.id}))
+        )
+        stage_input = await stack.enter_async_context(
+            inserted_stage_item_input(
+                StageItemInputInsertable(
+                    slot=0,
+                    tournament_id=tournament.id,
+                    stage_item_id=stage_item.id,
+                    team_id=team.id,
+                )
+            )
+        )
+        match = await stack.enter_async_context(
+            inserted_match(
+                DUMMY_MATCH1.model_copy(
+                    update={
+                        "round_id": round_.id,
+                        "stage_item_input1_id": stage_input.id,
+                        "stage_item_input2_id": None,
+                        "court_id": court.id,
+                    }
+                )
+            )
+        )
+        dependent_match = await stack.enter_async_context(
+            inserted_match(
+                DUMMY_MATCH1.model_copy(
+                    update={
+                        "round_id": round_.id,
+                        "stage_item_input1_id": stage_input.id,
+                        "stage_item_input2_id": None,
+                        "stage_item_input1_winner_from_match_id": match.id,
+                        "court_id": court.id,
+                        "position_in_schedule": 2,
+                    }
+                )
+            )
+        )
+        other_tournament = await stack.enter_async_context(
+            inserted_tournament(tournament_data.model_copy(update={"name": "Preserved tournament"}))
+        )
+        other_ranking = await stack.enter_async_context(
+            inserted_ranking(
+                DUMMY_RANKING1.model_copy(update={"tournament_id": other_tournament.id})
+            )
+        )
+        other_stage = await stack.enter_async_context(
+            inserted_stage(
+                DUMMY_STAGE1.model_copy(update={"tournament_id": other_tournament.id})
+            )
+        )
+        other_stage_item = await stack.enter_async_context(
+            inserted_stage_item(
+                DUMMY_STAGE_ITEM1.model_copy(
+                    update={"stage_id": other_stage.id, "ranking_id": other_ranking.id}
+                )
+            )
+        )
+        other_round = await stack.enter_async_context(
+            inserted_round(
+                DUMMY_ROUND1.model_copy(update={"stage_item_id": other_stage_item.id})
+            )
+        )
+        other_team = await stack.enter_async_context(
+            inserted_team(
+                DUMMY_TEAM1.model_copy(update={"tournament_id": other_tournament.id})
+            )
+        )
+        other_player = await stack.enter_async_context(
+            inserted_player_in_team(
+                DUMMY_PLAYER1.model_copy(update={"tournament_id": other_tournament.id}),
+                other_team.id,
+            )
+        )
+        other_court = await stack.enter_async_context(
+            inserted_court(DUMMY_COURT1.model_copy(update={"tournament_id": other_tournament.id}))
+        )
+        other_stage_input = await stack.enter_async_context(
+            inserted_stage_item_input(
+                StageItemInputInsertable(
+                    slot=0,
+                    tournament_id=other_tournament.id,
+                    stage_item_id=other_stage_item.id,
+                    team_id=other_team.id,
+                )
+            )
+        )
+        other_source_match = await stack.enter_async_context(
+            inserted_match(
+                DUMMY_MATCH1.model_copy(
+                    update={
+                        "round_id": other_round.id,
+                        "stage_item_input1_id": other_stage_input.id,
+                        "stage_item_input2_id": None,
+                        "court_id": other_court.id,
+                    }
+                )
+            )
+        )
+        other_cross_reference_match = await stack.enter_async_context(
+            inserted_match(
+                DUMMY_MATCH1.model_copy(
+                    update={
+                        "round_id": other_round.id,
+                        "stage_item_input1_id": other_stage_input.id,
+                        "stage_item_input2_id": None,
+                        "stage_item_input1_winner_from_match_id": match.id,
+                        "stage_item_input2_winner_from_match_id": other_source_match.id,
+                        "court_id": other_court.id,
+                        "position_in_schedule": 2,
+                    }
+                )
+            )
+        )
+        event_id = await database.execute(
+            match_events.insert(),
+            values={
+                "match_id": match.id,
+                "team_id": team.id,
+                "event_type": "GOAL",
+                "period": "HALF1",
+                "game_time_seconds": 10,
+                "player_id": player.id,
+                "player_name": player.name,
+            },
+        )
+        competition_id = await database.execute(
+            competitions.insert(),
+            values={
+                "tournament_id": tournament.id,
+                "name": "Delete competition",
+                "start_time": DUMMY_MOCK_TIME,
+                "duration_minutes": 30,
+                "court_id": court.id,
+            },
+        )
+        discipline_id = await database.execute(
+            competition_disciplines.insert(),
+            values={
+                "competition_id": competition_id,
+                "name": "Delete discipline",
+                "metric_type": "MANUAL",
+            },
+        )
+        scoring_id = await database.execute(
+            competition_scoring.insert(),
+            values={"competition_id": competition_id, "place": 1, "points": 3},
+        )
+        result_id = await database.execute(
+            competition_results.insert(),
+            values={"discipline_id": discipline_id, "team_id": team.id, "place": 1},
+        )
+        pairing_id = await database.execute(
+            competition_pairings.insert(),
+            values={
+                "discipline_id": discipline_id,
+                "shooter_team_id": team.id,
+                "goalkeeper_name": "Goalkeeper",
+            },
+        )
+
+        assert (
+            await send_tournament_request(
+                HTTPMethod.DELETE,
+                "",
+                auth_context.model_copy(update={"tournament": tournament}),
+            )
+            == SUCCESS_RESPONSE
+        )
+
+        deleted_rows = (
+            (tournaments, tournament.id),
+            (rankings, ranking.id),
+            (stages, stage.id),
+            (stage_items, stage_item.id),
+            (rounds, round_.id),
+            (stage_item_inputs, stage_input.id),
+            (matches, match.id),
+            (matches, dependent_match.id),
+            (match_events, event_id),
+            (players, player.id),
+            (teams, team.id),
+            (courts, court.id),
+            (competitions, competition_id),
+            (competition_disciplines, discipline_id),
+            (competition_scoring, scoring_id),
+            (competition_results, result_id),
+            (competition_pairings, pairing_id),
+        )
+        for table, row_id in deleted_rows:
+            assert await database.fetch_one(table.select().where(table.c.id == row_id)) is None
+        assert await database.fetch_all(
+            players_x_teams.select().where(players_x_teams.c.player_id == player.id)
+        ) == []
+
+        preserved_rows = (
+            (tournaments, other_tournament.id),
+            (rankings, other_ranking.id),
+            (stages, other_stage.id),
+            (stage_items, other_stage_item.id),
+            (rounds, other_round.id),
+            (stage_item_inputs, other_stage_input.id),
+            (matches, other_source_match.id),
+            (matches, other_cross_reference_match.id),
+            (players, other_player.id),
+            (teams, other_team.id),
+            (courts, other_court.id),
+        )
+        for table, row_id in preserved_rows:
+            assert await database.fetch_one(table.select().where(table.c.id == row_id)) is not None
+        assert await database.fetch_one(
+            players_x_teams.select().where(
+                (players_x_teams.c.player_id == other_player.id)
+                & (players_x_teams.c.team_id == other_team.id)
+            )
+        ) is not None
+
+        preserved_match = await database.fetch_one(
+            matches.select().where(matches.c.id == other_cross_reference_match.id)
+        )
+        assert preserved_match is not None
+        assert preserved_match["stage_item_input1_winner_from_match_id"] is None
+        assert (
+            preserved_match["stage_item_input2_winner_from_match_id"]
+            == other_source_match.id
+        )
 
 
 @pytest.mark.asyncio(loop_scope="session")
