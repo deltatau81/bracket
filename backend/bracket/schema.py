@@ -174,9 +174,28 @@ matches = Table(
     Column("stage_item_input1_penalty_score", Integer, nullable=False, server_default="0"),
     Column("stage_item_input2_penalty_score", Integer, nullable=False, server_default="0"), 
     Column("status", String(20), nullable=False, server_default="PLANNED"),
+    Column("ruleset_override", String(20), nullable=True),
+    Column("age_category_override", String(20), nullable=True),
+    Column("ruleset_season_override", String(7), nullable=True),
     CheckConstraint(
         "status IN ('PLANNED', 'RUNNING', 'FINISHED')",
         name="ck_matches_status",
+    ),
+    CheckConstraint(
+        "ruleset_override IS NULL OR ruleset_override IN ('DEB', 'IIHF')",
+        name="ck_matches_ruleset_override",
+    ),
+    CheckConstraint(
+        "age_category_override IS NULL OR age_category_override "
+        "IN ('U9', 'U11', 'U13', 'U15', 'U17', 'U20', 'SENIOR')",
+        name="ck_matches_age_category_override",
+    ),
+    CheckConstraint(
+        "ruleset_season_override IS NULL OR ("
+        "ruleset_season_override ~ '^[0-9]{4}/[0-9]{2}$' "
+        "AND substring(ruleset_season_override from 6 for 2)::integer = "
+        "(substring(ruleset_season_override from 1 for 4)::integer + 1) % 100)",
+        name="ck_matches_ruleset_season_override",
     ),
     Column("position_in_schedule", Integer, nullable=True),
 )

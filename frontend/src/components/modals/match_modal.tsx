@@ -1,4 +1,17 @@
-import { Badge, Button, Center, Checkbox, Divider, Grid, Group, Modal, NumberInput, Text, TextInput } from '@mantine/core';
+import {
+  Badge,
+  Button,
+  Center,
+  Checkbox,
+  Divider,
+  Grid,
+  Group,
+  Modal,
+  NumberInput,
+  Select,
+  Text,
+  TextInput,
+} from '@mantine/core';
 import { DatePickerInput, TimeInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { useTranslation } from 'next-i18next';
@@ -14,7 +27,13 @@ import {
   formatMatchInput2,
 } from '../../interfaces/match';
 import { RoundInterface } from '../../interfaces/round';
-import { TournamentMinimal } from '../../interfaces/tournament';
+import {
+  HockeyAgeCategory,
+  HockeyRuleset,
+  Tournament,
+  TournamentMinimal,
+} from '../../interfaces/tournament';
+import { getTournamentById } from '../../services/adapter';
 import { getMatchLookup, getStageItemLookup } from '../../services/lookups';
 import { deleteMatch, updateMatch } from '../../services/match';
 import DeleteButton from '../buttons/delete';
@@ -81,6 +100,10 @@ function formatHockeyPoints(points: number): string {
   return Number.isInteger(points) ? `${points}` : points.toFixed(1).replace('.', ',');
 }
 
+function formatAgeCategory(ageCategory: HockeyAgeCategory): string {
+  return ageCategory === 'SENIOR' ? 'Senioren' : ageCategory;
+}
+
 function MatchDeleteButton({
   tournamentData,
   match,
@@ -110,6 +133,7 @@ function MatchDeleteButton({
 
 function MatchModalForm({
   tournamentData,
+  tournament,
   match,
   swrStagesResponse,
   swrUpcomingMatchesResponse,
@@ -117,6 +141,7 @@ function MatchModalForm({
   round,
 }: {
   tournamentData: TournamentMinimal;
+  tournament: Tournament;
   match: MatchInterface | null;
   swrStagesResponse: SWRResponse;
   swrUpcomingMatchesResponse: SWRResponse | null;
@@ -146,6 +171,10 @@ function MatchModalForm({
       start_time_time: startTimeDate ? format(startTimeDate, 'HH:mm') : '',
       custom_duration_minutes: match.custom_duration_minutes,
       custom_margin_minutes: match.custom_margin_minutes,
+      ruleset_override: match.ruleset_override ?? '',
+      age_category_override: match.age_category_override ?? '',
+      ruleset_season_inherited: match.ruleset_season_override == null,
+      ruleset_season_override: match.ruleset_season_override ?? tournament.ruleset_season,
     },
 
     validate: {
@@ -165,6 +194,14 @@ function MatchModalForm({
         value == null || value >= 0 ? null : t('negative_match_duration_validation'),
       custom_margin_minutes: (value) =>
         value == null || value >= 0 ? null : t('negative_match_margin_validation'),
+      ruleset_season_override: (value, values) => {
+        if (values.ruleset_season_inherited) return null;
+        const matchResult = /^(\d{4})\/(\d{2})$/.exec(value);
+        if (matchResult == null) return 'Format JJJJ/JJ verwenden';
+        return (Number(matchResult[1]) + 1) % 100 === Number(matchResult[2])
+          ? null
+          : 'Die zweite Jahreszahl muss das Folgejahr sein';
+      },
     },
   });
 
@@ -282,6 +319,17 @@ function MatchModalForm({
             custom_duration_minutes: customDurationEnabled ? values.custom_duration_minutes : null,
             custom_margin_minutes: customMarginEnabled ? values.custom_margin_minutes : null,
             status: match.status,
+            ruleset_override:
+              values.ruleset_override === ''
+                ? null
+                : (values.ruleset_override as HockeyRuleset),
+            age_category_override:
+              values.age_category_override === ''
+                ? null
+                : (values.age_category_override as HockeyAgeCategory),
+            ruleset_season_override: values.ruleset_season_inherited
+              ? null
+              : values.ruleset_season_override,
           };
           await updateMatch(tournamentData.id, match.id, updatedMatch);
           await swrStagesResponse.mutate();
@@ -441,6 +489,60 @@ function MatchModalForm({
         </Grid>
         <Divider mt="lg" />
 
+        <Text fw={600} mt="lg" mb="sm">
+          Spielregeln
+        </Text>
+        <Grid>
+          <Grid.Col span={{ sm: 6 }}>
+            <Select
+              label="Regelwerk"
+              data={[
+                {
+                  value: '',
+                  label: `Turniereinstellung verwenden (${tournament.ruleset})`,
+                },
+                { value: 'DEB', label: 'DEB' },
+                { value: 'IIHF', label: 'IIHF' },
+              ]}
+              allowDeselect={false}
+              {...form.getInputProps('ruleset_override')}
+            />
+          </Grid.Col>
+          <Grid.Col span={{ sm: 6 }}>
+            <Select
+              label="Altersklasse"
+              data={[
+                {
+                  value: '',
+                  label: `Turniereinstellung verwenden (${formatAgeCategory(tournament.age_category)})`,
+                },
+                ...(['U9', 'U11', 'U13', 'U15', 'U17', 'U20', 'SENIOR'] as HockeyAgeCategory[]).map(
+                  (value) => ({
+                    value,
+                    label: formatAgeCategory(value),
+                  })
+                ),
+              ]}
+              allowDeselect={false}
+              {...form.getInputProps('age_category_override')}
+            />
+          </Grid.Col>
+        </Grid>
+        <Checkbox
+          mt="md"
+          label={`Turniereinstellung verwenden (${tournament.ruleset_season})`}
+          {...form.getInputProps('ruleset_season_inherited', { type: 'checkbox' })}
+        />
+        <TextInput
+          mt="xs"
+          label="Regelsaison"
+          placeholder="2026/27"
+          disabled={form.values.ruleset_season_inherited}
+          {...form.getInputProps('ruleset_season_override')}
+        />
+
+        <Divider mt="lg" />
+
         <Text size="sm" mt="lg">
           {t('custom_match_duration_label')}
         </Text>
@@ -527,18 +629,25 @@ export default function MatchModal({
   round: RoundInterface | null;
 }) {
   const { t } = useTranslation();
+  const swrTournamentResponse = getTournamentById(tournamentData.id);
+  const tournament: Tournament | null =
+    swrTournamentResponse.data != null ? swrTournamentResponse.data.data : null;
 
   return (
     <>
       <Modal opened={opened} onClose={() => setOpened(false)} title={t('edit_match_modal_title')}>
+        {tournament != null ? (
         <MatchModalForm
+          key={`${match?.id ?? 'none'}-${opened}`}
           swrStagesResponse={swrStagesResponse}
           swrUpcomingMatchesResponse={swrUpcomingMatchesResponse}
           tournamentData={tournamentData}
+          tournament={tournament}
           match={match}
           setOpened={setOpened}
           round={round}
         />
+        ) : null}
       </Modal>
     </>
   );

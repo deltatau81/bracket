@@ -1,6 +1,7 @@
 import { Translator } from '../components/utils/types';
 import { Court } from './court';
 import { StageItemInput, formatStageItemInput } from './stage_item_input';
+import { HockeyAgeCategory, HockeyRuleset } from './tournament';
 
 export type MatchStatus = 'PLANNED' | 'RUNNING' | 'FINISHED';
 
@@ -31,6 +32,9 @@ export interface MatchInterface {
   stage_item_input1_conflict: boolean;
   stage_item_input2_conflict: boolean;
   status: MatchStatus;
+  ruleset_override: HockeyRuleset | null;
+  age_category_override: HockeyAgeCategory | null;
+  ruleset_season_override: string | null;
 }
 
 export interface MatchBodyInterface {
@@ -47,6 +51,9 @@ export interface MatchBodyInterface {
   custom_duration_minutes: number | null;
   custom_margin_minutes: number | null;
   status: MatchStatus;
+  ruleset_override?: HockeyRuleset | null;
+  age_category_override?: HockeyAgeCategory | null;
+  ruleset_season_override?: string | null;
 }
 
 export interface MatchRescheduleInterface {

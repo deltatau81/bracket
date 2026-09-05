@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from bracket.models.db.court import Court
 from bracket.models.db.shared import BaseModelORM
 from bracket.models.db.stage_item_inputs import StageItemInput
+from bracket.models.db.tournament import HockeyAgeCategory, HockeyRuleset, RulesetSeason
 from bracket.utils.id_types import CourtId, MatchId, RoundId, StageItemInputId
 from bracket.utils.types import EnumAutoStr, assert_some
 
@@ -38,6 +39,9 @@ class MatchBaseInsertable(BaseModelORM):
     stage_item_input1_conflict: bool
     stage_item_input2_conflict: bool
     status: MatchStatus = MatchStatus.PLANNED
+    ruleset_override: HockeyRuleset | None = None
+    age_category_override: HockeyAgeCategory | None = None
+    ruleset_season_override: RulesetSeason | None = None
 
     @property
     def end_time(self) -> datetime_utc:
@@ -116,6 +120,9 @@ class MatchBody(BaseModelORM):
     custom_duration_minutes: int | None = None
     custom_margin_minutes: int | None = None
     status: MatchStatus | None = None
+    ruleset_override: HockeyRuleset | None = None
+    age_category_override: HockeyAgeCategory | None = None
+    ruleset_season_override: RulesetSeason | None = None
 
 
 class MatchCreateBodyFrontend(BaseModelORM):

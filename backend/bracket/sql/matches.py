@@ -104,7 +104,19 @@ async def sql_update_match(match_id: MatchId, match: MatchBody, tournament: Tour
             custom_margin_minutes = :custom_margin_minutes,
             duration_minutes = :duration_minutes,
             margin_minutes = :margin_minutes,
-            status = COALESCE(:status, status)
+            status = COALESCE(:status, status),
+            ruleset_override = CASE
+                WHEN :ruleset_override_is_set THEN :ruleset_override
+                ELSE ruleset_override
+            END,
+            age_category_override = CASE
+                WHEN :age_category_override_is_set THEN :age_category_override
+                ELSE age_category_override
+            END,
+            ruleset_season_override = CASE
+                WHEN :ruleset_season_override_is_set THEN :ruleset_season_override
+                ELSE ruleset_season_override
+            END
         WHERE matches.id = :match_id
         RETURNING *
         """
@@ -127,6 +139,20 @@ async def sql_update_match(match_id: MatchId, match: MatchBody, tournament: Tour
             "status": match.status.value if match.status is not None else None,
             "duration_minutes": duration_minutes,
             "margin_minutes": margin_minutes,
+            "ruleset_override_is_set": "ruleset_override" in match.model_fields_set,
+            "ruleset_override": (
+                match.ruleset_override.value if match.ruleset_override is not None else None
+            ),
+            "age_category_override_is_set": "age_category_override" in match.model_fields_set,
+            "age_category_override": (
+                match.age_category_override.value
+                if match.age_category_override is not None
+                else None
+            ),
+            "ruleset_season_override_is_set": (
+                "ruleset_season_override" in match.model_fields_set
+            ),
+            "ruleset_season_override": match.ruleset_season_override,
         },
     )
 
