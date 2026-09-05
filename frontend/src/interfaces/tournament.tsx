@@ -1,5 +1,7 @@
 export type TournamentStatus = 'OPEN' | 'ARCHIVED';
 export type HockeyMode = 'COMPETITION' | 'STANDARD';
+export type HockeyRuleset = 'DEB' | 'IIHF';
+export type HockeyAgeCategory = 'U9' | 'U11' | 'U13' | 'U15' | 'U17' | 'U20' | 'SENIOR';
 
 export type TournamentFilter = 'ALL' | TournamentStatus;
 
@@ -18,6 +20,9 @@ export interface Tournament {
   margin_minutes: number;
   status: TournamentStatus;
   hockey_mode: HockeyMode;
+  ruleset: HockeyRuleset;
+  age_category: HockeyAgeCategory;
+  ruleset_season: string;
 }
 export interface TournamentMinimal {
   id: number;

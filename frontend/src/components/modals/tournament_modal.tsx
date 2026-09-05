@@ -18,7 +18,12 @@ import React, { useState } from 'react';
 import { SWRResponse } from 'swr';
 
 import { Club } from '../../interfaces/club';
-import { HockeyMode, Tournament } from '../../interfaces/tournament';
+import {
+  HockeyAgeCategory,
+  HockeyMode,
+  HockeyRuleset,
+  Tournament,
+} from '../../interfaces/tournament';
 import { getBaseApiUrl, getClubs } from '../../services/adapter';
 import { createTournament } from '../../services/tournament';
 import SaveButton from '../buttons/save';
@@ -56,6 +61,9 @@ function GeneralTournamentForm({
       duration_minutes: 10,
       margin_minutes: 5,
       hockey_mode: 'COMPETITION' as HockeyMode,
+      ruleset: 'DEB' as HockeyRuleset,
+      age_category: 'U15' as HockeyAgeCategory,
+      ruleset_season: '2026/27',
     },
 
     validate: {
@@ -66,6 +74,12 @@ function GeneralTournamentForm({
         value != null && value > 0 ? null : t('duration_minutes_choose_title'),
       margin_minutes: (value) =>
         value != null && value > 0 ? null : t('margin_minutes_choose_title'),
+      ruleset_season: (value) => {
+        const match = /^(\d{4})\/(\d{2})$/.exec(value);
+        return match != null && Number(match[2]) === (Number(match[1]) + 1) % 100
+          ? null
+          : 'Regelsaison muss das Format YYYY/YY haben und fortlaufend sein';
+      },
     },
   });
 
@@ -83,7 +97,10 @@ function GeneralTournamentForm({
           values.start_time.toISOString(),
           values.duration_minutes,
           values.margin_minutes,
-          values.hockey_mode
+          values.hockey_mode,
+          values.ruleset,
+          values.age_category,
+          values.ruleset_season
         );
         await swrTournamentsResponse.mutate();
         setOpened(false);
@@ -121,6 +138,41 @@ function GeneralTournamentForm({
         ]}
         mt="lg"
         {...form.getInputProps('hockey_mode')}
+      />
+
+      <Select
+        withAsterisk
+        label="Regelwerk"
+        data={[
+          { value: 'DEB', label: 'DEB' },
+          { value: 'IIHF', label: 'IIHF' },
+        ]}
+        mt="lg"
+        {...form.getInputProps('ruleset')}
+      />
+
+      <Select
+        withAsterisk
+        label="Altersklasse"
+        data={[
+          { value: 'U9', label: 'U9' },
+          { value: 'U11', label: 'U11' },
+          { value: 'U13', label: 'U13' },
+          { value: 'U15', label: 'U15' },
+          { value: 'U17', label: 'U17' },
+          { value: 'U20', label: 'U20' },
+          { value: 'SENIOR', label: 'Senioren' },
+        ]}
+        mt="lg"
+        {...form.getInputProps('age_category')}
+      />
+
+      <TextInput
+        withAsterisk
+        label="Regelsaison"
+        placeholder="2026/27"
+        mt="lg"
+        {...form.getInputProps('ruleset_season')}
       />
 
       <TextInput

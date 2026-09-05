@@ -5,7 +5,13 @@ import pytest
 
 from bracket.database import database
 from bracket.logic.tournaments import sql_delete_tournament_completely
-from bracket.models.db.tournament import HockeyMode, Tournament, TournamentStatus
+from bracket.models.db.tournament import (
+    HockeyAgeCategory,
+    HockeyMode,
+    HockeyRuleset,
+    Tournament,
+    TournamentStatus,
+)
 from bracket.schema import tournaments
 from bracket.sql.tournaments import sql_delete_tournament, sql_get_tournament_by_endpoint_name
 from bracket.utils.db import fetch_one_parsed_certain
@@ -42,6 +48,9 @@ async def test_tournaments_endpoint(
                 "margin_minutes": 5,
                 "status": "OPEN",
                 "hockey_mode": "COMPETITION",
+                "ruleset": "DEB",
+                "age_category": "U15",
+                "ruleset_season": "2026/27",
             }
         ],
     }
@@ -69,6 +78,9 @@ async def test_tournament_endpoint(
             "margin_minutes": 5,
             "status": "OPEN",
             "hockey_mode": "COMPETITION",
+            "ruleset": "DEB",
+            "age_category": "U15",
+            "ruleset_season": "2026/27",
         },
     }
 
@@ -97,6 +109,9 @@ async def test_create_tournament(
     # Cleanup
     tournament = assert_some(await sql_get_tournament_by_endpoint_name(dashboard_endpoint))
     assert tournament.hockey_mode is HockeyMode.COMPETITION
+    assert tournament.ruleset is HockeyRuleset.DEB
+    assert tournament.age_category is HockeyAgeCategory.U15
+    assert tournament.ruleset_season == "2026/27"
     await sql_delete_tournament_completely(tournament.id)
 
 
@@ -116,6 +131,9 @@ async def test_create_standard_tournament(
         "duration_minutes": 12,
         "margin_minutes": 3,
         "hockey_mode": "STANDARD",
+        "ruleset": "IIHF",
+        "age_category": "SENIOR",
+        "ruleset_season": "2026/27",
     }
     assert (
         await send_auth_request(HTTPMethod.POST, "tournaments", auth_context, json=body)
@@ -124,11 +142,79 @@ async def test_create_standard_tournament(
 
     tournament = assert_some(await sql_get_tournament_by_endpoint_name(dashboard_endpoint))
     assert tournament.hockey_mode is HockeyMode.STANDARD
+    assert tournament.ruleset is HockeyRuleset.IIHF
+    assert tournament.age_category is HockeyAgeCategory.SENIOR
     response = await send_auth_request(
         HTTPMethod.GET, f"tournaments/{tournament.id}", auth_context, {}
     )
     assert response["data"]["hockey_mode"] == "STANDARD"
+    assert response["data"]["ruleset"] == "IIHF"
+    assert response["data"]["age_category"] == "SENIOR"
+    assert response["data"]["ruleset_season"] == "2026/27"
     await sql_delete_tournament_completely(tournament.id)
+
+
+@pytest.mark.parametrize("ruleset_season", ["2026/27", "2029/30", "2099/00"])
+@pytest.mark.asyncio(loop_scope="session")
+async def test_create_tournament_with_valid_ruleset_season(
+    startup_and_shutdown_uvicorn_server: None,
+    auth_context: AuthContext,
+    ruleset_season: str,
+) -> None:
+    dashboard_endpoint = f"rules-season-{ruleset_season.replace('/', '-')}"
+    body = {
+        "name": "Configured Hockey",
+        "start_time": DUMMY_MOCK_TIME.isoformat().replace("+00:00", "Z"),
+        "club_id": auth_context.club.id,
+        "dashboard_public": True,
+        "dashboard_endpoint": dashboard_endpoint,
+        "players_can_be_in_multiple_teams": True,
+        "auto_assign_courts": True,
+        "duration_minutes": 12,
+        "margin_minutes": 3,
+        "ruleset": "DEB",
+        "age_category": "U15",
+        "ruleset_season": ruleset_season,
+    }
+    assert (
+        await send_auth_request(HTTPMethod.POST, "tournaments", auth_context, json=body)
+        == SUCCESS_RESPONSE
+    )
+    tournament = assert_some(await sql_get_tournament_by_endpoint_name(dashboard_endpoint))
+    assert tournament.ruleset_season == ruleset_season
+    await sql_delete_tournament_completely(tournament.id)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("ruleset", "UNKNOWN"),
+        ("age_category", "U99"),
+        ("ruleset_season", "2026/99"),
+        ("ruleset_season", "26/27"),
+        ("ruleset_season", "2026-27"),
+    ],
+)
+@pytest.mark.asyncio(loop_scope="session")
+async def test_create_tournament_rejects_invalid_rules_configuration(
+    startup_and_shutdown_uvicorn_server: None,
+    auth_context: AuthContext,
+    field: str,
+    value: str,
+) -> None:
+    body = {
+        "name": "Invalid Hockey",
+        "start_time": DUMMY_MOCK_TIME.isoformat().replace("+00:00", "Z"),
+        "club_id": auth_context.club.id,
+        "dashboard_public": True,
+        "players_can_be_in_multiple_teams": True,
+        "auto_assign_courts": True,
+        "duration_minutes": 12,
+        "margin_minutes": 3,
+        field: value,
+    }
+    response = await send_auth_request(HTTPMethod.POST, "tournaments", auth_context, json=body)
+    assert "detail" in response
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -196,6 +282,9 @@ async def test_hockey_mode_cannot_be_changed_after_creation(
                 "club_id": auth_context.club.id,
                 "dashboard_endpoint": None,
                 "hockey_mode": HockeyMode.STANDARD,
+                "ruleset": HockeyRuleset.IIHF,
+                "age_category": HockeyAgeCategory.SENIOR,
+                "ruleset_season": "2029/30",
             }
         )
     ) as standard_tournament:
@@ -213,6 +302,9 @@ async def test_hockey_mode_cannot_be_changed_after_creation(
             tournaments.select().where(tournaments.c.id == standard_tournament.id),
         )
         assert stored.hockey_mode is HockeyMode.STANDARD
+        assert stored.ruleset is HockeyRuleset.IIHF
+        assert stored.age_category is HockeyAgeCategory.SENIOR
+        assert stored.ruleset_season == "2029/30"
 
         assert (
             await send_tournament_request(
@@ -220,6 +312,21 @@ async def test_hockey_mode_cannot_be_changed_after_creation(
                 "",
                 standard_context,
                 json=update_body | {"hockey_mode": "STANDARD"},
+            )
+            == SUCCESS_RESPONSE
+        )
+
+        assert (
+            await send_tournament_request(
+                HTTPMethod.PUT,
+                "",
+                standard_context,
+                json=update_body
+                | {
+                    "ruleset": "IIHF",
+                    "age_category": "SENIOR",
+                    "ruleset_season": "2029/30",
+                },
             )
             == SUCCESS_RESPONSE
         )
@@ -251,6 +358,52 @@ async def test_hockey_mode_cannot_be_changed_after_creation(
         tournaments.select().where(tournaments.c.id == auth_context.tournament.id),
     )
     assert stored.hockey_mode is HockeyMode.COMPETITION
+
+
+@pytest.mark.parametrize(
+    ("field", "changed_value"),
+    [
+        ("ruleset", "IIHF"),
+        ("age_category", "SENIOR"),
+        ("ruleset_season", "2029/30"),
+    ],
+)
+@pytest.mark.asyncio(loop_scope="session")
+async def test_rules_configuration_cannot_be_changed_after_creation(
+    startup_and_shutdown_uvicorn_server: None,
+    auth_context: AuthContext,
+    field: str,
+    changed_value: str,
+) -> None:
+    async with inserted_tournament(
+        DUMMY_TOURNAMENT.model_copy(
+            update={"club_id": auth_context.club.id, "dashboard_endpoint": None}
+        )
+    ) as tournament:
+        tournament_context = auth_context.model_copy(update={"tournament": tournament})
+        body = {
+            "name": "This name must not be stored",
+            "start_time": DUMMY_MOCK_TIME.isoformat().replace("+00:00", "Z"),
+            "dashboard_public": False,
+            "players_can_be_in_multiple_teams": True,
+            "auto_assign_courts": True,
+            "duration_minutes": 12,
+            "margin_minutes": 3,
+            field: changed_value,
+        }
+        response = await send_tournament_request(
+            HTTPMethod.PUT, "", tournament_context, json=body
+        )
+        assert "cannot be changed" in response["detail"]
+        stored = await fetch_one_parsed_certain(
+            database,
+            Tournament,
+            tournaments.select().where(tournaments.c.id == tournament.id),
+        )
+        assert stored.name == tournament.name
+        assert stored.ruleset is HockeyRuleset.DEB
+        assert stored.age_category is HockeyAgeCategory.U15
+        assert stored.ruleset_season == "2026/27"
 
 
 @pytest.mark.asyncio(loop_scope="session")

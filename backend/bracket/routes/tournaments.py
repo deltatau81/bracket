@@ -59,6 +59,18 @@ unauthorized_exception = HTTPException(
 )
 
 
+def validate_immutable_tournament_fields(
+    tournament: Tournament, tournament_body: TournamentUpdateBody
+) -> None:
+    for field in ("hockey_mode", "ruleset", "age_category", "ruleset_season"):
+        requested_value = getattr(tournament_body, field)
+        if requested_value is not None and requested_value != getattr(tournament, field):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"{field} cannot be changed after tournament creation",
+            )
+
+
 @router.get("/tournaments/{tournament_id}", response_model=TournamentResponse)
 async def get_tournament(
     tournament_id: TournamentId,
@@ -107,14 +119,7 @@ async def update_tournament_by_id(
     _: UserPublic = Depends(user_authenticated_for_tournament),
     tournament: Tournament = Depends(disallow_archived_tournament),
 ) -> SuccessResponse:
-    if (
-        tournament_body.hockey_mode is not None
-        and tournament_body.hockey_mode is not tournament.hockey_mode
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Hockey mode cannot be changed after tournament creation",
-        )
+    validate_immutable_tournament_fields(tournament, tournament_body)
     with check_unique_constraint_violation({UniqueIndex.ix_tournaments_dashboard_endpoint}):
         await sql_update_tournament(tournament_id, tournament_body)
 

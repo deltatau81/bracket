@@ -204,6 +204,20 @@ function GeneralTournamentForm({
         mt="lg"
       />
 
+      <TextInput label="Regelwerk" value={tournament.ruleset} disabled mt="lg" />
+      <TextInput
+        label="Altersklasse"
+        value={tournament.age_category === 'SENIOR' ? 'Senioren' : tournament.age_category}
+        disabled
+        mt="lg"
+      />
+      <TextInput
+        label="Regelsaison"
+        value={tournament.ruleset_season}
+        disabled
+        mt="lg"
+      />
+
       <Fieldset legend={t('planning_of_matches_legend')} mt="lg" radius="md">
         <Text fz="sm">{t('planning_of_matches_description')}</Text>
         <Grid>

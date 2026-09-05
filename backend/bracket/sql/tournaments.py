@@ -80,7 +80,10 @@ async def sql_update_tournament(
             auto_assign_courts = :auto_assign_courts,
             duration_minutes = :duration_minutes,
             margin_minutes = :margin_minutes,
-            hockey_mode = COALESCE(:hockey_mode, hockey_mode)
+            hockey_mode = COALESCE(:hockey_mode, hockey_mode),
+            ruleset = COALESCE(:ruleset, ruleset),
+            age_category = COALESCE(:age_category, age_category),
+            ruleset_season = COALESCE(:ruleset_season, ruleset_season)
         WHERE tournaments.id = :tournament_id
         """
     await database.execute(
@@ -91,6 +94,11 @@ async def sql_update_tournament(
             "hockey_mode": (
                 tournament.hockey_mode.value if tournament.hockey_mode is not None else None
             ),
+            "ruleset": tournament.ruleset.value if tournament.ruleset is not None else None,
+            "age_category": (
+                tournament.age_category.value if tournament.age_category is not None else None
+            ),
+            "ruleset_season": tournament.ruleset_season,
         },
     )
 
@@ -125,7 +133,10 @@ async def sql_create_tournament(tournament: TournamentBody) -> TournamentId:
             auto_assign_courts,
             duration_minutes,
             margin_minutes,
-            hockey_mode
+            hockey_mode,
+            ruleset,
+            age_category,
+            ruleset_season
         )
         VALUES (
             :name,
@@ -138,11 +149,16 @@ async def sql_create_tournament(tournament: TournamentBody) -> TournamentId:
             :auto_assign_courts,
             :duration_minutes,
             :margin_minutes,
-            :hockey_mode
+            :hockey_mode,
+            :ruleset,
+            :age_category,
+            :ruleset_season
         )
         RETURNING id
         """
     values = tournament.model_dump()
     values["hockey_mode"] = tournament.hockey_mode.value
+    values["ruleset"] = tournament.ruleset.value
+    values["age_category"] = tournament.age_category.value
     new_id = await database.fetch_val(query=query, values=values)
     return TournamentId(new_id)

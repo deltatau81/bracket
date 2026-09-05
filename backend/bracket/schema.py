@@ -38,6 +38,9 @@ tournaments = Table(
     Column("players_can_be_in_multiple_teams", Boolean, nullable=False, server_default="f"),
     Column("auto_assign_courts", Boolean, nullable=False, server_default="f"),
     Column("hockey_mode", String(20), nullable=False, server_default="COMPETITION"),
+    Column("ruleset", String(20), nullable=False, server_default="DEB"),
+    Column("age_category", String(20), nullable=False, server_default="U15"),
+    Column("ruleset_season", String(7), nullable=False, server_default="2026/27"),
     Column("duration_minutes", Integer, nullable=False, server_default="15"),
     Column("margin_minutes", Integer, nullable=False, server_default="5"),
     Column(
@@ -54,6 +57,17 @@ tournaments = Table(
     CheckConstraint(
         "hockey_mode IN ('COMPETITION', 'STANDARD')",
         name="ck_tournaments_hockey_mode",
+    ),
+    CheckConstraint("ruleset IN ('DEB', 'IIHF')", name="ck_tournaments_ruleset"),
+    CheckConstraint(
+        "age_category IN ('U9', 'U11', 'U13', 'U15', 'U17', 'U20', 'SENIOR')",
+        name="ck_tournaments_age_category",
+    ),
+    CheckConstraint(
+        "ruleset_season ~ '^[0-9]{4}/[0-9]{2}$' "
+        "AND substring(ruleset_season from 6 for 2)::integer = "
+        "(substring(ruleset_season from 1 for 4)::integer + 1) % 100",
+        name="ck_tournaments_ruleset_season",
     ),
 )
 
