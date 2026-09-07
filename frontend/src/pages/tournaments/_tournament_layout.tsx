@@ -5,16 +5,31 @@ import { HiArchiveBoxArrowDown } from 'react-icons/hi2';
 
 import { TournamentLinks } from '../../components/navbar/_main_links';
 import { responseIsValid } from '../../components/utils/util';
-import { checkForAuthError, getTournamentById } from '../../services/adapter';
+import {
+  checkForAuthError,
+  getTournamentById,
+  getUser,
+} from '../../services/adapter';
 import Layout from '../_layout';
 
 export default function TournamentLayout({ children, tournament_id }: any) {
   const { t } = useTranslation();
 
   const tournamentResponse = getTournamentById(tournament_id);
-  checkForAuthError(tournamentResponse);
+  const swrUserResponse = getUser();
 
-  const tournamentLinks = <TournamentLinks tournament_id={tournament_id} />;
+  checkForAuthError(tournamentResponse);
+  checkForAuthError(swrUserResponse);
+
+  const accountType = swrUserResponse.data?.data?.account_type;
+
+  const tournamentLinks = (
+    <TournamentLinks
+      tournament_id={tournament_id}
+      accountType={accountType}
+    />
+  );
+
   const breadcrumbs = responseIsValid(tournamentResponse) ? (
     <Group gap="xs" miw="25rem">
       <Title order={2} maw="20rem">
@@ -29,7 +44,10 @@ export default function TournamentLayout({ children, tournament_id }: any) {
           color="yellow"
           variant="light"
           style={{
-            visibility: tournamentResponse.data.data.status === 'ARCHIVED' ? 'visible' : 'hidden',
+            visibility:
+              tournamentResponse.data.data.status === 'ARCHIVED'
+                ? 'visible'
+                : 'hidden',
           }}
         >
           <HiArchiveBoxArrowDown />
@@ -39,7 +57,10 @@ export default function TournamentLayout({ children, tournament_id }: any) {
   ) : null;
 
   return (
-    <Layout additionalNavbarLinks={tournamentLinks} breadcrumbs={breadcrumbs}>
+    <Layout
+      additionalNavbarLinks={tournamentLinks}
+      breadcrumbs={breadcrumbs}
+    >
       {children}
     </Layout>
   );

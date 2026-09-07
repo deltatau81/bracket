@@ -23,6 +23,7 @@ from bracket.models.db.tournament import Tournament
 from bracket.models.db.user import UserPublic
 from bracket.routes.auth import (
     user_authenticated_for_tournament,
+    user_authenticated_for_tournament_admin,
     user_authenticated_or_public_dashboard,
 )
 from bracket.routes.models import (
@@ -120,7 +121,7 @@ async def get_teams(
 async def update_team_by_id(
     tournament_id: TournamentId,
     team_body: TeamBody,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
     team: Team = Depends(team_dependency),
 ) -> SingleTeamResponse:
@@ -153,7 +154,7 @@ async def update_team_by_id(
 async def update_team_logo(
     tournament_id: TournamentId,
     file: UploadFile | None = None,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
     team: Team = Depends(team_dependency),
 ) -> SingleTeamResponse:
@@ -190,7 +191,7 @@ async def update_team_logo(
 @router.delete("/tournaments/{tournament_id}/teams/{team_id}", response_model=SuccessResponse)
 async def delete_team(
     tournament_id: TournamentId,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
     team: FullTeamWithPlayers = Depends(team_with_players_dependency),
 ) -> SuccessResponse:
@@ -210,7 +211,7 @@ async def delete_team(
 async def create_team(
     team_to_insert: TeamBody,
     tournament_id: TournamentId,
-    user: UserPublic = Depends(user_authenticated_for_tournament),
+    user: UserPublic = Depends(user_authenticated_for_tournament_admin),
     _: Tournament = Depends(disallow_archived_tournament),
 ) -> SingleTeamResponse:
     await check_foreign_keys_belong_to_tournament(team_to_insert, tournament_id)
@@ -242,7 +243,7 @@ async def create_team(
 async def create_multiple_teams(
     team_body: TeamMultiBody,
     tournament_id: TournamentId,
-    user: UserPublic = Depends(user_authenticated_for_tournament),
+    user: UserPublic = Depends(user_authenticated_for_tournament_admin),
     _: Tournament = Depends(disallow_archived_tournament),
 ) -> SuccessResponse:
     reader = list(csv.reader(team_body.names.split("\n"), delimiter=","))

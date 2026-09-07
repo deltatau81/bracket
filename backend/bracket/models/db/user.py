@@ -47,6 +47,14 @@ class UserPasswordToUpdate(BaseModel):
     password: constr(min_length=8, max_length=48)  # type: ignore[valid-type]
 
 
+
+class UserAdminCreateBody(BaseModel):
+    email: str
+    name: str
+    password: constr(min_length=8, max_length=48)  # type: ignore[valid-type]
+    account_type: UserAccountType
+
+
 class DemoUserToRegister(BaseModelORM):
     captcha_token: str
 

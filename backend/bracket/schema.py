@@ -174,12 +174,23 @@ matches = Table(
     Column("stage_item_input1_penalty_score", Integer, nullable=False, server_default="0"),
     Column("stage_item_input2_penalty_score", Integer, nullable=False, server_default="0"), 
     Column("status", String(20), nullable=False, server_default="PLANNED"),
+    Column("active_period", String(20), nullable=True),
+    Column("phase_state", String(20), nullable=True),
     Column("ruleset_override", String(20), nullable=True),
     Column("age_category_override", String(20), nullable=True),
     Column("ruleset_season_override", String(7), nullable=True),
     CheckConstraint(
         "status IN ('PLANNED', 'RUNNING', 'FINISHED')",
         name="ck_matches_status",
+    ),
+    CheckConstraint(
+        "active_period IS NULL OR active_period IN "
+        "('HALF1', 'HALF2', 'SHOOTOUT', 'PERIOD1', 'PERIOD2', 'PERIOD3', 'OVERTIME')",
+        name="ck_matches_active_period",
+    ),
+    CheckConstraint(
+        "phase_state IS NULL OR phase_state IN ('ACTIVE', 'BREAK')",
+        name="ck_matches_phase_state",
     ),
     CheckConstraint(
         "ruleset_override IS NULL OR ruleset_override IN ('DEB', 'IIHF')",
@@ -245,6 +256,7 @@ users = Table(
         "account_type",
         Enum(
             "REGULAR",
+            "SCORER",
             "DEMO",
             name="account_type",
         ),
@@ -319,14 +331,18 @@ match_events = Table(
     ),
     Column("assist2_number", Integer, nullable=True),
     Column("assist2_name", String, nullable=True),
+    Column("penalty_code", String, nullable=True),
+    Column("penalty_rule", String, nullable=True),
     Column("penalty_type", String, nullable=True),
     Column("penalty_minutes", Integer, nullable=True),
     Column("infraction", String, nullable=True),
+    Column("game_misconduct", Boolean, nullable=True),
     Column("sort_order", Integer, nullable=False, server_default="0"),
     Column("created", DateTimeTZ, nullable=False, server_default=func.now()),
     CheckConstraint("event_type IN ('GOAL', 'PENALTY')", name="ck_match_events_event_type"),
     CheckConstraint(
-        "period IN ('HALF1', 'HALF2', 'PERIOD1', 'PERIOD2', 'PERIOD3', 'OVERTIME')",
+        "period IN "
+        "('HALF1', 'HALF2', 'SHOOTOUT', 'PERIOD1', 'PERIOD2', 'PERIOD3', 'OVERTIME')",
         name="ck_match_events_period",
     ),
     CheckConstraint("game_time_seconds >= 0", name="ck_match_events_game_time_positive"),

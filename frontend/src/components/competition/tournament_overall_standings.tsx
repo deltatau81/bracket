@@ -1,5 +1,6 @@
 import {
   Alert,
+  Box,
   Card,
   Group,
   Image,
@@ -73,56 +74,164 @@ export default function TournamentOverallStandings({
       {standings.length === 0 ? (
         <Text c="dimmed">Noch keine Mannschaften vorhanden.</Text>
       ) : (
-        <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Platz</Table.Th>
-              <Table.Th>Mannschaft</Table.Th>
-              <Table.Th ta="right">Hockey</Table.Th>
-              <Table.Th ta="right">Technik</Table.Th>
-              <Table.Th ta="right">Gesamt</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
+                <Box style={{ width: '100%', overflow: 'hidden' }}>
+          <Table
+            striped
+            highlightOnHover
+            style={{
+              width: '100%',
+              tableLayout: 'fixed',
+            }}
+          >
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th
+                  style={{
+                    width: '3.5rem',
+                    paddingLeft: '0.5rem',
+                    paddingRight: '0.25rem',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Platz
+                </Table.Th>
 
-          <Table.Tbody>
-            {standings.map((standing, index) => {
-              const team = teamsById.get(standing.team_id);
+                <Table.Th
+                  style={{
+                    width: 'auto',
+                    paddingLeft: '0.25rem',
+                    paddingRight: '0.25rem',
+                  }}
+                >
+                  Mannschaft
+                </Table.Th>
 
-              return (
-                <Table.Tr key={standing.team_id}>
-                  <Table.Td>{index + 1}</Table.Td>
+                <Table.Th
+                  ta="right"
+                  style={{
+                    width: '4rem',
+                    paddingLeft: '0.25rem',
+                    paddingRight: '0.25rem',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Hockey
+                </Table.Th>
 
-                  <Table.Td>
-                    <Group gap="xs" wrap="nowrap">
-                      <TeamLogo team={team} />
-                      <Text component="span">
-                        {standing.team_name}
-                      </Text>
-                    </Group>
-                  </Table.Td>
+                <Table.Th
+                  ta="right"
+                  style={{
+                    width: '4rem',
+                    paddingLeft: '0.25rem',
+                    paddingRight: '0.25rem',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Technik
+                </Table.Th>
 
-                  <Table.Td ta="right">
-                    {pointsFormatter.format(standing.game_points)}
-                  </Table.Td>
+                <Table.Th
+                  ta="right"
+                  style={{
+                    width: '4.25rem',
+                    paddingLeft: '0.25rem',
+                    paddingRight: '0.5rem',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Gesamt
+                </Table.Th>
+              </Table.Tr>
+            </Table.Thead>
 
-                  <Table.Td ta="right">
-                    {pointsFormatter.format(
-                      standing.competition_points
-                    )}
-                  </Table.Td>
+            <Table.Tbody>
+              {standings.map((standing, index) => {
+                const team = teamsById.get(standing.team_id);
 
-                  <Table.Td ta="right">
-                    <Text component="span" fw={700} c="blue">
+                return (
+                  <Table.Tr key={standing.team_id}>
+                    <Table.Td
+                      style={{
+                        paddingLeft: '0.5rem',
+                        paddingRight: '0.25rem',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {index + 1}
+                    </Table.Td>
+
+                    <Table.Td
+                      style={{
+                        paddingLeft: '0.25rem',
+                        paddingRight: '0.25rem',
+                      }}
+                    >
+                      <Group
+                        gap="xs"
+                        wrap="nowrap"
+                        align="center"
+                        style={{ minWidth: 0 }}
+                      >
+                        <TeamLogo team={team} />
+
+                        <Text
+                          component="span"
+                          style={{
+                            minWidth: 0,
+                            overflowWrap: 'break-word',
+                          }}
+                        >
+                          {standing.team_name}
+                        </Text>
+                      </Group>
+                    </Table.Td>
+
+                    <Table.Td
+                      ta="right"
+                      style={{
+                        paddingLeft: '0.25rem',
+                        paddingRight: '0.25rem',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
                       {pointsFormatter.format(
-                        standing.total_points
+                        standing.game_points
                       )}
-                    </Text>
-                  </Table.Td>
-                </Table.Tr>
-              );
-            })}
-          </Table.Tbody>
-        </Table>
+                    </Table.Td>
+
+                    <Table.Td
+                      ta="right"
+                      style={{
+                        paddingLeft: '0.25rem',
+                        paddingRight: '0.25rem',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {pointsFormatter.format(
+                        standing.competition_points
+                      )}
+                    </Table.Td>
+
+                    <Table.Td
+                      ta="right"
+                      style={{
+                        paddingLeft: '0.25rem',
+                        paddingRight: '0.5rem',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <Text component="span" fw={700} c="blue">
+                        {pointsFormatter.format(
+                          standing.total_points
+                        )}
+                      </Text>
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })}
+            </Table.Tbody>
+          </Table>
+        </Box>
       )}
     </Card>
   );

@@ -56,50 +56,22 @@ export async function updateTeam(
 
 export async function setPlayerTeam(
   tournament_id: number,
-  teams: TeamInterface[],
+  _teams: TeamInterface[],
   player_id: number,
   team_id: number | null,
   number: number | null,
   position: PlayerPosition | null
 ) {
-  const existingTeams = teams.filter((team) =>
-    team.players.some((player) => player.id === player_id)
+  const result = await awaitRequestAndHandleError(async (axios) =>
+    axios.put(
+      `tournaments/${tournament_id}/players/${player_id}/team`,
+      {
+        team_id,
+        number: team_id == null ? null : number,
+        position: team_id == null ? null : position,
+      }
+    )
   );
-  const targetTeam = teams.find((team) => team.id === team_id);
-  const targetIsExistingTeam = existingTeams.some((team) => team.id === team_id);
-  if (team_id != null && targetTeam == null) return false;
 
-  if (targetTeam != null) {
-    const playerIds = targetTeam.players
-      .filter((player) => player.id !== player_id)
-      .map((player) => `${player.id}`);
-    playerIds.push(`${player_id}`);
-    const result = await updateTeam(
-      tournament_id,
-      targetTeam.id,
-      targetTeam.name,
-      targetTeam.active,
-      playerIds,
-      [{ player_id, number, position }]
-    );
-    if (!requestSucceeded(result)) return false;
-
-    if (targetIsExistingTeam) return true;
-  }
-
-  for (const team of existingTeams) {
-    const playerIds = team.players
-      .filter((player) => player.id !== player_id)
-      .map((player) => `${player.id}`);
-    const result = await updateTeam(
-      tournament_id,
-      team.id,
-      team.name,
-      team.active,
-      playerIds
-    );
-    if (!requestSucceeded(result)) return false;
-  }
-
-  return true;
+  return requestSucceeded(result);
 }

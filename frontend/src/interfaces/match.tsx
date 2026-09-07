@@ -5,6 +5,26 @@ import { HockeyAgeCategory, HockeyRuleset } from './tournament';
 
 export type MatchStatus = 'PLANNED' | 'RUNNING' | 'FINISHED';
 
+export type MatchPeriod =
+  | 'HALF1'
+  | 'HALF2'
+  | 'SHOOTOUT'
+  | 'PERIOD1'
+  | 'PERIOD2'
+  | 'PERIOD3'
+  | 'OVERTIME';
+
+export type MatchPhaseState = 'ACTIVE' | 'BREAK';
+
+export type MatchPhaseAction =
+  | 'START_MATCH'
+  | 'END_PERIOD'
+  | 'START_NEXT_PERIOD'
+  | 'START_OVERTIME'
+  | 'FINISH_MATCH'
+  | 'REOPEN_MATCH'
+  | 'RESUME_PERIOD';
+
 export interface MatchInterface {
   id: number;
   round_id: number;
@@ -32,6 +52,8 @@ export interface MatchInterface {
   stage_item_input1_conflict: boolean;
   stage_item_input2_conflict: boolean;
   status: MatchStatus;
+  active_period: MatchPeriod | null;
+  phase_state: MatchPhaseState | null;
   ruleset_override: HockeyRuleset | null;
   age_category_override: HockeyAgeCategory | null;
   ruleset_season_override: string | null;
@@ -50,7 +72,7 @@ export interface MatchBodyInterface {
   start_time?: string | null;
   custom_duration_minutes: number | null;
   custom_margin_minutes: number | null;
-  status: MatchStatus;
+  status?: MatchStatus;
   ruleset_override?: HockeyRuleset | null;
   age_category_override?: HockeyAgeCategory | null;
   ruleset_season_override?: string | null;

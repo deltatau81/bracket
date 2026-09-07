@@ -2,6 +2,8 @@ import { showNotification } from '@mantine/notifications';
 
 import {
   MatchBodyInterface,
+  MatchInterface,
+  MatchPhaseAction,
   MatchCreateBodyInterface,
   MatchRescheduleInterface,
 } from '../interfaces/match';
@@ -26,6 +28,19 @@ export async function updateMatch(
 ) {
   return createAxios()
     .put(`tournaments/${tournament_id}/matches/${match_id}`, match)
+    .catch((response: any) => handleRequestError(response));
+}
+
+export async function transitionMatchPhase(
+  tournamentId: number,
+  matchId: number,
+  action: MatchPhaseAction
+) {
+  return createAxios()
+    .post<{ data: MatchInterface }>(
+      `tournaments/${tournamentId}/matches/${matchId}/phase`,
+      { action }
+    )
     .catch((response: any) => handleRequestError(response));
 }
 

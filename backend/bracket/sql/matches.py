@@ -3,7 +3,15 @@ from datetime import datetime
 from heliclockter import datetime_utc
 
 from bracket.database import database
-from bracket.models.db.match import Match, MatchBody, MatchCreateBody
+from bracket.logic.match_phase import MatchPhaseTransition
+from bracket.models.db.match import (
+    Match,
+    MatchBody,
+    MatchCreateBody,
+    MatchPeriod,
+    MatchPhaseState,
+    MatchStatus,
+)
 from bracket.models.db.tournament import Tournament
 from bracket.utils.id_types import (
     CourtId,
@@ -82,6 +90,120 @@ async def sql_create_match(match: MatchCreateBody) -> Match:
     return Match.model_validate(dict(result._mapping))
 
 
+async def sql_transition_match_phase(
+    match_id: MatchId,
+    expected_status: MatchStatus,
+    expected_active_period: MatchPeriod | None,
+    expected_phase_state: MatchPhaseState | None,
+    next_state: MatchPhaseTransition,
+) -> Match | None:
+    query = """
+        UPDATE matches
+        SET status = :next_status,
+            active_period = :next_active_period,
+            phase_state = :next_phase_state
+        WHERE id = :match_id
+          AND status = :expected_status
+          AND active_period IS NOT DISTINCT FROM :expected_active_period
+          AND phase_state IS NOT DISTINCT FROM :expected_phase_state
+        RETURNING *
+    """
+    result = await database.fetch_one(
+        query=query,
+        values={
+            "match_id": match_id,
+            "expected_status": expected_status.value,
+            "expected_active_period": (
+                expected_active_period.value if expected_active_period is not None else None
+            ),
+            "expected_phase_state": (
+                expected_phase_state.value if expected_phase_state is not None else None
+            ),
+            "next_status": next_state.status.value,
+            "next_active_period": (
+                next_state.active_period.value
+                if next_state.active_period is not None
+                else None
+            ),
+            "next_phase_state": (
+                next_state.phase_state.value
+                if next_state.phase_state is not None
+                else None
+            ),
+        },
+    )
+    if result is None:
+        return None
+    return Match.model_validate(dict(result._mapping))
+
+
+async def sql_update_match_results(
+    match_id: MatchId,
+    match: Match,
+    match_body: MatchBody,
+) -> None:
+    fields_set = match_body.model_fields_set
+
+    half1_score1 = (
+        match_body.stage_item_input1_half1_score
+        if "stage_item_input1_half1_score" in fields_set
+        else match.stage_item_input1_half1_score
+    )
+    half1_score2 = (
+        match_body.stage_item_input2_half1_score
+        if "stage_item_input2_half1_score" in fields_set
+        else match.stage_item_input2_half1_score
+    )
+    half2_score1 = (
+        match_body.stage_item_input1_half2_score
+        if "stage_item_input1_half2_score" in fields_set
+        else match.stage_item_input1_half2_score
+    )
+    half2_score2 = (
+        match_body.stage_item_input2_half2_score
+        if "stage_item_input2_half2_score" in fields_set
+        else match.stage_item_input2_half2_score
+    )
+    penalty_score1 = (
+        match_body.stage_item_input1_penalty_score
+        if "stage_item_input1_penalty_score" in fields_set
+        else match.stage_item_input1_penalty_score
+    )
+    penalty_score2 = (
+        match_body.stage_item_input2_penalty_score
+        if "stage_item_input2_penalty_score" in fields_set
+        else match.stage_item_input2_penalty_score
+    )
+
+    query = """
+        UPDATE matches
+        SET stage_item_input1_score = :stage_item_input1_score,
+            stage_item_input2_score = :stage_item_input2_score,
+            stage_item_input1_half1_score = :stage_item_input1_half1_score,
+            stage_item_input2_half1_score = :stage_item_input2_half1_score,
+            stage_item_input1_half2_score = :stage_item_input1_half2_score,
+            stage_item_input2_half2_score = :stage_item_input2_half2_score,
+            stage_item_input1_penalty_score = :stage_item_input1_penalty_score,
+            stage_item_input2_penalty_score = :stage_item_input2_penalty_score
+        WHERE matches.id = :match_id
+    """
+
+    await database.execute(
+        query=query,
+        values={
+            "match_id": match_id,
+            "stage_item_input1_score": half1_score1 + half2_score1,
+            "stage_item_input2_score": half1_score2 + half2_score2,
+            "stage_item_input1_half1_score": half1_score1,
+            "stage_item_input2_half1_score": half1_score2,
+            "stage_item_input1_half2_score": half2_score1,
+            "stage_item_input2_half2_score": half2_score2,
+            "stage_item_input1_penalty_score": penalty_score1,
+            "stage_item_input2_penalty_score": penalty_score2,
+        },
+    )
+
+
 async def sql_update_match(match_id: MatchId, match: MatchBody, tournament: Tournament) -> None:
     query = """
         UPDATE matches
@@ -135,7 +257,7 @@ async def sql_update_match(match_id: MatchId, match: MatchBody, tournament: Tour
         query=query,
         values={
             "match_id": match_id,
-            **match.model_dump(exclude={"status"}),
+            **match.model_dump(exclude={"status", "id"}),
             "status": match.status.value if match.status is not None else None,
             "duration_minutes": duration_minutes,
             "margin_minutes": margin_minutes,

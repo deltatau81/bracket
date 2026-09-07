@@ -19,3 +19,9 @@ class PlayerTeamAssignmentBody(BaseModelORM):
     player_id: PlayerId
     number: int | None = Field(default=None, ge=0)
     position: PlayerPosition | None = None
+
+
+class PlayerTeamUpdateBody(BaseModelORM):
+    team_id: TeamId | None = None
+    number: int | None = Field(default=None, ge=0)
+    position: PlayerPosition | None = None

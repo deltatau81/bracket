@@ -16,6 +16,7 @@ from bracket.models.db.tournament import Tournament
 from bracket.models.db.user import UserPublic
 from bracket.routes.auth import (
     user_authenticated_for_tournament,
+    user_authenticated_for_tournament_admin,
     user_authenticated_or_public_dashboard,
 )
 from bracket.routes.models import (
@@ -118,7 +119,7 @@ async def get_competition_by_id(
 async def create_competition_route(
     tournament_id: TournamentId,
     body: CompetitionBody,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> CompetitionResponse:
     competition_id = await create_competition(
@@ -146,7 +147,7 @@ async def update_competition_route(
     tournament_id: TournamentId,
     competition_id: CompetitionId,
     body: CompetitionBody,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> CompetitionResponse:
     existing = await get_competition(
@@ -179,7 +180,7 @@ async def update_competition_route(
 async def delete_competition_route(
     tournament_id: TournamentId,
     competition_id: CompetitionId,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> SuccessResponse:
     existing = await get_competition(
@@ -240,7 +241,7 @@ async def create_competition_discipline(
     tournament_id: TournamentId,
     competition_id: CompetitionId,
     body: CompetitionDisciplineBody,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> CompetitionDisciplineResponse:
     competition = await get_competition(
@@ -280,7 +281,7 @@ async def update_competition_discipline(
     competition_id: CompetitionId,
     discipline_id: CompetitionDisciplineId,
     body: CompetitionDisciplineBody,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> CompetitionDisciplineResponse:
     competition = await get_competition(
@@ -325,7 +326,7 @@ async def delete_competition_discipline(
     tournament_id: TournamentId,
     competition_id: CompetitionId,
     discipline_id: CompetitionDisciplineId,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> SuccessResponse:
     competition = await get_competition(
@@ -388,7 +389,7 @@ async def set_competition_scoring(
     tournament_id: TournamentId,
     competition_id: CompetitionId,
     body: list[CompetitionScoringBody],
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> CompetitionScoringResponse:
     competition = await get_competition(

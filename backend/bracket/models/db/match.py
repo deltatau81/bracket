@@ -2,7 +2,7 @@ from decimal import Decimal
 from enum import auto
 
 from heliclockter import datetime_utc, timedelta
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from bracket.models.db.court import Court
 from bracket.models.db.shared import BaseModelORM
@@ -16,6 +16,35 @@ class MatchStatus(EnumAutoStr):
     PLANNED = auto()
     RUNNING = auto()
     FINISHED = auto()
+
+
+class MatchPeriod(EnumAutoStr):
+    HALF1 = auto()
+    HALF2 = auto()
+    SHOOTOUT = auto()
+    PERIOD1 = auto()
+    PERIOD2 = auto()
+    PERIOD3 = auto()
+    OVERTIME = auto()
+
+
+class MatchPhaseState(EnumAutoStr):
+    ACTIVE = auto()
+    BREAK = auto()
+
+
+class MatchPhaseAction(EnumAutoStr):
+    START_MATCH = auto()
+    END_PERIOD = auto()
+    START_NEXT_PERIOD = auto()
+    START_OVERTIME = auto()
+    FINISH_MATCH = auto()
+    REOPEN_MATCH = auto()
+    RESUME_PERIOD = auto()
+
+
+class MatchPhaseBody(BaseModelORM):
+    action: MatchPhaseAction
 
 
 class MatchBaseInsertable(BaseModelORM):
@@ -39,6 +68,8 @@ class MatchBaseInsertable(BaseModelORM):
     stage_item_input1_conflict: bool
     stage_item_input2_conflict: bool
     status: MatchStatus = MatchStatus.PLANNED
+    active_period: MatchPeriod | None = None
+    phase_state: MatchPhaseState | None = None
     ruleset_override: HockeyRuleset | None = None
     age_category_override: HockeyAgeCategory | None = None
     ruleset_season_override: RulesetSeason | None = None
@@ -125,7 +156,13 @@ class MatchBody(BaseModelORM):
     ruleset_season_override: RulesetSeason | None = None
 
 
+class MatchUpdateBody(MatchBody):
+    model_config = ConfigDict(extra="forbid")
+
+    id: MatchId | None = None
+
 class MatchCreateBodyFrontend(BaseModelORM):
+
     round_id: RoundId
     court_id: CourtId | None = None
     stage_item_input1_id: StageItemInputId | None = None

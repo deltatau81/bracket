@@ -16,6 +16,7 @@ class MatchEventType(EnumAutoStr):
 class MatchEventPeriod(EnumAutoStr):
     HALF1 = auto()
     HALF2 = auto()
+    SHOOTOUT = auto()
     PERIOD1 = auto()
     PERIOD2 = auto()
     PERIOD3 = auto()
@@ -36,9 +37,12 @@ class MatchEventBody(BaseModelORM):
     assist2_player_id: PlayerId | None = None
     assist2_number: int | None = Field(default=None, ge=0)
     assist2_name: str | None = None
+    penalty_code: str | None = None
+    penalty_rule: str | None = None
     penalty_type: str | None = None
     penalty_minutes: int | None = Field(default=None, ge=0)
     infraction: str | None = None
+    game_misconduct: bool | None = None
     sort_order: int = 0
 
     @model_validator(mode="after")
@@ -51,7 +55,14 @@ class MatchEventBody(BaseModelORM):
             self.assist2_number,
             self.assist2_name,
         )
-        penalty_values = (self.penalty_type, self.penalty_minutes, self.infraction)
+        penalty_values = (
+            self.penalty_code,
+            self.penalty_rule,
+            self.penalty_type,
+            self.penalty_minutes,
+            self.infraction,
+            self.game_misconduct,
+        )
         if self.event_type is MatchEventType.GOAL and any(
             value is not None for value in penalty_values
         ):

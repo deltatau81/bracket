@@ -265,13 +265,13 @@ export default function SchedulePage() {
       </Head>
       <DoubleHeader tournamentData={tournamentDataFull} />
       <Container size="xl" mt="lg" px="md">
-        <Grid visibleFrom="md" gutter="xl" align="flex-start">
+        <Grid visibleFrom="lg" gutter="xl" align="flex-start">
           <Grid.Col span={8}>{timeline}</Grid.Col>
           <Grid.Col span={4}>
             <Box style={{ position: 'sticky', top: '1rem' }}>{overallStandings}</Box>
           </Grid.Col>
         </Grid>
-        <Tabs hiddenFrom="md" defaultValue="timeline">
+        <Tabs hiddenFrom="lg" defaultValue="timeline">
           <Tabs.List grow mb="md">
             <Tabs.Tab value="timeline">Ablauf &amp; Ergebnisse</Tabs.Tab>
             <Tabs.Tab value="standings">Gesamtwertung</Tabs.Tab>

@@ -7,9 +7,16 @@ import {
   formatMatchInput2,
   MatchInterface,
 } from '../../interfaces/match';
+import { MatchEvent } from '../../interfaces/match_event';
 import { TeamInterface } from '../../interfaces/team';
 import { getBaseApiUrl } from '../../services/adapter';
+import { getTournamentMatchEvents } from '../../services/match_event';
 import CompetitionTimelineItem from '../competition/competition_timeline_item';
+import {
+  formatGameTime,
+  formatPenaltyDetails,
+  MATCH_PERIOD_LABELS,
+} from '../match_event_utils';
 import { formatTime } from '../utils/datetime';
 import { Translator } from '../utils/types';
 
@@ -138,13 +145,113 @@ function ScoreRow({
   );
 }
 
+
+function MatchEventTimeline({
+  events,
+  match,
+}: {
+  events: MatchEvent[];
+  match: MatchInterface;
+}) {
+  if (events.length === 0) return null;
+
+  const team1 = match.stage_item_input1?.team;
+  const team2 = match.stage_item_input2?.team;
+
+  function teamName(teamId: number): string {
+    if (team1?.id === teamId) return team1.name;
+    if (team2?.id === teamId) return team2.name;
+    return `Team ${teamId}`;
+  }
+
+  const grouped: Array<{
+    period: MatchEvent['period'];
+    events: MatchEvent[];
+  }> = [];
+
+  for (const event of events) {
+    const current = grouped[grouped.length - 1];
+
+    if (current != null && current.period === event.period) {
+      current.events.push(event);
+    } else {
+      grouped.push({
+        period: event.period,
+        events: [event],
+      });
+    }
+  }
+
+  return (
+    <Stack
+      gap="sm"
+      mt="md"
+      pt="sm"
+      style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}
+    >
+      <Text fw={700} size="sm">
+        Spielereignisse
+      </Text>
+
+      {grouped.map((group) => (
+        <Stack key={group.period} gap={4}>
+          <Badge variant="light" size="sm" style={{ alignSelf: 'flex-start' }}>
+            {MATCH_PERIOD_LABELS[group.period]}
+          </Badge>
+
+          {group.events.map((event) => {
+            const player =
+              event.player_name != null || event.player_number != null
+                ? `${event.player_number == null ? '' : `#${event.player_number} `}${event.player_name ?? ''}`.trim()
+                : null;
+
+            return (
+              <div key={event.id}>
+                <Group gap="xs" wrap="wrap">
+                  <Text size="sm" fw={700}>
+                    {formatGameTime(event.game_time_seconds)}
+                  </Text>
+
+                  <Text size="sm">{teamName(event.team_id)}</Text>
+
+                  {player != null ? (
+                    <Text size="sm" c="dimmed">
+                      {player}
+                    </Text>
+                  ) : null}
+
+                  <Badge
+                    size="sm"
+                    variant="outline"
+                    color={event.event_type === 'GOAL' ? 'green' : 'orange'}
+                  >
+                    {event.event_type === 'GOAL' ? 'Tor' : 'Strafe'}
+                  </Badge>
+                </Group>
+
+                {event.event_type === 'PENALTY' ? (
+                  <Text size="sm" c="dimmed" ml="md">
+                    {formatPenaltyDetails(event)}
+                  </Text>
+                ) : null}
+              </div>
+            );
+          })}
+        </Stack>
+      ))}
+    </Stack>
+  );
+}
+
 function MatchTimelineItem({
   event,
+  matchEvents,
   t,
   stageItemsLookup,
   matchesLookup,
 }: {
   event: MatchTimelineEvent;
+  matchEvents: MatchEvent[];
   t: Translator;
   stageItemsLookup: any;
   matchesLookup: any;
@@ -265,6 +372,8 @@ function MatchTimelineItem({
           </Center>
         )}
       </Card>
+
+      <MatchEventTimeline events={matchEvents} match={match} />
     </Card>
   );
 }
@@ -284,6 +393,9 @@ export default function TournamentTimeline({
   matchesLookup: any;
   stageItemsLookup: any;
 }) {
+  const tournamentMatchEventsResponse = getTournamentMatchEvents(tournamentId);
+  const tournamentMatchEvents = tournamentMatchEventsResponse.data?.data ?? [];
+
   const matchEvents: MatchTimelineEvent[] = Object.values(matchesLookup)
     .map((data: any) => ({
       kind: 'match' as const,
@@ -328,6 +440,9 @@ export default function TournamentTimeline({
           {event.kind === 'match' ? (
             <MatchTimelineItem
               event={event}
+              matchEvents={tournamentMatchEvents.filter(
+                (matchEvent) => matchEvent.match_id === event.match.id
+              )}
               t={t}
               stageItemsLookup={stageItemsLookup}
               matchesLookup={matchesLookup}

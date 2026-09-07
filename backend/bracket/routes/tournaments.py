@@ -19,6 +19,8 @@ from bracket.models.db.tournament import (
 )
 from bracket.models.db.user import UserPublic
 from bracket.routes.auth import (
+    user_authenticated_for_tournament_admin,
+    user_authenticated_admin,
     user_authenticated,
     user_authenticated_for_tournament,
     user_authenticated_or_public_dashboard,
@@ -106,7 +108,7 @@ async def get_tournaments(
 async def update_tournament_by_id(
     tournament_id: TournamentId,
     tournament_body: TournamentUpdateBody,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     tournament: Tournament = Depends(disallow_archived_tournament),
 ) -> SuccessResponse:
     validate_immutable_tournament_fields(tournament, tournament_body)
@@ -119,7 +121,7 @@ async def update_tournament_by_id(
 
 @router.delete("/tournaments/{tournament_id}", response_model=SuccessResponse)
 async def delete_tournament(
-    tournament_id: TournamentId, _: UserPublic = Depends(user_authenticated_for_tournament)
+    tournament_id: TournamentId, _: UserPublic = Depends(user_authenticated_for_tournament_admin)
 ) -> SuccessResponse:
     await sql_delete_tournament_completely(tournament_id)
     return SuccessResponse()
@@ -129,7 +131,7 @@ async def delete_tournament(
 async def change_status(
     tournament_id: TournamentId,
     body: TournamentChangeStatusBody,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
 ) -> SuccessResponse:
     """
     Make a tournament archived or non-archived.
@@ -149,7 +151,7 @@ async def change_status(
 
 @router.post("/tournaments", response_model=SuccessResponse)
 async def create_tournament(
-    tournament_to_insert: TournamentBody, user: UserPublic = Depends(user_authenticated)
+    tournament_to_insert: TournamentBody, user: UserPublic = Depends(user_authenticated_admin)
 ) -> SuccessResponse:
     existing_tournaments = await sql_get_tournaments((tournament_to_insert.club_id,))
     check_requirement(existing_tournaments, user, "max_tournaments")
@@ -176,7 +178,7 @@ async def create_tournament(
 async def upload_logo(
     tournament_id: TournamentId,
     file: UploadFile | None = None,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> TournamentResponse:
     old_logo_path = await get_tournament_logo_path(tournament_id)

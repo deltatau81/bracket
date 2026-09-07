@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends
 from bracket.database import database
 from bracket.logic.subscriptions import check_requirement
 from bracket.models.db.player import Player, PlayerBody, PlayerMultiBody
+from bracket.models.db.player_x_team import PlayerTeamUpdateBody
 from bracket.models.db.tournament import Tournament
 from bracket.models.db.user import UserPublic
 from bracket.routes.auth import user_authenticated_for_tournament
@@ -14,7 +15,7 @@ from bracket.routes.models import (
     SuccessResponse,
 )
 from bracket.routes.util import disallow_archived_tournament
-from bracket.schema import players
+from bracket.schema import players, players_x_teams, teams
 from bracket.sql.players import (
     get_all_players_in_tournament,
     get_player_count,
@@ -75,6 +76,67 @@ async def update_player_by_id(
             )
         )
     )
+
+
+@router.put(
+    "/tournaments/{tournament_id}/players/{player_id}/team",
+    response_model=SuccessResponse,
+)
+async def update_player_team(
+    tournament_id: TournamentId,
+    player_id: PlayerId,
+    body: PlayerTeamUpdateBody,
+    _: UserPublic = Depends(user_authenticated_for_tournament),
+    __: Tournament = Depends(disallow_archived_tournament),
+) -> SuccessResponse:
+    player_exists = await database.fetch_one(
+        players.select().where(
+            (players.c.id == player_id)
+            & (players.c.tournament_id == tournament_id)
+        )
+    )
+    if player_exists is None:
+        from fastapi import HTTPException, status
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Player not found",
+        )
+
+    if body.team_id is not None:
+        team_exists = await database.fetch_one(
+            teams.select().where(
+                (teams.c.id == body.team_id)
+                & (teams.c.tournament_id == tournament_id)
+            )
+        )
+        if team_exists is None:
+            from fastapi import HTTPException, status
+
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Team not found",
+            )
+
+    async with database.transaction():
+        await database.execute(
+            players_x_teams.delete().where(
+                players_x_teams.c.player_id == player_id
+            )
+        )
+
+        if body.team_id is not None:
+            await database.execute(
+                players_x_teams.insert(),
+                values={
+                    "player_id": player_id,
+                    "team_id": body.team_id,
+                    "number": body.number,
+                    "position": body.position,
+                },
+            )
+
+    return SuccessResponse()
 
 
 @router.delete("/tournaments/{tournament_id}/players/{player_id}", response_model=SuccessResponse)

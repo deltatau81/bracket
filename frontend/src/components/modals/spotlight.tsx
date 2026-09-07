@@ -4,6 +4,7 @@ import {
   IconBrackets,
   IconCalendarEvent,
   IconHome,
+  IconMedal,
   IconScoreboard,
   IconSearch,
   IconSettings,
@@ -16,12 +17,18 @@ import { useTranslation } from 'next-i18next';
 import { useRouter } from 'next/router';
 import React from 'react';
 
+import { getUser } from '../../services/adapter';
 import { getTournamentIdFromRouter } from '../utils/util';
 
 export function BracketSpotlight() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id: tournamentId } = getTournamentIdFromRouter();
+  const swrUserResponse = getUser();
+
+  const accountType = swrUserResponse.data?.data?.account_type;
+  const isScorer = accountType === 'SCORER';
+  const isAdmin = accountType != null && !isScorer;
 
   const actions: SpotlightActionData[] = [
     {
@@ -31,13 +38,17 @@ export function BracketSpotlight() {
       onClick: () => router.push('/'),
       leftSection: <IconHome size="1.2rem" />,
     },
-    {
-      id: 'clubs',
-      title: t('clubs_title'),
-      description: t('clubs_spotlight_description'),
-      onClick: () => router.push('/clubs'),
-      leftSection: <IconUsersGroup size="1.2rem" />,
-    },
+    ...(isAdmin
+      ? [
+          {
+            id: 'clubs',
+            title: t('clubs_title'),
+            description: t('clubs_spotlight_description'),
+            onClick: () => router.push('/clubs'),
+            leftSection: <IconUsersGroup size="1.2rem" />,
+          },
+        ]
+      : []),
     {
       id: 'user settings',
       title: t('user_settings_title'),
@@ -47,58 +58,92 @@ export function BracketSpotlight() {
     },
   ];
 
-  const tournamentActions: SpotlightActionData[] = [
+  const operationalTournamentActions: SpotlightActionData[] = [
+    {
+      id: 'players',
+      title: t('players_title'),
+      description: t('players_spotlight_description'),
+      onClick: () =>
+        router.push(`/tournaments/${tournamentId}/players`),
+      leftSection: <IconUsers size="1.2rem" />,
+    },
     {
       id: 'results',
       title: t('results_title'),
       description: t('results_spotlight_description'),
-      onClick: () => router.push(`/tournaments/${tournamentId}/results`),
+      onClick: () =>
+        router.push(`/tournaments/${tournamentId}/results`),
       leftSection: <IconBrackets size="1.2rem" />,
     },
+    {
+      id: 'competitions',
+      title: 'Technikwettbewerb',
+      description: 'Ergebnisse des Technikwettbewerbs erfassen',
+      onClick: () =>
+        router.push(`/tournaments/${tournamentId}/competitions`),
+      leftSection: <IconMedal size="1.2rem" />,
+    },
+  ];
+
+  const adminTournamentActions: SpotlightActionData[] = [
     {
       id: 'planning',
       title: t('planning_title'),
       description: t('planning_spotlight_description'),
-      onClick: () => router.push(`/tournaments/${tournamentId}/schedule`),
+      onClick: () =>
+        router.push(`/tournaments/${tournamentId}/schedule`),
       leftSection: <IconCalendarEvent size="1.2rem" />,
     },
     {
       id: 'teams',
       title: t('teams_title'),
       description: t('teams_spotlight_description'),
-      onClick: () => router.push(`/tournaments/${tournamentId}/teams`),
-      leftSection: <IconUsers size="1.2rem" />,
-    },
-    {
-      id: 'players',
-      title: t('players_title'),
-      description: t('players_spotlight_description'),
-      onClick: () => router.push(`/tournaments/${tournamentId}/players`),
+      onClick: () =>
+        router.push(`/tournaments/${tournamentId}/teams`),
       leftSection: <IconUsers size="1.2rem" />,
     },
     {
       id: 'stages',
       title: t('stage_title'),
       description: t('stage_spotlight_description'),
-      onClick: () => router.push(`/tournaments/${tournamentId}/stages`),
+      onClick: () =>
+        router.push(`/tournaments/${tournamentId}/stages`),
       leftSection: <IconTrophy size="1.2rem" />,
     },
     {
       id: 'tournament settings',
       title: t('tournament_setting_title'),
       description: t('tournament_setting_spotlight_description'),
-      onClick: () => router.push(`/tournaments/${tournamentId}/settings`),
+      onClick: () =>
+        router.push(`/tournaments/${tournamentId}/settings`),
       leftSection: <IconSettings size="1.2rem" />,
     },
     {
       id: 'rankings',
       title: t('rankings_title'),
       description: t('rankings_spotlight_description'),
-      onClick: () => router.push(`/tournaments/${tournamentId}/rankings`),
+      onClick: () =>
+        router.push(`/tournaments/${tournamentId}/rankings`),
       leftSection: <IconScoreboard size="1.2rem" />,
     },
   ];
-  const allActions = tournamentId >= 0 ? actions.concat(tournamentActions) : actions;
+
+  let tournamentActions: SpotlightActionData[] = [];
+
+  if (isScorer) {
+    tournamentActions = operationalTournamentActions;
+  } else if (isAdmin) {
+    tournamentActions = [
+      ...operationalTournamentActions,
+      ...adminTournamentActions,
+    ];
+  }
+
+  const allActions =
+    tournamentId >= 0
+      ? actions.concat(tournamentActions)
+      : actions;
+
   return (
     <Spotlight
       actions={allActions}
@@ -106,7 +151,12 @@ export function BracketSpotlight() {
       nothingFound={t('nothing_found_placeholder')}
       highlightQuery
       searchProps={{
-        leftSection: <IconSearch style={{ width: rem(20), height: rem(20) }} stroke={1.5} />,
+        leftSection: (
+          <IconSearch
+            style={{ width: rem(20), height: rem(20) }}
+            stroke={1.5}
+          />
+        ),
         placeholder: t('search_placeholder'),
       }}
     />

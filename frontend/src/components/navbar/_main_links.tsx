@@ -8,18 +8,19 @@ import {
   IconCalendar,
   IconDots,
   IconHome,
+  IconMedal,
   IconScoreboard,
   IconSettings,
   IconTrophy,
   IconUser,
   IconUsers,
-  IconMedal,
 } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React from 'react';
 
+import { UserAccountType } from '../../interfaces/user';
 import { getBaseApiUrl } from '../../services/adapter';
 import { capitalize } from '../utils/util';
 import classes from './_main_links.module.css';
@@ -71,12 +72,27 @@ function MainLink({ item, pathName }: { item: MainLinkProps; pathName: String })
   );
 }
 
-export function getBaseLinksDict() {
+export function getBaseLinksDict(accountType?: UserAccountType) {
   const { t } = useTranslation();
+  const isAdmin = accountType != null && accountType !== 'SCORER';
 
   return [
-    { link: '/clubs', label: capitalize(t('clubs_title')), links: [], icon: IconUsers },
-    { link: '/', label: capitalize(t('tournaments_title')), links: [], icon: IconHome },
+    ...(isAdmin
+      ? [
+          {
+            link: '/clubs',
+            label: capitalize(t('clubs_title')),
+            links: [],
+            icon: IconUsers,
+          },
+        ]
+      : []),
+    {
+      link: '/',
+      label: capitalize(t('tournaments_title')),
+      links: [],
+      icon: IconHome,
+    },
     {
       link: '/user',
       label: t('user_title'),
@@ -88,62 +104,94 @@ export function getBaseLinksDict() {
       link: '',
       label: t('more_title'),
       links: [
-        { link: 'https://docs.bracketapp.nl/', label: t('website_title'), icon: IconBrowser },
+        {
+          link: 'https://docs.bracketapp.nl/',
+          label: t('website_title'),
+          icon: IconBrowser,
+        },
         {
           link: 'https://github.com/evroon/bracket',
           label: t('github_title'),
           icon: IconBrandGithub,
         },
-        { link: `${getBaseApiUrl()}/docs`, label: t('api_docs_title'), icon: IconBook },
+        {
+          link: `${getBaseApiUrl()}/docs`,
+          label: t('api_docs_title'),
+          icon: IconBook,
+        },
       ],
     },
   ];
 }
 
-export function getBaseLinks() {
+export function getBaseLinks(accountType?: UserAccountType) {
   const router = useRouter();
   const pathName = router.pathname.replace(/\/+$/, '');
-  return getBaseLinksDict()
+
+  return getBaseLinksDict(accountType)
     .filter((link) => link.links.length < 1)
-    .map((link) => <MainLinkMobile key={link.label} item={link} pathName={pathName} />);
+    .map((link) => (
+      <MainLinkMobile
+        key={link.label}
+        item={link}
+        pathName={pathName}
+      />
+    ));
 }
 
-export function TournamentLinks({ tournament_id }: any) {
+export function TournamentLinks({
+  tournament_id,
+  accountType,
+}: {
+  tournament_id: number;
+  accountType?: UserAccountType;
+}) {
   const router = useRouter();
   const { t } = useTranslation();
   const tm_prefix = `/tournaments/${tournament_id}`;
-  const pathName = router.pathname.replace('[id]', tournament_id).replace(/\/+$/, '');
+  const pathName = router.pathname
+    .replace('[id]', `${tournament_id}`)
+    .replace(/\/+$/, '');
 
-  const data = [
+  const isScorer = accountType === 'SCORER';
+  const isAdmin = accountType != null && !isScorer;
+
+  const adminLinks: MainLinkProps[] = [
     {
       icon: IconTrophy,
       label: capitalize(t('stage_title')),
       link: `${tm_prefix}/stages`,
     },
     {
+      icon: IconUsers,
+      label: capitalize(t('teams_title')),
+      link: `${tm_prefix}/teams`,
+    },
+  ];
+
+  const operationalLinks: MainLinkProps[] = [
+    {
       icon: IconUser,
       label: capitalize(t('players_title')),
       link: `${tm_prefix}/players`,
     },
     {
-      icon: IconUsers,
-      label: capitalize(t('teams_title')),
-      link: `${tm_prefix}/teams`,
-    },
-    {
-       icon: IconMedal,
-       label: 'Competitions',
-       link: `${tm_prefix}/competitions`,
-    },
-    {
-      icon: IconCalendar,
-      label: capitalize(t('planning_title')),
-      link: `${tm_prefix}/schedule`,
+      icon: IconMedal,
+      label: 'Technikwettbewerb',
+      link: `${tm_prefix}/competitions`,
     },
     {
       icon: IconBrackets,
       label: capitalize(t('results_title')),
       link: `${tm_prefix}/results`,
+    },
+  ];
+
+  const remainingAdminLinks: MainLinkProps[] = [
+    {
+      icon: IconCalendar,
+      label: capitalize(t('planning_title')),
+      link: `${tm_prefix}/schedule`,
     },
     {
       icon: IconScoreboard,
@@ -157,7 +205,26 @@ export function TournamentLinks({ tournament_id }: any) {
     },
   ];
 
-  const links = data.map((link) => <MainLink key={link.label} item={link} pathName={pathName} />);
+  let data: MainLinkProps[] = [];
+
+  if (isScorer) {
+    data = operationalLinks;
+  } else if (isAdmin) {
+    data = [
+      ...adminLinks,
+      ...operationalLinks,
+      ...remainingAdminLinks,
+    ];
+  }
+
+  const links = data.map((link) => (
+    <MainLink
+      key={link.label}
+      item={link}
+      pathName={pathName}
+    />
+  ));
+
   return (
     <>
       <Center hiddenFrom="sm">

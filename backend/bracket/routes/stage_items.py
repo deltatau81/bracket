@@ -32,6 +32,7 @@ from bracket.models.db.user import UserPublic
 from bracket.models.db.util import StageItemWithRounds
 from bracket.routes.auth import (
     user_authenticated_for_tournament,
+    user_authenticated_for_tournament_admin,
 )
 from bracket.routes.models import SuccessResponse
 from bracket.routes.util import disallow_archived_tournament, stage_item_dependency
@@ -69,7 +70,7 @@ router = APIRouter()
 async def delete_stage_item(
     tournament_id: TournamentId,
     stage_item_id: StageItemId,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: StageItemWithRounds = Depends(stage_item_dependency),
 ) -> SuccessResponse:
     with check_foreign_key_violation(
@@ -84,7 +85,7 @@ async def delete_stage_item(
 async def create_stage_item(
     tournament_id: TournamentId,
     stage_body: StageItemCreateBody,
-    user: UserPublic = Depends(user_authenticated_for_tournament),
+    user: UserPublic = Depends(user_authenticated_for_tournament_admin),
 ) -> SuccessResponse:
     await check_foreign_keys_belong_to_tournament(stage_body, tournament_id)
 
@@ -104,7 +105,7 @@ async def update_stage_item(
     tournament_id: TournamentId,
     stage_item_id: StageItemId,
     stage_item_body: StageItemUpdateBody,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
     stage_item: StageItemWithRounds = Depends(stage_item_dependency),
 ) -> SuccessResponse:
@@ -138,7 +139,7 @@ async def start_next_round(
     stage_item_id: StageItemId,
     active_next_body: StageItemActivateNextBody,
     stage_item: StageItemWithRounds = Depends(stage_item_dependency),
-    user: UserPublic = Depends(user_authenticated_for_tournament),
+    user: UserPublic = Depends(user_authenticated_for_tournament_admin),
     elo_diff_threshold: int = 200,
     iterations: int = 2_000,
     only_recommended: bool = False,

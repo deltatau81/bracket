@@ -10,6 +10,7 @@ from starlette.requests import Request
 
 from bracket.config import config
 from bracket.database import database
+from bracket.models.db.account import UserAccountType
 from bracket.models.db.tournament import Tournament
 from bracket.models.db.user import UserInDB, UserPublic
 from bracket.schema import tournaments
@@ -113,6 +114,20 @@ async def user_authenticated_for_tournament(
     return UserPublic.model_validate(user.model_dump())
 
 
+async def user_authenticated_for_tournament_admin(
+    tournament_id: TournamentId, token: str = Depends(oauth2_scheme)
+) -> UserPublic:
+    user = await user_authenticated_for_tournament(tournament_id, token)
+
+    if user.account_type is UserAccountType.SCORER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator permissions required",
+        )
+
+    return user
+
+
 async def user_authenticated_for_club(
     club_id: ClubId, token: str = Depends(oauth2_scheme)
 ) -> UserPublic:
@@ -203,3 +218,32 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 #         "email": user.email,
 #         "provider": user.provider,
 #     }
+
+
+async def user_authenticated_admin(
+    token: str = Depends(oauth2_scheme),
+) -> UserPublic:
+    user = await user_authenticated(token)
+
+    if user.account_type is UserAccountType.SCORER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator permissions required",
+        )
+
+    return user
+
+
+async def user_authenticated_for_club_admin(
+    club_id: ClubId,
+    token: str = Depends(oauth2_scheme),
+) -> UserPublic:
+    user = await user_authenticated_for_club(club_id, token)
+
+    if user.account_type is UserAccountType.SCORER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator permissions required",
+        )
+
+    return user

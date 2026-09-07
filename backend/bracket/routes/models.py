@@ -2,6 +2,7 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
+from bracket.logic.penalty_catalog import PenaltyCatalog
 from bracket.logic.scheduling.handle_stage_activation import StageItemInputUpdate
 from bracket.models.db.club import Club
 from bracket.models.db.court import Court
@@ -88,6 +89,10 @@ class MatchEventsResponse(DataResponse[list[MatchEvent]]):
     pass
 
 
+class PenaltyCatalogResponse(DataResponse[PenaltyCatalog]):
+    pass
+
+
 class SingleMatchEventResponse(DataResponse[MatchEvent]):
     pass
 
@@ -106,6 +111,11 @@ class SingleTeamResponse(DataResponse[Team]):
 
 
 class UserPublicResponse(DataResponse[UserPublic]):
+    pass
+
+
+
+class UsersResponse(DataResponse[list[UserPublic]]):
     pass
 
 

@@ -17,6 +17,7 @@ import React, { ReactNode } from 'react';
 
 import { Brand } from '../components/navbar/_brand';
 import { getBaseLinks, getBaseLinksDict } from '../components/navbar/_main_links';
+import { checkForAuthError, getUser } from '../services/adapter';
 import classes from './_layout.module.css';
 
 interface HeaderActionLink {
@@ -126,9 +127,13 @@ export default function Layout({ children, additionalNavbarLinks, breadcrumbs }:
   const navbarState = useDisclosure();
   const [opened] = navbarState;
 
+  const swrUserResponse = getUser();
+  checkForAuthError(swrUserResponse);
+  const accountType = swrUserResponse.data?.data?.account_type;
+
   const linksComponent = (
     <AppShell.Section grow>
-      {getBaseLinks()}
+      {getBaseLinks(accountType)}
       {additionalNavbarLinks}
     </AppShell.Section>
   );
@@ -147,7 +152,7 @@ export default function Layout({ children, additionalNavbarLinks, breadcrumbs }:
       padding="md"
     >
       <HeaderAction
-        links={getBaseLinksDict()}
+        links={getBaseLinksDict(accountType)}
         navbarState={navbarState}
         breadcrumbs={breadcrumbs}
       />
