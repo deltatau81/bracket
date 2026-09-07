@@ -205,6 +205,15 @@ function MatchEventTimeline({
                 ? `${event.player_number == null ? '' : `#${event.player_number} `}${event.player_name ?? ''}`.trim()
                 : null;
 
+            const assists = [
+              event.assist1_name != null || event.assist1_number != null
+                ? `${event.assist1_number == null ? '' : `#${event.assist1_number} `}${event.assist1_name ?? ''}`.trim()
+                : null,
+              event.assist2_name != null || event.assist2_number != null
+                ? `${event.assist2_number == null ? '' : `#${event.assist2_number} `}${event.assist2_name ?? ''}`.trim()
+                : null,
+            ].filter((assist): assist is string => assist != null);
+
             return (
               <div key={event.id}>
                 <Group gap="xs" wrap="wrap">
@@ -228,6 +237,12 @@ function MatchEventTimeline({
                     {event.event_type === 'GOAL' ? 'Tor' : 'Strafe'}
                   </Badge>
                 </Group>
+
+                {event.event_type === 'GOAL' && assists.length > 0 ? (
+                  <Text size="sm" c="dimmed" ml="md">
+                    Assists: {assists.join(', ')}
+                  </Text>
+                ) : null}
 
                 {event.event_type === 'PENALTY' ? (
                   <Text size="sm" c="dimmed" ml="md">

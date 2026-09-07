@@ -66,6 +66,10 @@ function eventBody(
   teamId: number,
   playerId: number | null,
   playerNumber: number | null,
+  assist1PlayerId: number | null,
+  assist1Number: number | null,
+  assist2PlayerId: number | null,
+  assist2Number: number | null,
   period: MatchPeriod,
   gameTimeSeconds: number,
   penaltyCode: string | null,
@@ -81,12 +85,12 @@ function eventBody(
     player_id: playerId,
     player_number: playerNumber,
     player_name: playerId == null ? null : event.player_name,
-    assist1_player_id: event.assist1_player_id,
-    assist1_number: event.assist1_number,
-    assist1_name: event.assist1_name,
-    assist2_player_id: event.assist2_player_id,
-    assist2_number: event.assist2_number,
-    assist2_name: event.assist2_name,
+    assist1_player_id: event.event_type === 'GOAL' ? assist1PlayerId : null,
+    assist1_number: event.event_type === 'GOAL' ? assist1Number : null,
+    assist1_name: null,
+    assist2_player_id: event.event_type === 'GOAL' ? assist2PlayerId : null,
+    assist2_number: event.event_type === 'GOAL' ? assist2Number : null,
+    assist2_name: null,
     penalty_code: event.event_type === 'PENALTY' ? penaltyCode : null,
     penalty_rule: event.penalty_rule,
     penalty_type: event.event_type === 'PENALTY' ? penaltyType : null,
@@ -131,6 +135,10 @@ export default function MatchEvents({
   const [teamId, setTeamId] = useState<string | null>(null);
   const [playerNumber, setPlayerNumber] = useState<number | string>('');
   const [playerId, setPlayerId] = useState<string | null>(null);
+  const [assist1PlayerId, setAssist1PlayerId] = useState<string | null>(null);
+  const [assist1Number, setAssist1Number] = useState<string | number>('');
+  const [assist2PlayerId, setAssist2PlayerId] = useState<string | null>(null);
+  const [assist2Number, setAssist2Number] = useState<string | number>('');
   const [gameTime, setGameTime] = useState('');
   const [penaltyCode, setPenaltyCode] = useState<string | null>(null);
   const [penaltyType, setPenaltyType] = useState<PenaltyType | null>(null);
@@ -141,6 +149,10 @@ export default function MatchEvents({
   const [editTeamId, setEditTeamId] = useState<string | null>(null);
   const [editPlayerId, setEditPlayerId] = useState<string | null>(null);
   const [editPlayerNumber, setEditPlayerNumber] = useState<number | string>('');
+  const [editAssist1PlayerId, setEditAssist1PlayerId] = useState<string | null>(null);
+  const [editAssist1Number, setEditAssist1Number] = useState<string | number>('');
+  const [editAssist2PlayerId, setEditAssist2PlayerId] = useState<string | null>(null);
+  const [editAssist2Number, setEditAssist2Number] = useState<string | number>('');
   const [editPeriod, setEditPeriod] = useState<MatchPeriod | null>(null);
   const [editGameTime, setEditGameTime] = useState('');
   const [editPenaltyCode, setEditPenaltyCode] = useState<string | null>(null);
@@ -200,6 +212,19 @@ export default function MatchEvents({
       return;
     }
     if (activePeriod == null) return;
+
+    if (eventType === 'GOAL') {
+      const selectedPlayerIds = [playerId, assist1PlayerId, assist2PlayerId].filter(
+        (value): value is string => value != null
+      );
+      if (new Set(selectedPlayerIds).size !== selectedPlayerIds.length) {
+        setValidationError(
+          'Torschütze, Assist 1 und Assist 2 müssen unterschiedliche Spieler sein.'
+        );
+        return;
+      }
+    }
+
     if (eventType === 'PENALTY' && (penaltyCode == null || penaltyType == null)) {
       setValidationError('Bitte Vergehen und Strafe auswählen.');
       return;
@@ -215,6 +240,14 @@ export default function MatchEvents({
       game_time_seconds: seconds,
       player_id: playerId == null ? null : Number(playerId),
       player_number: playerNumber === '' ? null : Number(playerNumber),
+      assist1_player_id:
+        eventType === 'GOAL' && assist1PlayerId != null ? Number(assist1PlayerId) : null,
+      assist1_number:
+        eventType === 'GOAL' && assist1Number !== '' ? Number(assist1Number) : null,
+      assist2_player_id:
+        eventType === 'GOAL' && assist2PlayerId != null ? Number(assist2PlayerId) : null,
+      assist2_number:
+        eventType === 'GOAL' && assist2Number !== '' ? Number(assist2Number) : null,
       penalty_code: eventType === 'PENALTY' ? penaltyCode : null,
       penalty_type: eventType === 'PENALTY' ? penaltyType : null,
       penalty_minutes:
@@ -233,6 +266,10 @@ export default function MatchEvents({
     setGameTime('');
     setPlayerId(null);
     setPlayerNumber('');
+    setAssist1PlayerId(null);
+    setAssist1Number('');
+    setAssist2PlayerId(null);
+    setAssist2Number('');
     setPenaltyCode(null);
     setPenaltyType(null);
     setPenaltyMinutes('');
@@ -245,6 +282,14 @@ export default function MatchEvents({
     setEditTeamId(`${event.team_id}`);
     setEditPlayerId(event.player_id == null ? null : `${event.player_id}`);
     setEditPlayerNumber(event.player_number ?? '');
+    setEditAssist1PlayerId(
+      event.assist1_player_id == null ? null : `${event.assist1_player_id}`
+    );
+    setEditAssist1Number(event.assist1_number ?? '');
+    setEditAssist2PlayerId(
+      event.assist2_player_id == null ? null : `${event.assist2_player_id}`
+    );
+    setEditAssist2Number(event.assist2_number ?? '');
     setEditPeriod(event.period);
     setEditGameTime(formatGameTime(event.game_time_seconds));
     setEditPenaltyCode(event.penalty_code ?? null);
@@ -261,6 +306,22 @@ export default function MatchEvents({
       setEditError('Spielzeit im Format MM:SS eingeben (Sekunden 00\u201359).');
       return;
     }
+
+    if (editing.event_type === 'GOAL') {
+      const selectedPlayerIds = [
+        editPlayerId,
+        editAssist1PlayerId,
+        editAssist2PlayerId,
+      ].filter((value): value is string => value != null);
+
+      if (new Set(selectedPlayerIds).size !== selectedPlayerIds.length) {
+        setEditError(
+          'Torschütze, Assist 1 und Assist 2 müssen unterschiedliche Spieler sein.'
+        );
+        return;
+      }
+    }
+
     const response = await updateMatchEvent(
       tournamentId,
       match.id,
@@ -270,6 +331,10 @@ export default function MatchEvents({
         Number(editTeamId),
         editPlayerId == null ? null : Number(editPlayerId),
         editPlayerNumber === '' ? null : Number(editPlayerNumber),
+        editAssist1PlayerId == null ? null : Number(editAssist1PlayerId),
+        editAssist1Number === '' ? null : Number(editAssist1Number),
+        editAssist2PlayerId == null ? null : Number(editAssist2PlayerId),
+        editAssist2Number === '' ? null : Number(editAssist2Number),
         editPeriod,
         seconds,
         editPenaltyCode,
@@ -317,6 +382,11 @@ export default function MatchEvents({
               onChange={(value) => {
                 setTeamId(value);
                 setPlayerId(null);
+                setPlayerNumber('');
+                setAssist1PlayerId(null);
+                setAssist1Number('');
+                setAssist2PlayerId(null);
+                setAssist2Number('');
               }}
             />
             <NumberInput
@@ -342,6 +412,62 @@ export default function MatchEvents({
               clearable
               searchable
             />
+            {eventType === 'GOAL' ? (
+              <>
+                <Group grow align="flex-end">
+                  <NumberInput
+                    label="Assist 1 Nummer"
+                    min={0}
+                    value={assist1Number}
+                    onChange={setAssist1Number}
+                    disabled={teamId == null}
+                  />
+                  <Select
+                    label="Assist 1 Spieler (optional)"
+                    data={playerOptions}
+                    value={assist1PlayerId}
+                    onChange={(value) => {
+                      setAssist1PlayerId(value);
+                      if (value != null) {
+                        const player = selectedTeam?.players.find(
+                          (candidate) => candidate.id === Number(value)
+                        );
+                        if (player?.number != null) setAssist1Number(player.number);
+                      }
+                    }}
+                    disabled={teamId == null}
+                    clearable
+                    searchable
+                  />
+                </Group>
+                <Group grow align="flex-end">
+                  <NumberInput
+                    label="Assist 2 Nummer"
+                    min={0}
+                    value={assist2Number}
+                    onChange={setAssist2Number}
+                    disabled={teamId == null}
+                  />
+                  <Select
+                    label="Assist 2 Spieler (optional)"
+                    data={playerOptions}
+                    value={assist2PlayerId}
+                    onChange={(value) => {
+                      setAssist2PlayerId(value);
+                      if (value != null) {
+                        const player = selectedTeam?.players.find(
+                          (candidate) => candidate.id === Number(value)
+                        );
+                        if (player?.number != null) setAssist2Number(player.number);
+                      }
+                    }}
+                    disabled={teamId == null}
+                    clearable
+                    searchable
+                  />
+                </Group>
+              </>
+            ) : null}
             <TextInput
               label="Spielzeit (MM:SS)"
               placeholder="00:35"
@@ -401,7 +527,7 @@ export default function MatchEvents({
       )}
 
       {events.length === 0 ? <Text c="dimmed">Noch keine Spielereignisse.</Text> : null}
-      {events.map((event) => {
+      {(status === 'RUNNING' ? [...events].reverse() : events).map((event) => {
         const team = teamById[event.team_id];
 
         return (
@@ -419,6 +545,29 @@ export default function MatchEvents({
                     ? ` \u00b7 ${event.player_number == null ? '' : `#${event.player_number} `}${event.player_name ?? ''}`
                     : ''}
                 </Text>
+                {event.event_type === 'GOAL' &&
+                (event.assist1_name != null ||
+                  event.assist1_number != null ||
+                  event.assist2_name != null ||
+                  event.assist2_number != null) ? (
+                  <Text size="sm" c="dimmed">
+                    Assists:{' '}
+                    {[
+                      event.assist1_name != null || event.assist1_number != null
+                        ? `${event.assist1_number == null ? '' : `#${event.assist1_number} `}${
+                            event.assist1_name ?? ''
+                          }`.trim()
+                        : null,
+                      event.assist2_name != null || event.assist2_number != null
+                        ? `${event.assist2_number == null ? '' : `#${event.assist2_number} `}${
+                            event.assist2_name ?? ''
+                          }`.trim()
+                        : null,
+                    ]
+                      .filter((value): value is string => value != null)
+                      .join(', ')}
+                  </Text>
+                ) : null}
                 {event.event_type === 'PENALTY' ? (
                   <Text size="sm" c="dimmed">
                     {formatPenaltyDetails(event)}
@@ -471,6 +620,11 @@ export default function MatchEvents({
               onChange={(value) => {
                 setEditTeamId(value);
                 setEditPlayerId(null);
+                setEditPlayerNumber('');
+                setEditAssist1PlayerId(null);
+                setEditAssist1Number('');
+                setEditAssist2PlayerId(null);
+                setEditAssist2Number('');
               }}
             />
             <NumberInput
@@ -495,6 +649,62 @@ export default function MatchEvents({
               clearable
               searchable
             />
+            {editing.event_type === 'GOAL' ? (
+              <>
+                <Group grow align="flex-end">
+                  <NumberInput
+                    label="Assist 1 Nummer"
+                    min={0}
+                    value={editAssist1Number}
+                    onChange={setEditAssist1Number}
+                    disabled={editTeamId == null}
+                  />
+                  <Select
+                    label="Assist 1 Spieler (optional)"
+                    data={editPlayerOptions}
+                    value={editAssist1PlayerId}
+                    onChange={(value) => {
+                      setEditAssist1PlayerId(value);
+                      if (value != null) {
+                        const player = editTeam?.players.find(
+                          (candidate) => candidate.id === Number(value)
+                        );
+                        if (player?.number != null) setEditAssist1Number(player.number);
+                      }
+                    }}
+                    disabled={editTeamId == null}
+                    clearable
+                    searchable
+                  />
+                </Group>
+                <Group grow align="flex-end">
+                  <NumberInput
+                    label="Assist 2 Nummer"
+                    min={0}
+                    value={editAssist2Number}
+                    onChange={setEditAssist2Number}
+                    disabled={editTeamId == null}
+                  />
+                  <Select
+                    label="Assist 2 Spieler (optional)"
+                    data={editPlayerOptions}
+                    value={editAssist2PlayerId}
+                    onChange={(value) => {
+                      setEditAssist2PlayerId(value);
+                      if (value != null) {
+                        const player = editTeam?.players.find(
+                          (candidate) => candidate.id === Number(value)
+                        );
+                        if (player?.number != null) setEditAssist2Number(player.number);
+                      }
+                    }}
+                    disabled={editTeamId == null}
+                    clearable
+                    searchable
+                  />
+                </Group>
+              </>
+            ) : null}
             <TextInput
               label="Spielzeit (MM:SS)"
               value={editGameTime}

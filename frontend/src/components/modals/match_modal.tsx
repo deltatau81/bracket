@@ -570,130 +570,174 @@ function MatchModalForm({
           setOpened(false);
         })}
       >
-        <Text fw={600} mb="sm">
-          Ergebnis
-        </Text>
-
-        <Grid align="end">
-          <Grid.Col span={4}>
-            <Text size="sm" fw={500}>
-              Abschnitt
+        <Grid gutter="xl" align="flex-start">
+          <Grid.Col span={{ base: 12, md: 7 }}>
+            <Text fw={600} mb="sm">
+              Spielereignisse
             </Text>
-          </Grid.Col>
 
-          <Grid.Col span={4}>
-            <Text size="sm" fw={500} ta="center">
-              {team1Name}
-            </Text>
-          </Grid.Col>
-
-          <Grid.Col span={4}>
-            <Text size="sm" fw={500} ta="center">
-              {team2Name}
-            </Text>
-          </Grid.Col>
-
-          <Grid.Col span={4}>
-            <Text size="sm">1. Halbzeit</Text>
-          </Grid.Col>
-
-          <Grid.Col span={4}>
-            <NumberInput
-              min={0}
-              hideControls
-              disabled={currentStatus === 'PLANNED'}
-              {...form.getInputProps('stage_item_input1_half1_score')}
+            <MatchEvents
+              tournamentId={tournamentData.id}
+              hockeyMode={tournament.hockey_mode}
+              match={match}
+              status={currentStatus}
+              activePeriod={currentPeriod}
+              phaseState={currentPhaseState}
+              refreshMatch={() => swrStagesResponse.mutate()}
+              onGoalMutation={applyGoalMutation}
             />
           </Grid.Col>
 
-          <Grid.Col span={4}>
-            <NumberInput
-              min={0}
-              hideControls
-              disabled={currentStatus === 'PLANNED'}
-              {...form.getInputProps('stage_item_input2_half1_score')}
-            />
-          </Grid.Col>
-
-          <Grid.Col span={4}>
-           <Text size="sm">2. Halbzeit</Text>
-          </Grid.Col>
-
-          <Grid.Col span={4}>
-            <NumberInput
-              min={0}
-              hideControls
-              disabled={currentStatus === 'PLANNED'}
-              {...form.getInputProps('stage_item_input1_half2_score')}
-            />
-          </Grid.Col>
-
-          <Grid.Col span={4}>
-            <NumberInput
-              min={0}
-              hideControls
-              disabled={currentStatus === 'PLANNED'}
-              {...form.getInputProps('stage_item_input2_half2_score')}
-            />
-          </Grid.Col>
-
-          <Grid.Col span={4}>
-            <Text size="sm">Penalty</Text>
-          </Grid.Col>
-
-          <Grid.Col span={4}>
-            <NumberInput
-              min={0}
-              hideControls
-              disabled={currentStatus === 'PLANNED'}
-              {...form.getInputProps('stage_item_input1_penalty_score')}
-            />
-          </Grid.Col>
-
-          <Grid.Col span={4}>
-            <NumberInput
-              min={0}
-              hideControls
-              disabled={currentStatus === 'PLANNED'}
-              {...form.getInputProps('stage_item_input2_penalty_score')}
-            />
-          </Grid.Col>
-
-        </Grid>
-
-        <Divider my="lg" />
-
-        <Grid>
-          <Grid.Col span={4}>
-            <Text fw={600}>Gesamttore</Text>
-          </Grid.Col>
-
-          <Grid.Col span={4}>
-            <Text fw={600} ta="center">
-              {totalScore1}
+          <Grid.Col span={{ base: 12, md: 5 }}>
+            <Text fw={600} mb="sm">
+              Ergebnis
             </Text>
-          </Grid.Col>
 
-          <Grid.Col span={4}>
-            <Text fw={600} ta="center">
-              {totalScore2}
-            </Text>
-          </Grid.Col>
+            <Grid align="center">
+              <Grid.Col span={4}>
+                <Text size="sm" fw={500}>
+                  Abschnitt
+                </Text>
+              </Grid.Col>
+              <Grid.Col span={4}>
+                <Text size="sm" fw={500} ta="center">
+                  {team1Name}
+                </Text>
+              </Grid.Col>
+              <Grid.Col span={4}>
+                <Text size="sm" fw={500} ta="center">
+                  {team2Name}
+                </Text>
+              </Grid.Col>
 
-          <Grid.Col span={4}>
-            <Text fw={600}>Spielpunkte</Text>
-          </Grid.Col>
+              <Grid.Col span={4}>
+                <Text size="sm">1. Halbzeit</Text>
+              </Grid.Col>
+              <Grid.Col span={4}>
+                {isScorer ? (
+                  <Text ta="center">
+                    {form.values.stage_item_input1_half1_score}
+                  </Text>
+                ) : (
+                  <NumberInput
+                    min={0}
+                    hideControls
+                    disabled={currentStatus === 'PLANNED'}
+                    {...form.getInputProps('stage_item_input1_half1_score')}
+                  />
+                )}
+              </Grid.Col>
+              <Grid.Col span={4}>
+                {isScorer ? (
+                  <Text ta="center">
+                    {form.values.stage_item_input2_half1_score}
+                  </Text>
+                ) : (
+                  <NumberInput
+                    min={0}
+                    hideControls
+                    disabled={currentStatus === 'PLANNED'}
+                    {...form.getInputProps('stage_item_input2_half1_score')}
+                  />
+                )}
+              </Grid.Col>
 
-          <Grid.Col span={4}>
-            <Text fw={600} ta="center">
-              {formatHockeyPoints(hockeyPoints1)}
-            </Text>
-          </Grid.Col>
+              <Grid.Col span={4}>
+                <Text size="sm">2. Halbzeit</Text>
+              </Grid.Col>
+              <Grid.Col span={4}>
+                {isScorer ? (
+                  <Text ta="center">
+                    {form.values.stage_item_input1_half2_score}
+                  </Text>
+                ) : (
+                  <NumberInput
+                    min={0}
+                    hideControls
+                    disabled={currentStatus === 'PLANNED'}
+                    {...form.getInputProps('stage_item_input1_half2_score')}
+                  />
+                )}
+              </Grid.Col>
+              <Grid.Col span={4}>
+                {isScorer ? (
+                  <Text ta="center">
+                    {form.values.stage_item_input2_half2_score}
+                  </Text>
+                ) : (
+                  <NumberInput
+                    min={0}
+                    hideControls
+                    disabled={currentStatus === 'PLANNED'}
+                    {...form.getInputProps('stage_item_input2_half2_score')}
+                  />
+                )}
+              </Grid.Col>
 
-          <Grid.Col span={4}>
-            <Text fw={600} ta="center">
-              {formatHockeyPoints(hockeyPoints2)}
-            </Text>
+              <Grid.Col span={4}>
+                <Text size="sm">Penalty</Text>
+              </Grid.Col>
+              <Grid.Col span={4}>
+                {isScorer ? (
+                  <Text ta="center">
+                    {form.values.stage_item_input1_penalty_score}
+                  </Text>
+                ) : (
+                  <NumberInput
+                    min={0}
+                    hideControls
+                    disabled={currentStatus === 'PLANNED'}
+                    {...form.getInputProps('stage_item_input1_penalty_score')}
+                  />
+                )}
+              </Grid.Col>
+              <Grid.Col span={4}>
+                {isScorer ? (
+                  <Text ta="center">
+                    {form.values.stage_item_input2_penalty_score}
+                  </Text>
+                ) : (
+                  <NumberInput
+                    min={0}
+                    hideControls
+                    disabled={currentStatus === 'PLANNED'}
+                    {...form.getInputProps('stage_item_input2_penalty_score')}
+                  />
+                )}
+              </Grid.Col>
+            </Grid>
+
+            <Divider my="md" />
+
+            <Grid>
+              <Grid.Col span={4}>
+                <Text fw={600}>Gesamttore</Text>
+              </Grid.Col>
+              <Grid.Col span={4}>
+                <Text fw={600} ta="center">
+                  {totalScore1}
+                </Text>
+              </Grid.Col>
+              <Grid.Col span={4}>
+                <Text fw={600} ta="center">
+                  {totalScore2}
+                </Text>
+              </Grid.Col>
+
+              <Grid.Col span={4}>
+                <Text fw={600}>Spielpunkte</Text>
+              </Grid.Col>
+              <Grid.Col span={4}>
+                <Text fw={600} ta="center">
+                  {formatHockeyPoints(hockeyPoints1)}
+                </Text>
+              </Grid.Col>
+              <Grid.Col span={4}>
+                <Text fw={600} ta="center">
+                  {formatHockeyPoints(hockeyPoints2)}
+                </Text>
+              </Grid.Col>
+            </Grid>
           </Grid.Col>
         </Grid>
 
@@ -833,20 +877,12 @@ function MatchModalForm({
           </>
         ) : null}
 
-        <Button fullWidth style={{ marginTop: 20 }} color="green" type="submit">
-          {t('save_button')}
-        </Button>
+        {!isScorer ? (
+          <Button fullWidth style={{ marginTop: 20 }} color="green" type="submit">
+            {t('save_button')}
+          </Button>
+        ) : null}
       </form>
-      <MatchEvents
-        tournamentId={tournamentData.id}
-        hockeyMode={tournament.hockey_mode}
-        match={match}
-        status={currentStatus}
-        activePeriod={currentPeriod}
-        phaseState={currentPhaseState}
-        refreshMatch={() => swrStagesResponse.mutate()}
-        onGoalMutation={applyGoalMutation}
-      />
       {!isScorer && round && round.is_draft && (
         <MatchDeleteButton
           swrRoundsResponse={swrStagesResponse}
@@ -883,7 +919,12 @@ export default function MatchModal({
 
   return (
     <>
-      <Modal opened={opened} onClose={() => setOpened(false)} title={t('edit_match_modal_title')}>
+      <Modal
+        opened={opened}
+        onClose={() => setOpened(false)}
+        title={t('edit_match_modal_title')}
+        size="xl"
+      >
         {tournament != null ? (
         <MatchModalForm
           key={`${match?.id ?? 'none'}-${opened}`}

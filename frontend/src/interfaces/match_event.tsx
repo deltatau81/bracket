@@ -74,6 +74,10 @@ export interface MatchEventCreateBody {
   game_time_seconds: number;
   player_id: number | null;
   player_number?: number | null;
+  assist1_player_id?: number | null;
+  assist1_number?: number | null;
+  assist2_player_id?: number | null;
+  assist2_number?: number | null;
   penalty_code?: string | null;
   penalty_type?: PenaltyType | null;
   penalty_minutes?: number | null;
