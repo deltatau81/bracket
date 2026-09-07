@@ -544,6 +544,13 @@ function MatchModalForm({
     reopenedBreak
   );
 
+  const scorerCanEditPenaltyScore =
+    isScorer &&
+    tournament.hockey_mode === 'COMPETITION' &&
+    currentStatus === 'RUNNING' &&
+    currentPeriod === 'SHOOTOUT' &&
+    currentPhaseState === 'ACTIVE';
+
   return (
     <>
       <Group justify="space-between" align="center" mb="lg">
@@ -678,7 +685,7 @@ function MatchModalForm({
                 <Text size="sm">Penalty</Text>
               </Grid.Col>
               <Grid.Col span={4}>
-                {isScorer ? (
+                {isScorer && !scorerCanEditPenaltyScore ? (
                   <Text ta="center">
                     {form.values.stage_item_input1_penalty_score}
                   </Text>
@@ -692,7 +699,7 @@ function MatchModalForm({
                 )}
               </Grid.Col>
               <Grid.Col span={4}>
-                {isScorer ? (
+                {isScorer && !scorerCanEditPenaltyScore ? (
                   <Text ta="center">
                     {form.values.stage_item_input2_penalty_score}
                   </Text>
