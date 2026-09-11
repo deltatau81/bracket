@@ -197,6 +197,27 @@ async def send_tournament_request_with_status(
 
 
 @pytest.mark.asyncio(loop_scope="session")
+async def test_scorer_cannot_manage_tournament_sponsors(
+    startup_and_shutdown_uvicorn_server: None,
+    auth_context: AuthContext,
+) -> None:
+    async with scorer_auth_context(auth_context) as scorer_context:
+        response_status, body = await send_tournament_request_with_status(
+            HTTPMethod.POST,
+            "sponsors",
+            scorer_context,
+            json={
+                "name": "Sponsor",
+                "logo_path": "sponsor.png",
+                "position": "LEFT",
+            },
+        )
+
+    assert response_status == 403
+    assert body["detail"] == "Administrator permissions required"
+
+
+@pytest.mark.asyncio(loop_scope="session")
 async def test_scorer_result_update_preserves_administrative_match_fields(
     auth_context: AuthContext,
 ) -> None:

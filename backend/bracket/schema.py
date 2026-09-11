@@ -71,6 +71,25 @@ tournaments = Table(
     ),
 )
 
+tournament_sponsors = Table(
+    "tournament_sponsors",
+    metadata,
+    Column("id", BigInteger, primary_key=True, index=True, autoincrement=True),
+    Column(
+        "tournament_id",
+        BigInteger,
+        ForeignKey("tournaments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    ),
+    Column("name", String, nullable=False),
+    Column("logo_path", String, nullable=False),
+    Column("url", String, nullable=True),
+    Column("position", String(10), nullable=False),
+    Column("sort_order", Integer, nullable=False, server_default="0"),
+    CheckConstraint("position IN ('LEFT', 'RIGHT')", name="ck_tournament_sponsors_position"),
+)
+
 stages = Table(
     "stages",
     metadata,

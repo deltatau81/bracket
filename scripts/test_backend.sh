@@ -26,6 +26,11 @@ case "${1:-all}" in
       tests/integration_tests/api/match_phase_test.py
     )
     ;;
+  sponsors)
+    TESTS=(
+      tests/integration_tests/api/tournament_sponsors_test.py
+    )
+    ;;
   all)
     TESTS=(
       tests/unit_tests/penalty_catalog_test.py
@@ -33,10 +38,11 @@ case "${1:-all}" in
       tests/integration_tests/api/match_events_test.py
       tests/unit_tests/match_phase_test.py
       tests/integration_tests/api/match_phase_test.py
+      tests/integration_tests/api/tournament_sponsors_test.py
     )
     ;;
   *)
-    echo "Usage: $0 {catalog|scorer|events|phase|all}"
+    echo "Usage: $0 {catalog|scorer|events|phase|sponsors|all}"
     exit 2
     ;;
 esac

@@ -16,6 +16,7 @@ from bracket.models.db.stage_item_inputs import (
 )
 from bracket.models.db.team import FullTeamWithPlayers, Team
 from bracket.models.db.tournament import Tournament
+from bracket.models.db.tournament_sponsor import TournamentSponsor
 from bracket.models.db.user import UserPublic
 from bracket.models.db.util import StageWithStageItems
 from bracket.routes.auth import Token
@@ -53,6 +54,14 @@ class TournamentResponse(DataResponse[Tournament]):
 
 
 class TournamentsResponse(DataResponse[list[Tournament]]):
+    pass
+
+
+class TournamentSponsorResponse(DataResponse[TournamentSponsor]):
+    pass
+
+
+class TournamentSponsorsResponse(DataResponse[list[TournamentSponsor]]):
     pass
 
 
