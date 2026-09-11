@@ -57,7 +57,7 @@ async def update_tournament_sponsor(
             (tournament_sponsors.c.id == sponsor_id)
             & (tournament_sponsors.c.tournament_id == tournament_id)
         )
-        .values(**body.model_dump(), url=body.url)
+        .values(**body.model_dump(exclude={"url"}), url=body.url)
     )
 
 

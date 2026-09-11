@@ -28,6 +28,7 @@ import { MdArchive } from 'react-icons/md';
 import { SWRResponse } from 'swr';
 
 import NotFoundTitle from '../../404';
+import SponsorSettings from '../../../components/sponsors/sponsor_settings';
 import { DropzoneButton } from '../../../components/utils/file_upload';
 import { GenericSkeletonThreeRows } from '../../../components/utils/skeletons';
 import { capitalize, getBaseURL, getTournamentIdFromRouter } from '../../../components/utils/util';
@@ -37,6 +38,8 @@ import {
   getBaseApiUrl,
   getClubs,
   getTournamentById,
+  getTournamentSponsors,
+  getUser,
   handleRequestError,
   removeTournamentLogo,
 } from '../../../services/adapter';
@@ -379,6 +382,8 @@ export default function SettingsPage() {
   const { tournamentData } = getTournamentIdFromRouter();
   const swrClubsResponse: SWRResponse = getClubs();
   const swrTournamentResponse = getTournamentById(tournamentData.id);
+  const swrSponsorsResponse = getTournamentSponsors(tournamentData.id);
+  const swrUserResponse = getUser();
   const tournamentDataFull =
     swrTournamentResponse.data != null ? swrTournamentResponse.data.data : null;
 
@@ -392,11 +397,19 @@ export default function SettingsPage() {
 
   if (tournamentDataFull != null) {
     content = (
-      <GeneralTournamentForm
-        tournament={tournamentDataFull}
-        swrTournamentResponse={swrTournamentResponse}
-        clubs={clubs}
-      />
+      <>
+        <GeneralTournamentForm
+          tournament={tournamentDataFull}
+          swrTournamentResponse={swrTournamentResponse}
+          clubs={clubs}
+        />
+        {swrUserResponse.data?.data?.account_type === 'REGULAR' ? (
+          <SponsorSettings
+            tournamentId={tournamentData.id}
+            sponsorsResponse={swrSponsorsResponse}
+          />
+        ) : null}
+      </>
     );
   }
 

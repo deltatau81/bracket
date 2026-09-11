@@ -15,17 +15,22 @@ export function DropzoneButton({
   swrResponse,
   variant,
   teamId,
+  onFileSelect,
+  selectedFileName,
 }: {
   tournamentId: Tournament['id'];
   swrResponse: SWRResponse;
-  variant: 'tournament' | 'team';
+  variant: 'tournament' | 'team' | 'sponsor';
   teamId?: TeamInterface['id'];
+  onFileSelect?: (file: File) => void;
+  selectedFileName?: string;
 }) {
   // const { classes, theme } = useStyles();
   const openRef = useRef<() => void>(null);
   const { t } = useTranslation();
 
   const useUploadLogo = useMemo(() => {
+    if (variant === 'sponsor') return null;
     if (variant === 'tournament') {
       return uploadTournamentLogo.bind(null, tournamentId);
     }
@@ -40,6 +45,11 @@ export function DropzoneButton({
         mt="lg"
         openRef={openRef}
         onDrop={async (files) => {
+          if (onFileSelect != null) {
+            onFileSelect(files[0]);
+            return;
+          }
+          if (useUploadLogo == null) return;
           const response = await useUploadLogo(files[0]);
           await swrResponse.mutate();
           handleRequestError(response as unknown as AxiosError); // TODO: Check with Erik if this is correct
@@ -68,7 +78,10 @@ export function DropzoneButton({
             <Dropzone.Idle>{t('dropzone_idle_text')}</Dropzone.Idle>
           </Text>
           <Text ta="center" size="sm" mt="xs" c="dimmed">
-            {t(`upload_placeholder_${variant}`)}
+            {selectedFileName ??
+              (variant === 'sponsor'
+                ? 'Sponsorlogo per Klick oder Drag & Drop auswählen'
+                : t(`upload_placeholder_${variant}`))}
             <br />
             {t('dropzone_reject_text')}
           </Text>

@@ -212,9 +212,24 @@ async def test_scorer_cannot_manage_tournament_sponsors(
                 "position": "LEFT",
             },
         )
+        assert response_status == 403
+        assert body["detail"] == "Administrator permissions required"
 
-    assert response_status == 403
-    assert body["detail"] == "Administrator permissions required"
+        upload_url = (
+            get_root_uvicorn_url()
+            + f"tournaments/{auth_context.tournament.id}/sponsors/999999/logo"
+        )
+        data = aiohttp.FormData()
+        data.add_field("file", b"image", filename="sponsor.png", content_type="image/png")
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                upload_url,
+                headers=scorer_context.headers,
+                data=data,
+            ) as response:
+                upload_body = await response.json()
+                assert response.status == 403
+                assert upload_body["detail"] == "Administrator permissions required"
 
 
 @pytest.mark.asyncio(loop_scope="session")
