@@ -115,6 +115,13 @@ export function getTournamentById(tournament_id: number): SWRResponse {
   return useSWR(`tournaments/${tournament_id}`, fetcher);
 }
 
+export function getTournamentSponsors(tournament_id: number | null): SWRResponse {
+  return useSWR(
+    tournament_id == null ? null : `tournaments/${tournament_id}/sponsors`,
+    fetcher
+  );
+}
+
 export function getTournaments(filter: TournamentFilter): SWRResponse {
   return useSWR(`tournaments?filter_=${filter}`, fetcher);
 }

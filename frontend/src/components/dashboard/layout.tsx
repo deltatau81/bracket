@@ -14,7 +14,8 @@ import React from 'react';
 import QRCode from 'react-qr-code';
 
 import { Tournament } from '../../interfaces/tournament';
-import { getBaseApiUrl } from '../../services/adapter';
+import { TournamentSponsor } from '../../interfaces/tournament_sponsor';
+import { getBaseApiUrl, getTournamentSponsors } from '../../services/adapter';
 import { getBaseURL } from '../utils/util';
 import classes from './layout.module.css';
 
@@ -82,6 +83,8 @@ export function TournamentTitle({ tournamentDataFull }: { tournamentDataFull: To
 export function DoubleHeader({ tournamentData }: { tournamentData: Tournament }) {
   const router = useRouter();
   const endpoint = tournamentData.dashboard_endpoint;
+  const sponsorsResponse = getTournamentSponsors(tournamentData.id);
+  const sponsors: TournamentSponsor[] = sponsorsResponse.data?.data ?? [];
   const pathName = router.pathname.replace('[id]', endpoint).replace(/\/+$/, '');
 
   const mainLinks = [
@@ -100,20 +103,75 @@ export function DoubleHeader({ tournamentData }: { tournamentData: Tournament })
     </Link>
   ));
 
+  const sponsorLogo = (sponsor: TournamentSponsor) => {
+    const logo = (
+      <Image
+        className={classes.sponsorLogo}
+        src={`${getBaseApiUrl()}/${sponsor.logo_path.replace(/^\/+/, '')}`}
+        alt={sponsor.name}
+        title={sponsor.name}
+      />
+    );
+
+    return sponsor.url ? (
+      <a
+        key={sponsor.id}
+        href={sponsor.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={sponsor.name}
+      >
+        {logo}
+      </a>
+    ) : (
+      <React.Fragment key={sponsor.id}>{logo}</React.Fragment>
+    );
+  };
+
+  const sponsorRail = (position: TournamentSponsor['position']) => {
+    const positionedSponsors = sponsors.filter((sponsor) => sponsor.position === position);
+
+    if (positionedSponsors.length === 0) return null;
+
+    return (
+      <aside
+        className={classes.sponsorRail}
+        data-position={position.toLowerCase()}
+        aria-label={`${position.toLowerCase()} sponsors`}
+      >
+        {positionedSponsors.map(sponsorLogo)}
+      </aside>
+    );
+  };
+
+  const compactSponsors = [
+    ...sponsors.filter((sponsor) => sponsor.position === 'LEFT'),
+    ...sponsors.filter((sponsor) => sponsor.position === 'RIGHT'),
+  ];
+
   return (
-    <header className={classes.header}>
-      <Container className={classes.inner}>
-        <UnstyledButton component={Link} href={`/tournaments/${endpoint}/dashboard`}>
-          <Title size="lg" lineClamp={1}>
-            {tournamentData.name}
-          </Title>
-        </UnstyledButton>
-        <Box className={classes.links}>
-          <Group gap={0} className={classes.mainLinks}>
-            {mainItems}
-          </Group>
-        </Box>
-      </Container>
-    </header>
+    <>
+      <header className={classes.header}>
+        <Container className={classes.inner}>
+          <UnstyledButton component={Link} href={`/tournaments/${endpoint}/dashboard`}>
+            <Title size="lg" lineClamp={1}>
+              {tournamentData.name}
+            </Title>
+          </UnstyledButton>
+          <Box className={classes.links}>
+            <Group gap={0} className={classes.mainLinks}>
+              {mainItems}
+            </Group>
+          </Box>
+        </Container>
+      </header>
+      {compactSponsors.length > 0 ? (
+        <aside className={classes.compactSponsorBar} aria-label="Sponsors">
+          {compactSponsors.map(sponsorLogo)}
+        </aside>
+      ) : null}
+      {sponsorRail('LEFT')}
+      {sponsorRail('RIGHT')}
+    </>
   );
 }
