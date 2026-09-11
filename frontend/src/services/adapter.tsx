@@ -107,6 +107,10 @@ export function getClubs(): SWRResponse {
   return useSWR('clubs', fetcher);
 }
 
+export function getClubUsers(club_id: number): SWRResponse {
+  return useSWR(`clubs/${club_id}/users`, fetcher);
+}
+
 export function getTournamentByEndpointName(tournament_endpoint_name: string): SWRResponse {
   return useSWR(`tournaments?endpoint_name=${tournament_endpoint_name}`, fetcher);
 }

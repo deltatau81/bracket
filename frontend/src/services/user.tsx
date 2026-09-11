@@ -1,4 +1,8 @@
-import { UserBodyInterface, UserToRegisterInterface } from '../interfaces/user';
+import {
+  UserAdminCreateInterface,
+  UserBodyInterface,
+  UserToRegisterInterface,
+} from '../interfaces/user';
 import { createAxios, handleRequestError } from './adapter';
 
 export async function performLogin(username: string, password: string) {
@@ -37,6 +41,10 @@ export async function updatePassword(user_id: number, password: string) {
   return createAxios()
     .put(`users/${user_id}/password`, { password })
     .catch((response: any) => handleRequestError(response));
+}
+
+export async function createClubUser(club_id: number, user: UserAdminCreateInterface) {
+  return createAxios().post(`clubs/${club_id}/users`, user);
 }
 
 export async function registerUser(user: UserToRegisterInterface, captchaToken: string | null) {

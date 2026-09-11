@@ -1,4 +1,4 @@
-export type UserAccountType = 'REGULAR' | 'SCORER' | 'DEMO';
+export type UserAccountType = 'REGULAR' | 'ADMIN' | 'SCORER' | 'DEMO';
 
 export interface UserInterface {
   id: number;
@@ -23,5 +23,5 @@ export interface UserAdminCreateInterface {
   name: string;
   email: string;
   password: string;
-  account_type: 'REGULAR' | 'SCORER';
+  account_type: 'ADMIN' | 'SCORER';
 }

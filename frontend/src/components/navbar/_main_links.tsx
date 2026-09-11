@@ -74,7 +74,7 @@ function MainLink({ item, pathName }: { item: MainLinkProps; pathName: String })
 
 export function getBaseLinksDict(accountType?: UserAccountType) {
   const { t } = useTranslation();
-  const isAdmin = accountType != null && accountType !== 'SCORER';
+  const isAdmin = accountType === 'REGULAR' || accountType === 'ADMIN';
 
   return [
     ...(isAdmin
@@ -154,7 +154,7 @@ export function TournamentLinks({
     .replace(/\/+$/, '');
 
   const isScorer = accountType === 'SCORER';
-  const isAdmin = accountType != null && !isScorer;
+  const isAdmin = accountType === 'REGULAR' || accountType === 'ADMIN';
 
   const adminLinks: MainLinkProps[] = [
     {

@@ -5,15 +5,19 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import ClubModal from '../components/modals/club_modal';
 import ClubsTable from '../components/tables/clubs';
 import { capitalize } from '../components/utils/util';
-import { checkForAuthError, getClubs } from '../services/adapter';
+import { checkForAuthError, getClubs, getUser } from '../services/adapter';
 import Layout from './_layout';
 import classes from './index.module.css';
 
 export default function HomePage() {
   const swrClubsResponse = getClubs();
+  const swrUserResponse = getUser();
   const { t } = useTranslation();
 
   checkForAuthError(swrClubsResponse);
+  checkForAuthError(swrUserResponse);
+
+  const accountType = swrUserResponse.data?.data?.account_type;
 
   return (
     <Layout>
@@ -22,10 +26,12 @@ export default function HomePage() {
           <Title>{capitalize(t('clubs_title'))}</Title>
         </Grid.Col>
         <Grid.Col span="content" className={classes.fullWithMobile}>
-          <ClubModal swrClubsResponse={swrClubsResponse} club={null} />
+          {accountType === 'REGULAR' ? (
+            <ClubModal swrClubsResponse={swrClubsResponse} club={null} />
+          ) : null}
         </Grid.Col>
       </Grid>
-      <ClubsTable swrClubsResponse={swrClubsResponse} />
+      <ClubsTable swrClubsResponse={swrClubsResponse} accountType={accountType} />
     </Layout>
   );
 }

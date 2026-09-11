@@ -4,18 +4,27 @@ import React from 'react';
 import { SWRResponse } from 'swr';
 
 import { Club } from '../../interfaces/club';
+import { UserAccountType } from '../../interfaces/user';
 import { deleteClub } from '../../services/club';
 import DeleteButton from '../buttons/delete';
 import ClubModal from '../modals/club_modal';
+import ClubUsersModal from '../modals/club_users_modal';
 import { EmptyTableInfo } from '../no_content/empty_table_info';
 import RequestErrorAlert from '../utils/error_alert';
 import { TableSkeletonSingleColumn } from '../utils/skeletons';
 import TableLayout, { ThNotSortable, ThSortable, getTableState, sortTableEntries } from './table';
 
-export default function ClubsTable({ swrClubsResponse }: { swrClubsResponse: SWRResponse }) {
+export default function ClubsTable({
+  swrClubsResponse,
+  accountType,
+}: {
+  swrClubsResponse: SWRResponse;
+  accountType?: UserAccountType;
+}) {
   const clubs: Club[] = swrClubsResponse.data != null ? swrClubsResponse.data.data : [];
   const tableState = getTableState('name');
   const { t } = useTranslation();
+  const canAdministerClub = accountType === 'REGULAR' || accountType === 'ADMIN';
 
   if (swrClubsResponse.error) return <RequestErrorAlert error={swrClubsResponse.error} />;
   if (swrClubsResponse.isLoading) {
@@ -28,14 +37,19 @@ export default function ClubsTable({ swrClubsResponse }: { swrClubsResponse: SWR
       <Table.Tr key={club.id}>
         <Table.Td>{club.name}</Table.Td>
         <Table.Td>
-          <ClubModal swrClubsResponse={swrClubsResponse} club={club} />
-          <DeleteButton
-            onClick={async () => {
-              await deleteClub(club.id);
-              await swrClubsResponse.mutate();
-            }}
-            title={t('delete_club_button')}
-          />
+          {canAdministerClub ? (
+            <>
+              <ClubUsersModal club={club} accountType={accountType} />
+              <ClubModal swrClubsResponse={swrClubsResponse} club={club} />
+              <DeleteButton
+                onClick={async () => {
+                  await deleteClub(club.id);
+                  await swrClubsResponse.mutate();
+                }}
+                title={t('delete_club_button')}
+              />
+            </>
+          ) : null}
         </Table.Td>
       </Table.Tr>
     ));
