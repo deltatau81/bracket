@@ -41,6 +41,11 @@ case "${1:-all}" in
       tests/integration_tests/api/user_creation_authorization_test.py
     )
     ;;
+  club_listing)
+    TESTS=(
+      tests/integration_tests/api/club_listing_authorization_test.py
+    )
+    ;;
   all)
     TESTS=(
       tests/unit_tests/penalty_catalog_test.py
@@ -51,10 +56,11 @@ case "${1:-all}" in
       tests/integration_tests/api/tournament_sponsors_test.py
       tests/integration_tests/api/admin_authorization_test.py
       tests/integration_tests/api/user_creation_authorization_test.py
+      tests/integration_tests/api/club_listing_authorization_test.py
     )
     ;;
   *)
-    echo "Usage: $0 {authorization|catalog|scorer|events|phase|sponsors|user_creation|all}"
+    echo "Usage: $0 {authorization|catalog|club_listing|scorer|events|phase|sponsors|user_creation|all}"
     exit 2
     ;;
 esac

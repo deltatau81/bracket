@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from bracket.logic.subscriptions import check_requirement
+from bracket.models.db.account import UserAccountType
 from bracket.models.db.club import ClubCreateBody, ClubUpdateBody
 from bracket.models.db.user import UserPublic
 from bracket.routes.auth import (
@@ -9,7 +10,13 @@ from bracket.routes.auth import (
     user_authenticated_for_club_admin,
 )
 from bracket.routes.models import ClubResponse, ClubsResponse, SuccessResponse
-from bracket.sql.clubs import create_club, get_clubs_for_user_id, sql_delete_club, sql_update_club
+from bracket.sql.clubs import (
+    create_club,
+    get_all_clubs,
+    get_clubs_for_user_id,
+    sql_delete_club,
+    sql_update_club,
+)
 from bracket.utils.errors import ForeignKey, check_foreign_key_violation
 from bracket.utils.id_types import ClubId
 
@@ -18,6 +25,8 @@ router = APIRouter()
 
 @router.get("/clubs", response_model=ClubsResponse)
 async def get_clubs(user: UserPublic = Depends(user_authenticated)) -> ClubsResponse:
+    if user.account_type == UserAccountType.REGULAR:
+        return ClubsResponse(data=await get_all_clubs())
     return ClubsResponse(data=await get_clubs_for_user_id(user.id))
 
 
