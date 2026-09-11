@@ -74,6 +74,35 @@ async def scorer_auth_context(
         )
 
 
+@pytest.mark.parametrize(
+    "account_type",
+    [
+        UserAccountType.REGULAR,
+        UserAccountType.ADMIN,
+        UserAccountType.SCORER,
+    ],
+)
+@pytest.mark.asyncio(loop_scope="session")
+async def test_supported_account_types_are_persisted_and_serialized(
+    startup_and_shutdown_uvicorn_server: None,
+    account_type: UserAccountType,
+) -> None:
+    user = get_mock_user().model_copy(
+        update={"account_type": account_type}
+    )
+    headers = {"Authorization": f"Bearer {get_mock_token(user)}"}
+
+    async with inserted_user(user):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                get_root_uvicorn_url() + "users/me",
+                headers=headers,
+            ) as response:
+                body = await response.json()
+                assert response.status == 200, body
+                assert body["data"]["account_type"] == account_type.value
+
+
 @asynccontextmanager
 async def scorer_match_context(
     auth_context: AuthContext,

@@ -19,8 +19,8 @@ from bracket.models.db.tournament import (
 )
 from bracket.models.db.user import UserPublic
 from bracket.routes.auth import (
+    ensure_user_can_administer_club,
     user_authenticated_for_tournament_admin,
-    user_authenticated_admin,
     user_authenticated,
     user_authenticated_for_tournament,
     user_authenticated_or_public_dashboard,
@@ -38,7 +38,7 @@ from bracket.sql.tournaments import (
     sql_update_tournament,
     sql_update_tournament_status,
 )
-from bracket.sql.users import get_user_access_to_club, get_which_clubs_has_user_access_to
+from bracket.sql.users import get_which_clubs_has_user_access_to
 from bracket.utils.errors import UniqueIndex, check_unique_constraint_violation
 from bracket.utils.id_types import TournamentId
 from bracket.utils.logging import logger
@@ -151,18 +151,11 @@ async def change_status(
 
 @router.post("/tournaments", response_model=SuccessResponse)
 async def create_tournament(
-    tournament_to_insert: TournamentBody, user: UserPublic = Depends(user_authenticated_admin)
+    tournament_to_insert: TournamentBody, user: UserPublic = Depends(user_authenticated)
 ) -> SuccessResponse:
+    await ensure_user_can_administer_club(user, tournament_to_insert.club_id)
     existing_tournaments = await sql_get_tournaments((tournament_to_insert.club_id,))
     check_requirement(existing_tournaments, user, "max_tournaments")
-
-    has_access_to_club = await get_user_access_to_club(tournament_to_insert.club_id, user.id)
-    if not has_access_to_club:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Club ID is invalid",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
 
     async with database.transaction():
         with check_unique_constraint_violation({UniqueIndex.ix_tournaments_dashboard_endpoint}):

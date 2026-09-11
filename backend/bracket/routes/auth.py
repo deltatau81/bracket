@@ -117,15 +117,20 @@ async def user_authenticated_for_tournament(
 async def user_authenticated_for_tournament_admin(
     tournament_id: TournamentId, token: str = Depends(oauth2_scheme)
 ) -> UserPublic:
-    user = await user_authenticated_for_tournament(tournament_id, token)
+    user = await user_authenticated(token)
 
-    if user.account_type is UserAccountType.SCORER:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Administrator permissions required",
-        )
+    if user.account_type is UserAccountType.REGULAR:
+        return user
 
-    return user
+    if user.account_type is UserAccountType.ADMIN and await get_user_access_to_tournament(
+        tournament_id, user.id
+    ):
+        return user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Administrator permissions required",
+    )
 
 
 async def user_authenticated_for_club(
@@ -225,7 +230,7 @@ async def user_authenticated_admin(
 ) -> UserPublic:
     user = await user_authenticated(token)
 
-    if user.account_type is UserAccountType.SCORER:
+    if user.account_type is not UserAccountType.REGULAR:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Administrator permissions required",
@@ -234,16 +239,28 @@ async def user_authenticated_admin(
     return user
 
 
+async def ensure_user_can_administer_club(
+    user: UserPublic,
+    club_id: ClubId,
+) -> None:
+    if user.account_type is UserAccountType.REGULAR:
+        return
+
+    if user.account_type is UserAccountType.ADMIN and await get_user_access_to_club(
+        club_id, user.id
+    ):
+        return
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Administrator permissions required",
+    )
+
+
 async def user_authenticated_for_club_admin(
     club_id: ClubId,
     token: str = Depends(oauth2_scheme),
 ) -> UserPublic:
-    user = await user_authenticated_for_club(club_id, token)
-
-    if user.account_type is UserAccountType.SCORER:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Administrator permissions required",
-        )
-
+    user = await user_authenticated(token)
+    await ensure_user_can_administer_club(user, club_id)
     return user

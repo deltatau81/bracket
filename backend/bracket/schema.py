@@ -275,6 +275,7 @@ users = Table(
         "account_type",
         Enum(
             "REGULAR",
+            "ADMIN",
             "SCORER",
             "DEMO",
             name="account_type",

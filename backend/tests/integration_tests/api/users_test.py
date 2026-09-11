@@ -8,7 +8,12 @@ from bracket.database import database
 from bracket.models.db.account import UserAccountType
 from bracket.models.db.user import User, UserInsertable
 from bracket.schema import users
-from bracket.sql.users import create_user, delete_user, get_user_by_id
+from bracket.sql.users import (
+    check_whether_email_is_in_use,
+    create_user,
+    delete_user,
+    get_user_by_id,
+)
 from bracket.utils.db import fetch_one_parsed_certain
 from bracket.utils.http import HTTPMethod
 from bracket.utils.security import hash_password
@@ -41,7 +46,7 @@ async def test_users_endpoint(
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_create_user(
+async def test_public_registration_is_disabled(
     startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext
 ) -> None:
     body = {
@@ -51,10 +56,8 @@ async def test_create_user(
         "captcha_token": "my token",
     }
     response = await send_request(HTTPMethod.POST, "users/register", None, body)
-    assert "data" in response, response
-    assert response["data"]["token_type"] == "bearer"
-    assert response["data"]["user_id"]
-    await delete_user(response["data"]["user_id"])
+    assert response == {"detail": "Public registration cannot create administrative accounts"}
+    assert not await check_whether_email_is_in_use(body["email"])
 
 
 @pytest.mark.asyncio(loop_scope="session")
