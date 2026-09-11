@@ -9,6 +9,7 @@ from bracket.models.db.court import Court
 from bracket.models.db.match import Match, SuggestedMatch
 from bracket.models.db.match_event import MatchEvent
 from bracket.models.db.player import Player
+from bracket.models.db.player_statistics import PlayerStatistics
 from bracket.models.db.ranking import Ranking
 from bracket.models.db.stage_item_inputs import (
     StageItemInputOptionFinal,
@@ -71,6 +72,10 @@ class PaginatedPlayers(BaseModel):
 
 
 class PlayersResponse(DataResponse[PaginatedPlayers]):
+    pass
+
+
+class PlayerStatisticsResponse(DataResponse[list[PlayerStatistics]]):
     pass
 
 

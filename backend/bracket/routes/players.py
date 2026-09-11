@@ -6,10 +6,14 @@ from bracket.models.db.player import Player, PlayerBody, PlayerMultiBody
 from bracket.models.db.player_x_team import PlayerTeamUpdateBody
 from bracket.models.db.tournament import Tournament
 from bracket.models.db.user import UserPublic
-from bracket.routes.auth import user_authenticated_for_tournament
+from bracket.routes.auth import (
+    user_authenticated_for_tournament,
+    user_authenticated_or_public_dashboard,
+)
 from bracket.routes.models import (
     CreatedPlayerResponse,
     PaginatedPlayers,
+    PlayerStatisticsResponse,
     PlayersResponse,
     SinglePlayerResponse,
     SuccessResponse,
@@ -22,12 +26,24 @@ from bracket.sql.players import (
     insert_player,
     sql_delete_player,
 )
+from bracket.sql.player_statistics import get_player_statistics
 from bracket.utils.db import fetch_one_parsed
 from bracket.utils.id_types import PlayerId, TournamentId
 from bracket.utils.pagination import PaginationPlayers
 from bracket.utils.types import assert_some
 
 router = APIRouter()
+
+
+@router.get(
+    "/tournaments/{tournament_id}/player_statistics",
+    response_model=PlayerStatisticsResponse,
+)
+async def player_statistics(
+    tournament_id: TournamentId,
+    _: UserPublic | None = Depends(user_authenticated_or_public_dashboard),
+) -> PlayerStatisticsResponse:
+    return PlayerStatisticsResponse(data=await get_player_statistics(tournament_id))
 
 
 @router.get("/tournaments/{tournament_id}/players", response_model=PlayersResponse)
