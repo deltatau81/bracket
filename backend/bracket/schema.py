@@ -199,6 +199,7 @@ matches = Table(
     Column("ruleset_override", String(20), nullable=True),
     Column("age_category_override", String(20), nullable=True),
     Column("ruleset_season_override", String(7), nullable=True),
+    Column("score_entry_source", String(10), nullable=True),
     CheckConstraint(
         "status IN ('PLANNED', 'RUNNING', 'FINISHED')",
         name="ck_matches_status",
@@ -227,6 +228,10 @@ matches = Table(
         "AND substring(ruleset_season_override from 6 for 2)::integer = "
         "(substring(ruleset_season_override from 1 for 4)::integer + 1) % 100)",
         name="ck_matches_ruleset_season_override",
+    ),
+    CheckConstraint(
+        "score_entry_source IS NULL OR score_entry_source IN ('MANUAL', 'EVENTS')",
+        name="ck_matches_score_entry_source",
     ),
     Column("position_in_schedule", Integer, nullable=True),
 )

@@ -44,6 +44,11 @@ class MatchPhaseAction(EnumAutoStr):
     RESUME_PERIOD = auto()
 
 
+class MatchScoreEntrySource(EnumAutoStr):
+    MANUAL = auto()
+    EVENTS = auto()
+
+
 class MatchPhaseBody(BaseModelORM):
     action: MatchPhaseAction
 
@@ -74,6 +79,7 @@ class MatchBaseInsertable(BaseModelORM):
     ruleset_override: HockeyRuleset | None = None
     age_category_override: HockeyAgeCategory | None = None
     ruleset_season_override: RulesetSeason | None = None
+    score_entry_source: MatchScoreEntrySource | None = None
 
     @property
     def end_time(self) -> datetime_utc:

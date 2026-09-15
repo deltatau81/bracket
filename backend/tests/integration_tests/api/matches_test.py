@@ -85,6 +85,7 @@ async def test_create_match(
         assert response["data"]["ruleset_override"] is None
         assert response["data"]["age_category_override"] is None
         assert response["data"]["ruleset_season_override"] is None
+        assert response["data"]["score_entry_source"] == "MANUAL"
 
         await assert_row_count_and_clear(matches, 1)
 
@@ -551,6 +552,7 @@ async def test_upcoming_matches_endpoint(
                             "created": "2022-01-11T04:32:11Z",
                             "name": team1_inserted.name,
                             "tournament_id": auth_context.tournament.id,
+                            "participant_club_id": None,
                             "active": True,
                             "elo_score": "1150",
                             "swiss_score": "0",
@@ -577,6 +579,7 @@ async def test_upcoming_matches_endpoint(
                             "created": "2022-01-11T04:32:11Z",
                             "name": team2_inserted.name,
                             "tournament_id": auth_context.tournament.id,
+                            "participant_club_id": None,
                             "active": True,
                             "elo_score": "1350",
                             "swiss_score": "0",

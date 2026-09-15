@@ -50,6 +50,7 @@ from bracket.sql.matches import (
     sql_transition_match_phase,
     sql_update_match,
     sql_update_match_results,
+    ScoreEntrySourceConflictError,
 )
 from bracket.sql.rounds import get_round_by_id
 from bracket.sql.stage_items import get_stage_item
@@ -141,7 +142,9 @@ async def create_match(
         margin_minutes=tournament.margin_minutes,
     )
 
-    return SingleMatchResponse(data=await sql_create_match(body_with_durations))
+    return SingleMatchResponse(
+        data=await sql_create_match(body_with_durations, tournament.hockey_mode)
+    )
 
 
 @router.post("/tournaments/{tournament_id}/schedule_matches", response_model=SuccessResponse)
@@ -250,12 +253,18 @@ async def update_match_by_id(
 
     tournament = await sql_get_tournament(tournament_id)
 
-    if user.account_type is UserAccountType.SCORER:
-        await sql_update_match_results(
-            match_id, match, match_body, tournament.hockey_mode
-        )
-    else:
-        await sql_update_match(match_id, match_body, tournament)
+    try:
+        if user.account_type is UserAccountType.SCORER:
+            await sql_update_match_results(
+                match_id, match, match_body, tournament.hockey_mode
+            )
+        else:
+            await sql_update_match(match_id, match_body, tournament)
+    except ScoreEntrySourceConflictError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
     await handle_conflicts(await get_full_tournament_details(tournament_id))
 
     round_ = await get_round_by_id(tournament_id, match.round_id)

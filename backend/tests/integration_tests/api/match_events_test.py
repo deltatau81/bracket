@@ -6,7 +6,12 @@ import aiohttp
 import pytest
 
 from bracket.database import database
-from bracket.models.db.match import MatchPeriod, MatchPhaseState, MatchStatus
+from bracket.models.db.match import (
+    MatchPeriod,
+    MatchPhaseState,
+    MatchScoreEntrySource,
+    MatchStatus,
+)
 from bracket.models.db.stage_item_inputs import StageItemInputInsertable
 from bracket.schema import match_events, matches, players_x_teams, tournaments
 from bracket.sql.matches import sql_get_match
@@ -200,6 +205,43 @@ async def set_match_state(
             "phase_state": phase_state.value if phase_state is not None else None,
         },
     )
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_manual_goal_crud_does_not_change_match_score(
+    startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext
+) -> None:
+    async with event_match_context(auth_context) as context:
+        await database.execute(
+            query=matches.update().where(matches.c.id == context["match"].id),
+            values={
+                "score_entry_source": MatchScoreEntrySource.MANUAL.value,
+                "stage_item_input1_half1_score": 5,
+                "stage_item_input2_half1_score": 3,
+                "stage_item_input1_score": 5,
+                "stage_item_input2_score": 3,
+            },
+        )
+        body = goal_body(context)
+        goal = (await event_request(HTTPMethod.POST, context, auth_context, body=body))["data"]
+        match = await sql_get_match(context["match"].id)
+        assert (match.stage_item_input1_score, match.stage_item_input2_score) == (5, 3)
+
+        await event_request(
+            HTTPMethod.PUT,
+            context,
+            auth_context,
+            suffix=f"/{goal['id']}",
+            body=body | {"team_id": context["team2"].id},
+        )
+        await event_request(
+            HTTPMethod.DELETE,
+            context,
+            auth_context,
+            suffix=f"/{goal['id']}",
+        )
+        match = await sql_get_match(context["match"].id)
+        assert (match.stage_item_input1_score, match.stage_item_input2_score) == (5, 3)
 
 
 @pytest.mark.asyncio(loop_scope="session")

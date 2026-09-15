@@ -10,6 +10,7 @@ from bracket.models.db.match import (
     MatchCreateBody,
     MatchPeriod,
     MatchPhaseState,
+    MatchScoreEntrySource,
     MatchStatus,
 )
 from bracket.models.db.tournament import HockeyMode, Tournament
@@ -21,6 +22,26 @@ from bracket.utils.id_types import (
     StageItemInputId,
     TournamentId,
 )
+
+
+class ScoreEntrySourceConflictError(ValueError):
+    pass
+
+
+def default_score_entry_source(hockey_mode: HockeyMode) -> MatchScoreEntrySource | None:
+    if hockey_mode in {HockeyMode.COMPETITION, HockeyMode.GAME_SHOOTOUT}:
+        return MatchScoreEntrySource.MANUAL
+    return None
+
+
+def _ensure_score_update_allowed(match: Match, values: dict[str, int]) -> None:
+    if match.score_entry_source is MatchScoreEntrySource.EVENTS and any(
+        values[field] != getattr(match, field)
+        for field in values
+    ):
+        raise ScoreEntrySourceConflictError(
+            "Cannot edit scores for a match whose score is derived from events"
+        )
 
 
 async def sql_delete_match(match_id: MatchId) -> None:
@@ -44,7 +65,7 @@ async def sql_delete_matches_for_stage_item_id(stage_item_id: StageItemId) -> No
     await database.execute(query=query, values={"stage_item_id": stage_item_id})
 
 
-async def sql_create_match(match: MatchCreateBody) -> Match:
+async def sql_create_match(match: MatchCreateBody, hockey_mode: HockeyMode) -> Match:
     query = """
         INSERT INTO matches (
             round_id,
@@ -61,6 +82,7 @@ async def sql_create_match(match: MatchCreateBody) -> Match:
             stage_item_input2_score,
             stage_item_input1_conflict,
             stage_item_input2_conflict,
+            score_entry_source,
             created
         )
         VALUES (
@@ -78,11 +100,15 @@ async def sql_create_match(match: MatchCreateBody) -> Match:
             0,
             false,
             false,
+            :score_entry_source,
             NOW()
         )
         RETURNING *
     """
-    result = await database.fetch_one(query=query, values=match.model_dump())
+    values = match.model_dump()
+    default_source = default_score_entry_source(hockey_mode)
+    values["score_entry_source"] = default_source.value if default_source is not None else None
+    result = await database.fetch_one(query=query, values=values)
 
     if result is None:
         raise ValueError("Could not create stage")
@@ -176,6 +202,28 @@ async def sql_update_match_results(
         else match.stage_item_input2_penalty_score
     )
 
+    _ensure_score_update_allowed(
+        match,
+        {
+            "stage_item_input1_score": (
+                match.stage_item_input1_score
+                if hockey_mode is HockeyMode.GAME_SHOOTOUT
+                else half1_score1 + half2_score1
+            ),
+            "stage_item_input2_score": (
+                match.stage_item_input2_score
+                if hockey_mode is HockeyMode.GAME_SHOOTOUT
+                else half1_score2 + half2_score2
+            ),
+            "stage_item_input1_half1_score": half1_score1,
+            "stage_item_input2_half1_score": half1_score2,
+            "stage_item_input1_half2_score": half2_score1,
+            "stage_item_input2_half2_score": half2_score2,
+            "stage_item_input1_penalty_score": penalty_score1,
+            "stage_item_input2_penalty_score": penalty_score2,
+        },
+    )
+
     query = """
         UPDATE matches
         SET stage_item_input1_score = :stage_item_input1_score,
@@ -214,8 +262,8 @@ async def sql_update_match_results(
 
 
 async def sql_update_match(match_id: MatchId, match: MatchBody, tournament: Tournament) -> None:
+    current_match = await sql_get_match(match_id)
     if tournament.hockey_mode is HockeyMode.GAME_SHOOTOUT:
-        current_match = await sql_get_match(match_id)
         score1 = (
             match.stage_item_input1_score
             if match.stage_item_input1_score is not None
@@ -229,6 +277,20 @@ async def sql_update_match(match_id: MatchId, match: MatchBody, tournament: Tour
     else:
         score1 = match.stage_item_input1_half1_score + match.stage_item_input1_half2_score
         score2 = match.stage_item_input2_half1_score + match.stage_item_input2_half2_score
+
+    _ensure_score_update_allowed(
+        current_match,
+        {
+            "stage_item_input1_score": score1,
+            "stage_item_input2_score": score2,
+            "stage_item_input1_half1_score": match.stage_item_input1_half1_score,
+            "stage_item_input2_half1_score": match.stage_item_input2_half1_score,
+            "stage_item_input1_half2_score": match.stage_item_input1_half2_score,
+            "stage_item_input2_half2_score": match.stage_item_input2_half2_score,
+            "stage_item_input1_penalty_score": match.stage_item_input1_penalty_score,
+            "stage_item_input2_penalty_score": match.stage_item_input2_penalty_score,
+        },
+    )
 
     query = """
         UPDATE matches

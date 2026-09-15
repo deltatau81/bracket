@@ -4,6 +4,7 @@ import { StageItemInput, formatStageItemInput } from './stage_item_input';
 import { HockeyAgeCategory, HockeyRuleset } from './tournament';
 
 export type MatchStatus = 'PLANNED' | 'RUNNING' | 'FINISHED';
+export type MatchScoreEntrySource = 'MANUAL' | 'EVENTS';
 
 export type MatchPeriod =
   | 'GAME'
@@ -58,6 +59,7 @@ export interface MatchInterface {
   ruleset_override: HockeyRuleset | null;
   age_category_override: HockeyAgeCategory | null;
   ruleset_season_override: string | null;
+  score_entry_source: MatchScoreEntrySource | null;
 }
 
 export interface MatchBodyInterface {

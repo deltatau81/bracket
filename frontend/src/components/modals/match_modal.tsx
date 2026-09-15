@@ -628,6 +628,8 @@ function MatchModalForm({
     currentStatus === 'RUNNING' &&
     currentPeriod === 'SHOOTOUT' &&
     currentPhaseState === 'ACTIVE';
+  const eventsAreAuthoritative = match.score_entry_source === 'EVENTS';
+  const scoresAreEditable = !eventsAreAuthoritative;
 
   return (
     <>
@@ -669,7 +671,7 @@ function MatchModalForm({
               activePeriod={currentPeriod}
               phaseState={currentPhaseState}
               refreshMatch={() => swrStagesResponse.mutate()}
-              onGoalMutation={applyGoalMutation}
+              onGoalMutation={eventsAreAuthoritative ? applyGoalMutation : () => undefined}
             />
           </Grid.Col>
 
@@ -677,6 +679,13 @@ function MatchModalForm({
             <Text fw={600} mb="sm">
               Ergebnis
             </Text>
+            {tournament.hockey_mode !== 'STANDARD' && (
+              <Text size="sm" c="dimmed" mb="sm">
+                {eventsAreAuthoritative
+                  ? 'Das Ergebnis wird aus den Torereignissen berechnet.'
+                  : 'Torerereignisse dienen der Statistik und ändern das Ergebnis nicht.'}
+              </Text>
+            )}
 
             <Grid align="center">
               <Grid.Col span={4}>
@@ -701,13 +710,13 @@ function MatchModalForm({
                     <Text size="sm">Game</Text>
                   </Grid.Col>
                   <Grid.Col span={4}>
-                    {isScorer ? (
+                    {isScorer || eventsAreAuthoritative ? (
                       <Text ta="center">{form.values.stage_item_input1_score}</Text>
                     ) : (
                       <NumberInput
                         min={0}
                         hideControls
-                        disabled={currentStatus === 'PLANNED'}
+                        disabled={currentStatus === 'PLANNED' || !scoresAreEditable}
                         {...form.getInputProps('stage_item_input1_score')}
                       />
                     )}
@@ -719,7 +728,7 @@ function MatchModalForm({
                       <NumberInput
                         min={0}
                         hideControls
-                        disabled={currentStatus === 'PLANNED'}
+                        disabled={currentStatus === 'PLANNED' || !scoresAreEditable}
                         {...form.getInputProps('stage_item_input2_score')}
                       />
                     )}
@@ -731,7 +740,7 @@ function MatchModalForm({
                 <Text size="sm">1. Halbzeit</Text>
               </Grid.Col>
               <Grid.Col span={4}>
-                {isScorer ? (
+                {isScorer || eventsAreAuthoritative ? (
                   <Text ta="center">
                     {form.values.stage_item_input1_half1_score}
                   </Text>
@@ -739,13 +748,13 @@ function MatchModalForm({
                   <NumberInput
                     min={0}
                     hideControls
-                    disabled={currentStatus === 'PLANNED'}
+                    disabled={currentStatus === 'PLANNED' || !scoresAreEditable}
                     {...form.getInputProps('stage_item_input1_half1_score')}
                   />
                 )}
               </Grid.Col>
               <Grid.Col span={4}>
-                {isScorer ? (
+                {isScorer || eventsAreAuthoritative ? (
                   <Text ta="center">
                     {form.values.stage_item_input2_half1_score}
                   </Text>
@@ -753,7 +762,7 @@ function MatchModalForm({
                   <NumberInput
                     min={0}
                     hideControls
-                    disabled={currentStatus === 'PLANNED'}
+                    disabled={currentStatus === 'PLANNED' || !scoresAreEditable}
                     {...form.getInputProps('stage_item_input2_half1_score')}
                   />
                 )}
@@ -763,7 +772,7 @@ function MatchModalForm({
                 <Text size="sm">2. Halbzeit</Text>
               </Grid.Col>
               <Grid.Col span={4}>
-                {isScorer ? (
+                {isScorer || eventsAreAuthoritative ? (
                   <Text ta="center">
                     {form.values.stage_item_input1_half2_score}
                   </Text>
@@ -771,13 +780,13 @@ function MatchModalForm({
                   <NumberInput
                     min={0}
                     hideControls
-                    disabled={currentStatus === 'PLANNED'}
+                    disabled={currentStatus === 'PLANNED' || !scoresAreEditable}
                     {...form.getInputProps('stage_item_input1_half2_score')}
                   />
                 )}
               </Grid.Col>
               <Grid.Col span={4}>
-                {isScorer ? (
+                {isScorer || eventsAreAuthoritative ? (
                   <Text ta="center">
                     {form.values.stage_item_input2_half2_score}
                   </Text>
@@ -785,7 +794,7 @@ function MatchModalForm({
                   <NumberInput
                     min={0}
                     hideControls
-                    disabled={currentStatus === 'PLANNED'}
+                    disabled={currentStatus === 'PLANNED' || !scoresAreEditable}
                     {...form.getInputProps('stage_item_input2_half2_score')}
                   />
                 )}
@@ -799,7 +808,7 @@ function MatchModalForm({
                 </Text>
               </Grid.Col>
               <Grid.Col span={4}>
-                {isScorer && !scorerCanEditPenaltyScore ? (
+                {eventsAreAuthoritative || (isScorer && !scorerCanEditPenaltyScore) ? (
                   <Text ta="center">
                     {form.values.stage_item_input1_penalty_score}
                   </Text>
@@ -807,13 +816,13 @@ function MatchModalForm({
                   <NumberInput
                     min={0}
                     hideControls
-                    disabled={currentStatus === 'PLANNED'}
+                    disabled={currentStatus === 'PLANNED' || !scoresAreEditable}
                     {...form.getInputProps('stage_item_input1_penalty_score')}
                   />
                 )}
               </Grid.Col>
               <Grid.Col span={4}>
-                {isScorer && !scorerCanEditPenaltyScore ? (
+                {eventsAreAuthoritative || (isScorer && !scorerCanEditPenaltyScore) ? (
                   <Text ta="center">
                     {form.values.stage_item_input2_penalty_score}
                   </Text>
@@ -821,7 +830,7 @@ function MatchModalForm({
                   <NumberInput
                     min={0}
                     hideControls
-                    disabled={currentStatus === 'PLANNED'}
+                    disabled={currentStatus === 'PLANNED' || !scoresAreEditable}
                     {...form.getInputProps('stage_item_input2_penalty_score')}
                   />
                 )}

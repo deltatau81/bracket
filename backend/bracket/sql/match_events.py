@@ -75,8 +75,13 @@ async def adjust_goal_score(
 
     participants = await database.fetch_one(
         query="""
-            SELECT input1.team_id AS team1_id, input2.team_id AS team2_id
+                 SELECT input1.team_id AS team1_id, input2.team_id AS team2_id,
+                     matches.score_entry_source, tournaments.hockey_mode
             FROM matches
+                 JOIN rounds ON rounds.id = matches.round_id
+                 JOIN stage_items ON stage_items.id = rounds.stage_item_id
+                 JOIN stages ON stages.id = stage_items.stage_id
+                 JOIN tournaments ON tournaments.id = stages.tournament_id
             LEFT JOIN stage_item_inputs input1
                 ON input1.id = matches.stage_item_input1_id
             LEFT JOIN stage_item_inputs input2
@@ -88,6 +93,10 @@ async def adjust_goal_score(
     )
     if participants is None:
         return False
+    score_mutations_enabled = participants["score_entry_source"] != "MANUAL"
+    if not score_mutations_enabled:
+        return True
+
     if participants["team1_id"] == team_id:
         score_column = columns[0]
     elif participants["team2_id"] == team_id:
@@ -111,6 +120,7 @@ async def adjust_goal_score(
         SET {score_column} = {score_column} + :delta
             {aggregate_updates}
         WHERE id = :match_id
+        AND score_entry_source IS DISTINCT FROM 'MANUAL'
         AND {score_column} + :delta >= 0
         RETURNING id
     """
