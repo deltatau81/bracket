@@ -213,6 +213,7 @@ async def start_next_round(
                 custom_duration_minutes=None,
                 custom_margin_minutes=None,
             ),
+            tournament.hockey_mode,
         )
 
     draft_round = await get_round_by_id(tournament_id, round_id)
