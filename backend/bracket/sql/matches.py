@@ -12,7 +12,7 @@ from bracket.models.db.match import (
     MatchPhaseState,
     MatchStatus,
 )
-from bracket.models.db.tournament import Tournament
+from bracket.models.db.tournament import HockeyMode, Tournament
 from bracket.utils.id_types import (
     CourtId,
     MatchId,
@@ -141,6 +141,7 @@ async def sql_update_match_results(
     match_id: MatchId,
     match: Match,
     match_body: MatchBody,
+    hockey_mode: HockeyMode,
 ) -> None:
     fields_set = match_body.model_fields_set
 
@@ -192,8 +193,16 @@ async def sql_update_match_results(
         query=query,
         values={
             "match_id": match_id,
-            "stage_item_input1_score": half1_score1 + half2_score1,
-            "stage_item_input2_score": half1_score2 + half2_score2,
+            "stage_item_input1_score": (
+                match.stage_item_input1_score
+                if hockey_mode is HockeyMode.GAME_SHOOTOUT
+                else half1_score1 + half2_score1
+            ),
+            "stage_item_input2_score": (
+                match.stage_item_input2_score
+                if hockey_mode is HockeyMode.GAME_SHOOTOUT
+                else half1_score2 + half2_score2
+            ),
             "stage_item_input1_half1_score": half1_score1,
             "stage_item_input2_half1_score": half1_score2,
             "stage_item_input1_half2_score": half2_score1,
@@ -205,15 +214,27 @@ async def sql_update_match_results(
 
 
 async def sql_update_match(match_id: MatchId, match: MatchBody, tournament: Tournament) -> None:
+    if tournament.hockey_mode is HockeyMode.GAME_SHOOTOUT:
+        current_match = await sql_get_match(match_id)
+        score1 = (
+            match.stage_item_input1_score
+            if match.stage_item_input1_score is not None
+            else current_match.stage_item_input1_score
+        )
+        score2 = (
+            match.stage_item_input2_score
+            if match.stage_item_input2_score is not None
+            else current_match.stage_item_input2_score
+        )
+    else:
+        score1 = match.stage_item_input1_half1_score + match.stage_item_input1_half2_score
+        score2 = match.stage_item_input2_half1_score + match.stage_item_input2_half2_score
+
     query = """
         UPDATE matches
         SET round_id = :round_id,
-            stage_item_input1_score =
-                CAST(:stage_item_input1_half1_score AS INTEGER)
-                + CAST(:stage_item_input1_half2_score AS INTEGER),
-            stage_item_input2_score =
-                CAST(:stage_item_input2_half1_score AS INTEGER)
-                + CAST(:stage_item_input2_half2_score AS INTEGER),
+            stage_item_input1_score = :stage_item_input1_score,
+            stage_item_input2_score = :stage_item_input2_score,
             stage_item_input1_half1_score = :stage_item_input1_half1_score,
             stage_item_input2_half1_score = :stage_item_input2_half1_score,
             stage_item_input1_half2_score = :stage_item_input1_half2_score,
@@ -258,6 +279,8 @@ async def sql_update_match(match_id: MatchId, match: MatchBody, tournament: Tour
         values={
             "match_id": match_id,
             **match.model_dump(exclude={"status", "id"}),
+            "stage_item_input1_score": score1,
+            "stage_item_input2_score": score2,
             "status": match.status.value if match.status is not None else None,
             "duration_minutes": duration_minutes,
             "margin_minutes": margin_minutes,

@@ -32,9 +32,19 @@ _VALID_PERIODS = {
         MatchPeriod.PERIOD3,
         MatchPeriod.OVERTIME,
     },
+    HockeyMode.GAME_SHOOTOUT: {
+        MatchPeriod.GAME,
+        MatchPeriod.SHOOTOUT,
+    },
 }
 
 _TRANSITIONS = {
+    (HockeyMode.GAME_SHOOTOUT, MatchPeriod.GAME, MatchPhaseState.ACTIVE, MatchPhaseAction.END_PERIOD):
+        (MatchStatus.RUNNING, MatchPeriod.GAME, MatchPhaseState.BREAK),
+    (HockeyMode.GAME_SHOOTOUT, MatchPeriod.GAME, MatchPhaseState.BREAK, MatchPhaseAction.START_NEXT_PERIOD):
+        (MatchStatus.RUNNING, MatchPeriod.SHOOTOUT, MatchPhaseState.ACTIVE),
+    (HockeyMode.GAME_SHOOTOUT, MatchPeriod.SHOOTOUT, MatchPhaseState.ACTIVE, MatchPhaseAction.FINISH_MATCH):
+        (MatchStatus.FINISHED, MatchPeriod.SHOOTOUT, MatchPhaseState.BREAK),
     (HockeyMode.COMPETITION, MatchPeriod.HALF1, MatchPhaseState.ACTIVE, MatchPhaseAction.END_PERIOD):
         (MatchStatus.RUNNING, MatchPeriod.HALF1, MatchPhaseState.BREAK),
     (HockeyMode.COMPETITION, MatchPeriod.HALF1, MatchPhaseState.BREAK, MatchPhaseAction.START_NEXT_PERIOD):
@@ -96,11 +106,11 @@ def transition_match_phase(
     _validate_current_state(status, active_period, phase_state, hockey_mode)
 
     if status is MatchStatus.PLANNED and action is MatchPhaseAction.START_MATCH:
-        initial_period = (
-            MatchPeriod.HALF1
-            if hockey_mode is HockeyMode.COMPETITION
-            else MatchPeriod.PERIOD1
-        )
+        initial_period = {
+            HockeyMode.COMPETITION: MatchPeriod.HALF1,
+            HockeyMode.GAME_SHOOTOUT: MatchPeriod.GAME,
+            HockeyMode.STANDARD: MatchPeriod.PERIOD1,
+        }[hockey_mode]
         return MatchPhaseTransition(MatchStatus.RUNNING, initial_period, MatchPhaseState.ACTIVE)
 
     if status is MatchStatus.FINISHED and action is MatchPhaseAction.REOPEN_MATCH:

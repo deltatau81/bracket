@@ -686,3 +686,39 @@ def test_unfinished_competition_match_is_not_ranked() -> None:
     assert determine_ranking_for_stage_item(
         stage_item, ranking, HockeyMode.COMPETITION
     ) == {}
+
+
+@pytest.mark.parametrize(
+    ("game", "shootout", "expected"),
+    [
+        ((4, 2), (2, 1), (Decimal("3"), Decimal("0"))),
+        ((4, 4), (1, 2), (Decimal("1"), Decimal("2"))),
+        ((2, 3), (2, 1), (Decimal("1"), Decimal("2"))),
+        ((2, 2), (1, 1), (Decimal("1.5"), Decimal("1.5"))),
+    ],
+)
+def test_game_shootout_match_points(
+    game: tuple[int, int],
+    shootout: tuple[int, int],
+    expected: tuple[Decimal, Decimal],
+) -> None:
+    stage_item, _ = make_round_robin_stage_item()
+    match = stage_item.rounds[0].matches[0]
+    assert isinstance(match, MatchWithDetailsDefinitive)
+    match = match.model_copy(
+        update={
+            "stage_item_input1_score": game[0],
+            "stage_item_input2_score": game[1],
+            "stage_item_input1_penalty_score": shootout[0],
+            "stage_item_input2_penalty_score": shootout[1],
+        }
+    )
+    assert ranking_calculation.get_game_shootout_match_points(match, True) == expected[0]
+    assert ranking_calculation.get_game_shootout_match_points(match, False) == expected[1]
+
+
+def test_unfinished_game_shootout_match_is_not_ranked() -> None:
+    stage_item, ranking = make_round_robin_stage_item(MatchStatus.RUNNING)
+    assert determine_ranking_for_stage_item(
+        stage_item, ranking, HockeyMode.GAME_SHOOTOUT
+    ) == {}

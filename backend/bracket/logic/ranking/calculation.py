@@ -68,6 +68,24 @@ def get_hockey_match_points(
         )
     )
 
+
+def get_game_shootout_match_points(
+    match: MatchWithDetailsDefinitive,
+    is_team1: bool,
+) -> Decimal:
+    if is_team1:
+        game_team, game_opponent = match.stage_item_input1_score, match.stage_item_input2_score
+        shootout_team = match.stage_item_input1_penalty_score
+        shootout_opponent = match.stage_item_input2_penalty_score
+    else:
+        game_team, game_opponent = match.stage_item_input2_score, match.stage_item_input1_score
+        shootout_team = match.stage_item_input2_penalty_score
+        shootout_opponent = match.stage_item_input1_penalty_score
+
+    return get_part_points(game_team, game_opponent, Decimal("2"), Decimal("1")) + get_part_points(
+        shootout_team, shootout_opponent, Decimal("1"), Decimal("0.5")
+    )
+
 def set_statistics_for_stage_item_input(
     team_index: int,
     stats: defaultdict[StageItemInputId, TeamStatistics],
@@ -91,12 +109,14 @@ def set_statistics_for_stage_item_input(
     else:
         stats[stage_item_input_id].losses += 1
 
-    uses_competition_scoring = (
+    uses_fixed_hockey_scoring = (
         stage_item.type == StageType.ROUND_ROBIN
-        and hockey_mode is HockeyMode.COMPETITION
+        and hockey_mode in {HockeyMode.COMPETITION, HockeyMode.GAME_SHOOTOUT}
     )
-    if uses_competition_scoring:
+    if stage_item.type == StageType.ROUND_ROBIN and hockey_mode is HockeyMode.COMPETITION:
         swiss_score_diff = get_hockey_match_points(match, is_team1)
+    elif stage_item.type == StageType.ROUND_ROBIN and hockey_mode is HockeyMode.GAME_SHOOTOUT:
+        swiss_score_diff = get_game_shootout_match_points(match, is_team1)
     else:
         if has_won:
             swiss_score_diff = ranking.win_points
@@ -105,7 +125,7 @@ def set_statistics_for_stage_item_input(
         else:
             swiss_score_diff = ranking.loss_points
 
-    if ranking.add_score_points and not uses_competition_scoring:
+    if ranking.add_score_points and not uses_fixed_hockey_scoring:
         swiss_score_diff += (
             match.stage_item_input1_score if is_team1 else match.stage_item_input2_score
         )

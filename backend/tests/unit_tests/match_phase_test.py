@@ -39,6 +39,25 @@ def test_complete_competition_sequence() -> None:
         assert state == next_state
 
 
+def test_complete_game_shootout_sequence() -> None:
+    state: State = (MatchStatus.PLANNED, None, None)
+    expected = (
+        (MatchPhaseAction.START_MATCH, (MatchStatus.RUNNING, MatchPeriod.GAME, MatchPhaseState.ACTIVE)),
+        (MatchPhaseAction.END_PERIOD, (MatchStatus.RUNNING, MatchPeriod.GAME, MatchPhaseState.BREAK)),
+        (MatchPhaseAction.START_NEXT_PERIOD, (MatchStatus.RUNNING, MatchPeriod.SHOOTOUT, MatchPhaseState.ACTIVE)),
+        (MatchPhaseAction.FINISH_MATCH, (MatchStatus.FINISHED, MatchPeriod.SHOOTOUT, MatchPhaseState.BREAK)),
+    )
+    for action, next_state in expected:
+        state = apply(state, HockeyMode.GAME_SHOOTOUT, action)
+        assert state == next_state
+
+
+def test_game_shootout_enums_are_available() -> None:
+    assert HockeyMode.GAME_SHOOTOUT.value == "GAME_SHOOTOUT"
+    assert MatchPeriod.GAME.value == "GAME"
+    assert MatchEventPeriod.GAME.value == "GAME"
+
+
 def test_complete_standard_sequence_without_overtime() -> None:
     state: State = (MatchStatus.PLANNED, None, None)
     for action in (

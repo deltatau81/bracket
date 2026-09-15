@@ -18,6 +18,7 @@ class TournamentStatus(EnumAutoStr):
 
 class HockeyMode(EnumAutoStr):
     COMPETITION = auto()
+    GAME_SHOOTOUT = auto()
     STANDARD = auto()
 
 

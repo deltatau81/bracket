@@ -10,9 +10,9 @@ from bracket.models.db.account import UserAccountType
 from bracket.models.db.match import Match, MatchBody, MatchStatus
 from bracket.models.db.stage_item import StageType
 from bracket.models.db.stage_item_inputs import StageItemInputInsertable
-from bracket.models.db.tournament import HockeyAgeCategory, HockeyRuleset
+from bracket.models.db.tournament import HockeyAgeCategory, HockeyMode, HockeyRuleset
 from bracket.models.db.user_x_club import UserXClubInsertable, UserXClubRelation
-from bracket.schema import matches
+from bracket.schema import matches, tournaments
 from bracket.sql.matches import sql_update_match_results
 from bracket.utils.db import fetch_one_parsed_certain
 from bracket.utils.dummy_records import (
@@ -287,6 +287,7 @@ async def test_scorer_result_update_preserves_administrative_match_fields(
             match.id,
             before,
             body,
+            HockeyMode.COMPETITION,
         )
 
         after = await fetch_one_parsed_certain(
@@ -330,6 +331,66 @@ async def test_scorer_result_update_preserves_administrative_match_fields(
         )
 
         assert after.status == MatchStatus.RUNNING
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_game_shootout_scorer_partial_update_preserves_regulation_score(
+    startup_and_shutdown_uvicorn_server: None,
+    auth_context: AuthContext,
+) -> None:
+    await database.execute(
+        tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
+        values={"hockey_mode": "GAME_SHOOTOUT"},
+    )
+    try:
+        async with (
+            scorer_auth_context(auth_context) as scorer_context,
+            scorer_match_context(auth_context, status=MatchStatus.RUNNING) as context,
+        ):
+            match = context["match"]
+            await database.execute(
+                matches.update().where(matches.c.id == match.id),
+                values={
+                    "stage_item_input1_score": 5,
+                    "stage_item_input2_score": 3,
+                    "stage_item_input1_half1_score": 0,
+                    "stage_item_input2_half1_score": 0,
+                    "stage_item_input1_half2_score": 0,
+                    "stage_item_input2_half2_score": 0,
+                    "stage_item_input1_penalty_score": 1,
+                    "stage_item_input2_penalty_score": 1,
+                },
+            )
+
+            status_code, response = await send_tournament_request_with_status(
+                HTTPMethod.PUT,
+                f"matches/{match.id}",
+                scorer_context,
+                json={
+                    "round_id": context["round"].id,
+                    "stage_item_input2_penalty_score": 2,
+                },
+            )
+            assert status_code == 200, response
+
+            updated_match = await fetch_one_parsed_certain(
+                database,
+                Match,
+                query=matches.select().where(matches.c.id == match.id),
+            )
+            assert (
+                updated_match.stage_item_input1_score,
+                updated_match.stage_item_input2_score,
+            ) == (5, 3)
+            assert (
+                updated_match.stage_item_input1_penalty_score,
+                updated_match.stage_item_input2_penalty_score,
+            ) == (1, 2)
+    finally:
+        await database.execute(
+            tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
+            values={"hockey_mode": "COMPETITION"},
+        )
 
 
 @pytest.mark.asyncio(loop_scope="session")

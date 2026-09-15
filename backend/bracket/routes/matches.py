@@ -251,7 +251,9 @@ async def update_match_by_id(
     tournament = await sql_get_tournament(tournament_id)
 
     if user.account_type is UserAccountType.SCORER:
-        await sql_update_match_results(match_id, match, match_body)
+        await sql_update_match_results(
+            match_id, match, match_body, tournament.hockey_mode
+        )
     else:
         await sql_update_match(match_id, match_body, tournament)
     await handle_conflicts(await get_full_tournament_details(tournament_id))

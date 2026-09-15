@@ -60,6 +60,10 @@ ALLOWED_EVENT_PERIODS = {
         MatchEventPeriod.PERIOD3,
         MatchEventPeriod.OVERTIME,
     },
+    HockeyMode.GAME_SHOOTOUT: {
+        MatchEventPeriod.GAME,
+        MatchEventPeriod.SHOOTOUT,
+    },
 }
 
 

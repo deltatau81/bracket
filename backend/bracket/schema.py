@@ -56,7 +56,7 @@ tournaments = Table(
         index=True,
     ),
     CheckConstraint(
-        "hockey_mode IN ('COMPETITION', 'STANDARD')",
+        "hockey_mode IN ('COMPETITION', 'GAME_SHOOTOUT', 'STANDARD')",
         name="ck_tournaments_hockey_mode",
     ),
     CheckConstraint("ruleset IN ('DEB', 'IIHF')", name="ck_tournaments_ruleset"),
@@ -205,7 +205,7 @@ matches = Table(
     ),
     CheckConstraint(
         "active_period IS NULL OR active_period IN "
-        "('HALF1', 'HALF2', 'SHOOTOUT', 'PERIOD1', 'PERIOD2', 'PERIOD3', 'OVERTIME')",
+        "('GAME', 'HALF1', 'HALF2', 'SHOOTOUT', 'PERIOD1', 'PERIOD2', 'PERIOD3', 'OVERTIME')",
         name="ck_matches_active_period",
     ),
     CheckConstraint(
@@ -365,7 +365,7 @@ match_events = Table(
     CheckConstraint("event_type IN ('GOAL', 'PENALTY')", name="ck_match_events_event_type"),
     CheckConstraint(
         "period IN "
-        "('HALF1', 'HALF2', 'SHOOTOUT', 'PERIOD1', 'PERIOD2', 'PERIOD3', 'OVERTIME')",
+        "('GAME', 'HALF1', 'HALF2', 'SHOOTOUT', 'PERIOD1', 'PERIOD2', 'PERIOD3', 'OVERTIME')",
         name="ck_match_events_period",
     ),
     CheckConstraint("game_time_seconds >= 0", name="ck_match_events_game_time_positive"),

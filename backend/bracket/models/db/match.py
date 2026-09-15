@@ -19,6 +19,7 @@ class MatchStatus(EnumAutoStr):
 
 
 class MatchPeriod(EnumAutoStr):
+    GAME = auto()
     HALF1 = auto()
     HALF2 = auto()
     SHOOTOUT = auto()
@@ -140,6 +141,8 @@ class MatchWithDetailsDefinitive(Match):
 
 class MatchBody(BaseModelORM):
     round_id: RoundId
+    stage_item_input1_score: int | None = None
+    stage_item_input2_score: int | None = None
     stage_item_input1_half1_score: int = 0
     stage_item_input2_half1_score: int = 0
     stage_item_input1_half2_score: int = 0

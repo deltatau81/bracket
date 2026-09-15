@@ -120,6 +120,7 @@ async def event_match_context(
         )
         yield {
             "match": match,
+            "round": round_,
             "team1": team1,
             "team2": team2,
             "team3": team3,
@@ -528,6 +529,84 @@ async def test_goal_score_delta_reconciliation(
 
         assert converted_penalty["event_type"] == "PENALTY"
 
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_game_shootout_goal_score_reconciliation(
+    startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext
+) -> None:
+    await database.execute(
+        tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
+        values={"hockey_mode": "GAME_SHOOTOUT"},
+    )
+    try:
+        async with event_match_context(
+            auth_context, active_period=MatchPeriod.GAME
+        ) as context:
+            await send_tournament_request(
+                HTTPMethod.PUT,
+                f"matches/{context['match'].id}",
+                auth_context,
+                json={
+                    "round_id": context["round"].id,
+                    "stage_item_input1_score": 5,
+                    "stage_item_input2_score": 3,
+                    "stage_item_input1_penalty_score": 1,
+                    "stage_item_input2_penalty_score": 2,
+                },
+            )
+            match = await sql_get_match(context["match"].id)
+            assert (match.stage_item_input1_score, match.stage_item_input2_score) == (5, 3)
+            assert (
+                match.stage_item_input1_penalty_score,
+                match.stage_item_input2_penalty_score,
+            ) == (1, 2)
+            assert match.stage_item_input1_half1_score == 0
+            assert match.stage_item_input1_half2_score == 0
+
+            body = goal_body(context) | {"period": "GAME"}
+            goal = (
+                await event_request(HTTPMethod.POST, context, auth_context, body=body)
+            )["data"]
+            match = await sql_get_match(context["match"].id)
+            assert (match.stage_item_input1_score, match.stage_item_input2_score) == (6, 3)
+            assert match.stage_item_input1_half1_score == 0
+            assert match.stage_item_input1_half2_score == 0
+
+            updated = await event_request(
+                HTTPMethod.PUT,
+                context,
+                auth_context,
+                suffix=f"/{goal['id']}",
+                body=body | {"team_id": context["team2"].id},
+            )
+            assert updated["data"]["period"] == "GAME"
+            match = await sql_get_match(context["match"].id)
+            assert (match.stage_item_input1_score, match.stage_item_input2_score) == (5, 4)
+
+            await event_request(
+                HTTPMethod.DELETE, context, auth_context, suffix=f"/{goal['id']}"
+            )
+            match = await sql_get_match(context["match"].id)
+            assert (match.stage_item_input1_score, match.stage_item_input2_score) == (5, 3)
+
+            await set_match_state(
+                context,
+                status=MatchStatus.RUNNING,
+                active_period=MatchPeriod.SHOOTOUT,
+                phase_state=MatchPhaseState.ACTIVE,
+            )
+            shootout_goal = (
+                await event_request(HTTPMethod.POST, context, auth_context, body=body)
+            )["data"]
+            assert shootout_goal["period"] == "SHOOTOUT"
+            match = await sql_get_match(context["match"].id)
+            assert (match.stage_item_input1_score, match.stage_item_input2_score) == (5, 3)
+            assert match.stage_item_input1_penalty_score == 2
+    finally:
+        await database.execute(
+            tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
+            values={"hockey_mode": "COMPETITION"},
+        )
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_match_event_player_snapshots_and_validation(

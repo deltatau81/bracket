@@ -14,6 +14,7 @@ class MatchEventType(EnumAutoStr):
 
 
 class MatchEventPeriod(EnumAutoStr):
+    GAME = auto()
     HALF1 = auto()
     HALF2 = auto()
     SHOOTOUT = auto()

@@ -52,6 +52,10 @@ async def adjust_goal_score(
     delta: int,
 ) -> bool:
     score_columns = {
+        MatchEventPeriod.GAME: (
+            "stage_item_input1_score",
+            "stage_item_input2_score",
+        ),
         MatchEventPeriod.HALF1: (
             "stage_item_input1_half1_score",
             "stage_item_input2_half1_score",
@@ -84,37 +88,43 @@ async def adjust_goal_score(
     )
     if participants is None:
         return False
-    half_periods = {MatchEventPeriod.HALF1, MatchEventPeriod.HALF2}
     if participants["team1_id"] == team_id:
         score_column = columns[0]
-        score1_delta = delta if period in half_periods else 0
-        score2_delta = 0
     elif participants["team2_id"] == team_id:
         score_column = columns[1]
-        score1_delta = 0
-        score2_delta = delta if period in half_periods else 0
     else:
         return False
 
+    if period in {MatchEventPeriod.HALF1, MatchEventPeriod.HALF2}:
+        aggregate_updates = """
+            , stage_item_input1_score = stage_item_input1_half1_score
+                + stage_item_input1_half2_score
+                + :score1_delta
+            , stage_item_input2_score = stage_item_input2_half1_score
+                + stage_item_input2_half2_score
+                + :score2_delta
+        """
+    else:
+        aggregate_updates = ""
     query = f"""
         UPDATE matches
-        SET {score_column} = {score_column} + :delta,
-            stage_item_input1_score =
-                stage_item_input1_half1_score + stage_item_input1_half2_score + :score1_delta,
-            stage_item_input2_score =
-                stage_item_input2_half1_score + stage_item_input2_half2_score + :score2_delta
+        SET {score_column} = {score_column} + :delta
+            {aggregate_updates}
         WHERE id = :match_id
         AND {score_column} + :delta >= 0
         RETURNING id
     """
+    values = {"match_id": match_id, "delta": delta}
+    if aggregate_updates:
+        values["score1_delta"] = (
+            delta if participants["team1_id"] == team_id else 0
+        )
+        values["score2_delta"] = (
+            delta if participants["team2_id"] == team_id else 0
+        )
     result = await database.fetch_one(
         query=query,
-        values={
-            "match_id": match_id,
-            "delta": delta,
-            "score1_delta": score1_delta,
-            "score2_delta": score2_delta,
-        },
+        values=values,
     )
     return result is not None
 
@@ -139,6 +149,7 @@ async def get_player_snapshot(
 
 _EVENT_CHRONOLOGY_SQL = """
     CASE period
+        WHEN 'GAME' THEN 0
         WHEN 'HALF1' THEN 0
         WHEN 'HALF2' THEN 1
         WHEN 'SHOOTOUT' THEN 2
