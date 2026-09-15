@@ -40,6 +40,7 @@ import { deleteStageItem } from '../../services/stage_item';
 import { updateStageItemInput } from '../../services/stage_item_input';
 import CreateStageButton from '../buttons/create_stage';
 import { CreateStageItemModal } from '../modals/create_stage_item';
+import CreateYouthScheduleModal from '../modals/create_youth_schedule';
 import { UpdateStageModal } from '../modals/update_stage';
 import { UpdateStageItemModal } from '../modals/update_stage_item';
 import RequestErrorAlert from '../utils/error_alert';
@@ -450,6 +451,14 @@ function StageColumn({
         </Menu>
       </Group>
       {rows}
+
+      <CreateYouthScheduleModal
+        tournamentId={tournament.id}
+        stageId={stage.id}
+        swrStagesResponse={swrStagesResponse}
+        swrAvailableInputsResponse={swrAvailableInputsResponse}
+        swrRankingsPerStageItemResponse={swrRankingsPerStageItemResponse}
+      />
       <CreateStageItemModal
         key={-1}
         tournament={tournament}
