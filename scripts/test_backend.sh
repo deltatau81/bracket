@@ -61,9 +61,15 @@ case "${1:-all}" in
       tests/integration_tests/api/stage_items_test.py
     )
     ;;
+  conflicts)
+    TESTS=(
+      tests/unit_tests/conflicts_test.py
+    )
+    ;;
   ranking)
     TESTS=(
       tests/unit_tests/ranking_calculation_test.py
+      tests/unit_tests/conflicts_test.py
     )
     ;;
   score_source)
@@ -95,7 +101,7 @@ case "${1:-all}" in
     )
     ;;
   *)
-    echo "Usage: $0 {authorization|catalog|club_listing|matches|player_statistics|ranking|score_source|scorer|events|phase|stage_items|sponsors|teams|user_creation|all}"
+    echo "Usage: $0 {authorization|catalog|club_listing|conflicts|matches|player_statistics|ranking|score_source|scorer|events|phase|stage_items|sponsors|teams|user_creation|all}"
     exit 2
     ;;
 esac
