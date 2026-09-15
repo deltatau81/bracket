@@ -31,6 +31,7 @@ async def test_teams_endpoint(
                         "players": [],
                         "tournament_id": team_inserted.tournament_id,
                         "participant_club_id": None,
+                        "pairing_group": None,
                         "elo_score": "1200.0",
                         "swiss_score": "0.0",
                         "wins": 0,
@@ -52,6 +53,57 @@ async def test_create_team(
     response = await send_tournament_request(HTTPMethod.POST, "teams", auth_context, None, body)
     assert response["data"]["name"] == body["name"]
     await assert_row_count_and_clear(teams, 1)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_team_pairing_group_create_update_clear_and_length_validation(
+    startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext
+) -> None:
+    body = {"name": "Pairing Team", "active": True, "player_ids": []}
+
+    created = await send_tournament_request(
+        HTTPMethod.POST,
+        "teams",
+        auth_context,
+        None,
+        body | {"pairing_group": "A"},
+    )
+    team_id = created["data"]["id"]
+    assert created["data"]["pairing_group"] == "A"
+
+    updated = await send_tournament_request(
+        HTTPMethod.PUT,
+        f"teams/{team_id}",
+        auth_context,
+        None,
+        body | {"pairing_group": "C"},
+    )
+    assert updated["data"]["pairing_group"] == "C"
+
+    cleared = await send_tournament_request(
+        HTTPMethod.PUT,
+        f"teams/{team_id}",
+        auth_context,
+        None,
+        body | {"pairing_group": None},
+    )
+    assert cleared["data"]["pairing_group"] is None
+
+    omitted = await send_tournament_request(
+        HTTPMethod.POST, "teams", auth_context, None, body | {"name": "Omitted Group"}
+    )
+    assert omitted["data"]["pairing_group"] is None
+
+    too_long = await send_tournament_request(
+        HTTPMethod.POST,
+        "teams",
+        auth_context,
+        None,
+        body | {"name": "Too Long Group", "pairing_group": "X" * 33},
+    )
+    assert too_long["detail"][0]["loc"][-1] == "pairing_group"
+
+    await assert_row_count_and_clear(teams, 2)
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -151,6 +203,32 @@ async def test_team_participant_club_create_read_and_update(
             assert updated["data"]["participant_club_id"] == participant_club_id
 
         await assert_row_count_and_clear(teams, 1)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_team_batch_pairing_group_and_participant_club(
+    startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext
+) -> None:
+    async with inserted_club(DUMMY_CLUB.model_copy(update={"name": "Batch Club"})) as club:
+        response = await send_tournament_request(
+            HTTPMethod.POST,
+            "teams_multi",
+            auth_context,
+            None,
+            {
+                "names": "Batch Team 1\nBatch Team 2",
+                "active": True,
+                "participant_club_id": club.id,
+                "pairing_group": "B",
+            },
+        )
+        assert response["success"] is True
+        created_teams = await database.fetch_all(
+            teams.select().where(teams.c.tournament_id == auth_context.tournament.id)
+        )
+        assert {row["participant_club_id"] for row in created_teams} == {club.id}
+        assert {row["pairing_group"] for row in created_teams} == {"B"}
+        await assert_row_count_and_clear(teams, 2)
 
 
 @pytest.mark.asyncio(loop_scope="session")

@@ -148,7 +148,10 @@ async def update_team_by_id(
             (teams.c.id == team.id) & (teams.c.tournament_id == tournament_id)
         ),
         values=team_body.model_dump(exclude={"player_ids", "player_assignments"})
-        | {"participant_club_id": team_body.participant_club_id},
+        | {
+            "participant_club_id": team_body.participant_club_id,
+            "pairing_group": team_body.pairing_group,
+        },
     )
     await update_team_members(
         team.id, tournament_id, team_body.player_ids, team_body.player_assignments
@@ -277,6 +280,7 @@ async def create_multiple_teams(
 
     check_requirement(existing_teams, user, "max_teams", additions=len(reader))
     check_requirement(existing_players, user, "max_players", additions=len(players))
+    await validate_participant_club_id(team_body.participant_club_id)
 
     async with database.transaction():
         for team_name, players in teams_and_players:
@@ -285,6 +289,8 @@ async def create_multiple_teams(
                 values=TeamInsertable(
                     name=team_name,
                     active=team_body.active,
+                    participant_club_id=team_body.participant_club_id,
+                    pairing_group=team_body.pairing_group,
                     created=datetime_utc.now(),
                     tournament_id=tournament_id,
                 ).model_dump(),

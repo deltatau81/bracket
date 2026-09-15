@@ -29,6 +29,7 @@ function MultiTeamTab({
       names: '',
       active: true,
       participant_club_id: null as string | null,
+      pairing_group: '',
     },
 
     validate: {
@@ -43,6 +44,7 @@ function MultiTeamTab({
           values.names,
           values.active,
           values.participant_club_id == null ? null : Number(values.participant_club_id)
+          , values.pairing_group.trim() || null
         );
         await swrTeamsResponse.mutate();
         setOpened(false);
@@ -58,6 +60,13 @@ function MultiTeamTab({
         placeholder="Optional"
         data={clubs.map((club) => ({ value: `${club.id}`, label: club.name }))}
         {...form.getInputProps('participant_club_id')}
+      />
+
+      <TextInput
+        mt="md"
+        label="Pairing group"
+        placeholder="Optional"
+        {...form.getInputProps('pairing_group')}
       />
 
       <Checkbox
@@ -92,6 +101,7 @@ function SingleTeamTab({
       active: true,
       player_ids: [],
       participant_club_id: null as string | null,
+      pairing_group: '',
     },
     validate: {
       name: (value) => (value.length > 0 ? null : t('too_short_name_validation')),
@@ -106,7 +116,8 @@ function SingleTeamTab({
           values.active,
           values.player_ids,
           undefined,
-          values.participant_club_id == null ? null : Number(values.participant_club_id)
+          values.participant_club_id == null ? null : Number(values.participant_club_id),
+          values.pairing_group.trim() || null
         );
         await swrTeamsResponse.mutate();
         setOpened(false);
@@ -134,6 +145,13 @@ function SingleTeamTab({
         data={clubs.map((club) => ({ value: `${club.id}`, label: club.name }))}
         {...form.getInputProps('participant_club_id')}
       />
+
+        <TextInput
+          mt="md"
+          label="Pairing group"
+          placeholder="Optional"
+          {...form.getInputProps('pairing_group')}
+        />
 
       <MultiSelect
         data={players.map((p) => ({ value: `${p.id}`, label: p.name }))}

@@ -62,6 +62,7 @@ export default function TeamUpdateModal({
       player_ids: team.players.map((player) => `${player.id}`),
       participant_club_id:
         team.participant_club_id == null ? null : `${team.participant_club_id}`,
+      pairing_group: team.pairing_group ?? '',
     },
 
     validate: {
@@ -81,7 +82,8 @@ export default function TeamUpdateModal({
               values.active,
               values.player_ids,
               undefined,
-              values.participant_club_id == null ? null : Number(values.participant_club_id)
+              values.participant_club_id == null ? null : Number(values.participant_club_id),
+              values.pairing_group.trim() || null
             );
             if (requestSucceeded(result)) {
               await swrTeamsResponse.mutate();
@@ -110,6 +112,13 @@ export default function TeamUpdateModal({
             placeholder="Optional"
             data={clubs.map((club) => ({ value: `${club.id}`, label: club.name }))}
             {...form.getInputProps('participant_club_id')}
+          />
+
+          <TextInput
+            mt="md"
+            label="Pairing group"
+            placeholder="Optional"
+            {...form.getInputProps('pairing_group')}
           />
 
           <MultiSelect

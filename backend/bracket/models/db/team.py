@@ -19,6 +19,7 @@ class TeamInsertable(BaseModelORM):
     name: str
     tournament_id: TournamentId
     participant_club_id: ClubId | None = None
+    pairing_group: Annotated[str | None, StringConstraints(max_length=32)] = None
     active: bool
     elo_score: Decimal = START_ELO
     swiss_score: Decimal = Decimal("0.0")
@@ -73,6 +74,7 @@ class TeamBody(BaseModelORM):
     name: Annotated[str, StringConstraints(min_length=1, max_length=30)]
     active: bool
     participant_club_id: ClubId | None = None
+    pairing_group: Annotated[str | None, StringConstraints(max_length=32)] = None
     player_ids: set[PlayerId]
     player_assignments: list[PlayerTeamAssignmentBody] | None = None
 
@@ -87,3 +89,5 @@ class TeamBody(BaseModelORM):
 class TeamMultiBody(BaseModelORM):
     names: str = Field(..., min_length=1)
     active: bool
+    participant_club_id: ClubId | None = None
+    pairing_group: Annotated[str | None, StringConstraints(max_length=32)] = None

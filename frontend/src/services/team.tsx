@@ -13,7 +13,8 @@ export async function createTeam(
   active: boolean,
   player_ids: string[],
   player_assignments?: PlayerTeamAssignment[],
-  participant_club_id: number | null = null
+  participant_club_id: number | null = null,
+  pairing_group: string | null = null
 ) {
   return createAxios()
     .post(`tournaments/${tournament_id}/teams`, {
@@ -22,6 +23,7 @@ export async function createTeam(
       player_ids,
       player_assignments,
       participant_club_id,
+      pairing_group,
     })
     .catch((response: any) => handleRequestError(response));
 }
@@ -30,13 +32,15 @@ export async function createTeams(
   tournament_id: number,
   names: string,
   active: boolean,
-  participant_club_id: number | null = null
+  participant_club_id: number | null = null,
+  pairing_group: string | null = null
 ) {
   return createAxios()
     .post(`tournaments/${tournament_id}/teams_multi`, {
       names,
       active,
       participant_club_id,
+      pairing_group,
     })
     .catch((response: any) => handleRequestError(response));
 }
@@ -54,7 +58,8 @@ export async function updateTeam(
   active: boolean,
   player_ids: string[],
   player_assignments?: PlayerTeamAssignment[],
-  participant_club_id: number | null = null
+  participant_club_id: number | null = null,
+  pairing_group: string | null = null
 ) {
   return awaitRequestAndHandleError(async (axios) =>
     axios.put(`tournaments/${tournament_id}/teams/${team_id}`, {
@@ -63,6 +68,7 @@ export async function updateTeam(
       player_ids,
       player_assignments,
       participant_club_id,
+      pairing_group,
     })
   );
 }

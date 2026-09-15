@@ -244,6 +244,7 @@ teams = Table(
     Column("created", DateTimeTZ, nullable=False, server_default=func.now()),
     Column("tournament_id", BigInteger, ForeignKey("tournaments.id"), index=True, nullable=False),
     Column("participant_club_id", BigInteger, ForeignKey("clubs.id"), nullable=True),
+    Column("pairing_group", String(32), nullable=True),
     Column("active", Boolean, nullable=False, index=True, server_default="t"),
     Column("elo_score", Float, nullable=False, server_default="0"),
     Column("swiss_score", Float, nullable=False, server_default="0"),
