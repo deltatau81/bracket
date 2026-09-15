@@ -2,6 +2,7 @@ from sqlalchemy import (
     CheckConstraint,
     Column,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -237,6 +238,7 @@ teams = Table(
     Column("name", String, nullable=False, index=True),
     Column("created", DateTimeTZ, nullable=False, server_default=func.now()),
     Column("tournament_id", BigInteger, ForeignKey("tournaments.id"), index=True, nullable=False),
+    Column("participant_club_id", BigInteger, ForeignKey("clubs.id"), nullable=True),
     Column("active", Boolean, nullable=False, index=True, server_default="t"),
     Column("elo_score", Float, nullable=False, server_default="0"),
     Column("swiss_score", Float, nullable=False, server_default="0"),
@@ -244,6 +246,7 @@ teams = Table(
     Column("draws", Integer, nullable=False, server_default="0"),
     Column("losses", Integer, nullable=False, server_default="0"),
     Column("logo_path", String, nullable=True),
+    Index("ix_teams_tournament_id_participant_club_id", "tournament_id", "participant_club_id"),
 )
 
 players = Table(

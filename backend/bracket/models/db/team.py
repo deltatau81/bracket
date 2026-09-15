@@ -11,13 +11,14 @@ from bracket.logic.ranking.statistics import START_ELO
 from bracket.models.db.player import Player
 from bracket.models.db.player_x_team import PlayerPosition, PlayerTeamAssignmentBody
 from bracket.models.db.shared import BaseModelORM
-from bracket.utils.id_types import PlayerId, TeamId, TournamentId
+from bracket.utils.id_types import ClubId, PlayerId, TeamId, TournamentId
 
 
 class TeamInsertable(BaseModelORM):
     created: datetime_utc
     name: str
     tournament_id: TournamentId
+    participant_club_id: ClubId | None = None
     active: bool
     elo_score: Decimal = START_ELO
     swiss_score: Decimal = Decimal("0.0")
@@ -71,6 +72,7 @@ class FullTeamWithPlayers(TeamWithPlayers, Team):
 class TeamBody(BaseModelORM):
     name: Annotated[str, StringConstraints(min_length=1, max_length=30)]
     active: bool
+    participant_club_id: ClubId | None = None
     player_ids: set[PlayerId]
     player_assignments: list[PlayerTeamAssignmentBody] | None = None
 

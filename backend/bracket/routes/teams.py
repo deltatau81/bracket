@@ -4,8 +4,9 @@ from uuid import uuid4
 
 import aiofiles
 import aiofiles.os
-from fastapi import APIRouter, Depends, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from heliclockter import datetime_utc
+from starlette import status
 
 from bracket.database import database
 from bracket.logic.subscriptions import check_requirement
@@ -37,7 +38,7 @@ from bracket.routes.util import (
     team_dependency,
     team_with_players_dependency,
 )
-from bracket.schema import players_x_teams, teams
+from bracket.schema import clubs, players_x_teams, teams
 from bracket.sql.players import get_all_players_in_tournament, insert_player
 from bracket.sql.teams import (
     get_team_by_id,
@@ -48,12 +49,26 @@ from bracket.sql.teams import (
 from bracket.sql.validation import check_foreign_keys_belong_to_tournament
 from bracket.utils.db import fetch_one_parsed
 from bracket.utils.errors import ForeignKey, check_foreign_key_violation
-from bracket.utils.id_types import PlayerId, TeamId, TournamentId
+from bracket.utils.id_types import ClubId, PlayerId, TeamId, TournamentId
 from bracket.utils.logging import logger
 from bracket.utils.pagination import PaginationTeams
 from bracket.utils.types import assert_some
 
 router = APIRouter()
+
+
+async def validate_participant_club_id(participant_club_id: ClubId | None) -> None:
+    if participant_club_id is None:
+        return
+
+    club_exists = await database.fetch_val(
+        clubs.select().with_only_columns(clubs.c.id).where(clubs.c.id == participant_club_id)
+    )
+    if club_exists is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not find Club(s) with ID {participant_club_id}",
+        )
 
 
 async def update_team_members(
@@ -126,12 +141,14 @@ async def update_team_by_id(
     team: Team = Depends(team_dependency),
 ) -> SingleTeamResponse:
     await check_foreign_keys_belong_to_tournament(team_body, tournament_id)
+    await validate_participant_club_id(team_body.participant_club_id)
 
     await database.execute(
         query=teams.update().where(
             (teams.c.id == team.id) & (teams.c.tournament_id == tournament_id)
         ),
-        values=team_body.model_dump(exclude={"player_ids", "player_assignments"}),
+        values=team_body.model_dump(exclude={"player_ids", "player_assignments"})
+        | {"participant_club_id": team_body.participant_club_id},
     )
     await update_team_members(
         team.id, tournament_id, team_body.player_ids, team_body.player_assignments
@@ -215,6 +232,7 @@ async def create_team(
     _: Tournament = Depends(disallow_archived_tournament),
 ) -> SingleTeamResponse:
     await check_foreign_keys_belong_to_tournament(team_to_insert, tournament_id)
+    await validate_participant_club_id(team_to_insert.participant_club_id)
 
     existing_teams = await get_teams_with_members(tournament_id)
     check_requirement(existing_teams, user, "max_teams")
