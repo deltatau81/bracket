@@ -608,6 +608,133 @@ async def test_game_shootout_goal_score_reconciliation(
             values={"hockey_mode": "COMPETITION"},
         )
 
+@pytest.mark.parametrize(
+    ("hockey_mode", "active_period"),
+    [
+        ("COMPETITION", MatchPeriod.HALF1),
+        ("GAME_SHOOTOUT", MatchPeriod.GAME),
+    ],
+)
+@pytest.mark.asyncio(loop_scope="session")
+async def test_youth_goal_time_is_optional(
+    startup_and_shutdown_uvicorn_server: None,
+    auth_context: AuthContext,
+    hockey_mode: str,
+    active_period: MatchPeriod,
+) -> None:
+    await database.execute(
+        tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
+        values={"hockey_mode": hockey_mode},
+    )
+    try:
+        async with event_match_context(
+            auth_context, active_period=active_period
+        ) as context:
+            body = goal_body(context) | {"period": active_period.value}
+            body.pop("game_time_seconds")
+
+            created = (
+                await event_request(HTTPMethod.POST, context, auth_context, body=body)
+            )["data"]
+            assert created["game_time_seconds"] is None
+
+            match = await sql_get_match(context["match"].id)
+            assert match.stage_item_input1_score == 1
+
+            listed = (await event_request(HTTPMethod.GET, context, auth_context))["data"]
+            stored = next(event for event in listed if event["id"] == created["id"])
+            assert stored["game_time_seconds"] is None
+
+            edited = (
+                await event_request(
+                    HTTPMethod.PUT,
+                    context,
+                    auth_context,
+                    suffix=f"/{created['id']}",
+                    body=body | {"player_number": 18},
+                )
+            )["data"]
+            assert edited["game_time_seconds"] is None
+
+            timed = (
+                await event_request(
+                    HTTPMethod.PUT,
+                    context,
+                    auth_context,
+                    suffix=f"/{created['id']}",
+                    body=body | {"game_time_seconds": 342},
+                )
+            )["data"]
+            assert timed["game_time_seconds"] == 342
+
+            cleared = (
+                await event_request(
+                    HTTPMethod.PUT,
+                    context,
+                    auth_context,
+                    suffix=f"/{created['id']}",
+                    body=body | {"game_time_seconds": None},
+                )
+            )["data"]
+            assert cleared["game_time_seconds"] is None
+
+            assert (
+                await event_request(
+                    HTTPMethod.DELETE,
+                    context,
+                    auth_context,
+                    suffix=f"/{created['id']}",
+                )
+                == SUCCESS_RESPONSE
+            )
+            match = await sql_get_match(context["match"].id)
+            assert match.stage_item_input1_score == 0
+    finally:
+        await database.execute(
+            tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
+            values={"hockey_mode": "COMPETITION"},
+        )
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_standard_goal_still_requires_game_time(
+    startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext
+) -> None:
+    await database.execute(
+        tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
+        values={"hockey_mode": "STANDARD"},
+    )
+    try:
+        async with event_match_context(
+            auth_context, active_period=MatchPeriod.PERIOD1
+        ) as context:
+            body = goal_body(context) | {"period": "PERIOD1"}
+            body.pop("game_time_seconds")
+            status_code, _ = await event_request_with_status(
+                HTTPMethod.POST, context, auth_context, body=body
+            )
+            assert status_code == 422
+
+            timed = (
+                await event_request(
+                    HTTPMethod.POST,
+                    context,
+                    auth_context,
+                    body=body | {"game_time_seconds": 42},
+                )
+            )["data"]
+            assert timed["game_time_seconds"] == 42
+            await event_request(
+                HTTPMethod.DELETE,
+                context,
+                auth_context,
+                suffix=f"/{timed['id']}",
+            )
+    finally:
+        await database.execute(
+            tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
+            values={"hockey_mode": "COMPETITION"},
+        )
 @pytest.mark.asyncio(loop_scope="session")
 async def test_match_event_player_snapshots_and_validation(
     startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext

@@ -218,7 +218,9 @@ function MatchEventTimeline({
               <div key={event.id}>
                 <Group gap="xs" wrap="wrap">
                   <Text size="sm" fw={700}>
-                    {formatGameTime(event.game_time_seconds)}
+                    {event.game_time_seconds == null
+                      ? '-'
+                      : formatGameTime(event.game_time_seconds)}
                   </Text>
 
                   <Text size="sm">{teamName(event.team_id)}</Text>

@@ -218,6 +218,20 @@ def apply_penalty_snapshot(
     )
 
 
+def validate_game_time(event_body: MatchEventBody, tournament: Tournament) -> None:
+    if event_body.game_time_seconds is not None:
+        return
+    if (
+        event_body.event_type is MatchEventType.GOAL
+        and tournament.hockey_mode in {HockeyMode.COMPETITION, HockeyMode.GAME_SHOOTOUT}
+    ):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail="Game time is required for this event",
+    )
+
+
 async def event_or_404(match_id: MatchId, event_id: MatchEventId) -> MatchEvent:
     event = await get_match_event(match_id, event_id)
     if event is None:
@@ -318,6 +332,7 @@ async def create_event(
         )
 
     event_body = event_body.model_copy(update={"period": active_period})
+    validate_game_time(event_body, tournament)
     event_body = await apply_player_snapshots(event_body)
     if event_body.event_type is MatchEventType.PENALTY and event_body.penalty_code is not None:
         event_body = apply_penalty_snapshot(
@@ -351,6 +366,7 @@ async def update_event(
     event_body = await apply_player_snapshots(event_body)
     match = await sql_get_match(match_id)
     tournament = await sql_get_tournament(tournament_id)
+    validate_game_time(event_body, tournament)
     if event_body.event_type is MatchEventType.PENALTY and event_body.penalty_code is not None:
         event_body = apply_penalty_snapshot(
             event_body,

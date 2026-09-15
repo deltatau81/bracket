@@ -2,6 +2,7 @@ import { MatchPeriod } from '../interfaces/match';
 import { MatchEvent } from '../interfaces/match_event';
 
 export const MATCH_PERIOD_LABELS: Record<MatchPeriod, string> = {
+  GAME: 'Game',
   HALF1: '1. Halbzeit',
   HALF2: '2. Halbzeit',
   SHOOTOUT: 'Penalty',

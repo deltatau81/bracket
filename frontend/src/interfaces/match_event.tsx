@@ -49,7 +49,7 @@ export interface MatchEventBody {
   team_id: number;
   event_type: MatchEventType;
   period: MatchPeriod;
-  game_time_seconds: number;
+  game_time_seconds: number | null;
   player_id: number | null;
   player_number?: number | null;
   player_name?: string | null;
@@ -71,7 +71,7 @@ export interface MatchEventBody {
 export interface MatchEventCreateBody {
   team_id: number;
   event_type: MatchEventType;
-  game_time_seconds: number;
+  game_time_seconds: number | null;
   player_id: number | null;
   player_number?: number | null;
   assist1_player_id?: number | null;

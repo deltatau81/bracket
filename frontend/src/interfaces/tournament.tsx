@@ -1,5 +1,5 @@
 export type TournamentStatus = 'OPEN' | 'ARCHIVED';
-export type HockeyMode = 'COMPETITION' | 'STANDARD';
+export type HockeyMode = 'COMPETITION' | 'GAME_SHOOTOUT' | 'STANDARD';
 export type HockeyRuleset = 'DEB' | 'IIHF';
 export type HockeyAgeCategory = 'U9' | 'U11' | 'U13' | 'U15' | 'U17' | 'U20' | 'SENIOR';
 

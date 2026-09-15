@@ -102,6 +102,19 @@ function getHockeyPoints(
   );
 }
 
+
+function getGameShootoutPoints(
+  gameTeam: number,
+  gameOpponent: number,
+  shootoutTeam: number,
+  shootoutOpponent: number
+): number {
+  return (
+    getPartPoints(gameTeam, gameOpponent, 2, 1) +
+    getPartPoints(shootoutTeam, shootoutOpponent, 1, 0.5)
+  );
+}
+
 function formatHockeyPoints(points: number): string {
   return Number.isInteger(points) ? `${points}` : points.toFixed(1).replace('.', ',');
 }
@@ -124,6 +137,7 @@ interface PhaseUi {
 
 function resumeControl(period: MatchPeriod): PhaseControl {
   const label = {
+    GAME: 'Game fortsetzen',
     HALF1: '1. Halbzeit fortsetzen',
     HALF2: '2. Halbzeit fortsetzen',
     SHOOTOUT: 'Penalty fortsetzen',
@@ -167,6 +181,29 @@ function getPhaseUi(
     return { label: 'Pause', controls: [resumeControl(period)] };
   }
 
+  if (mode === 'GAME_SHOOTOUT') {
+    if (period === 'GAME' && phaseState === 'ACTIVE') {
+      return {
+        label: 'Game läuft',
+        controls: [{ label: 'Game beenden', action: 'END_PERIOD' }],
+      };
+    }
+    if (period === 'GAME' && phaseState === 'BREAK') {
+      return {
+        label: 'Pause nach Game',
+        controls: [{ label: 'Shootout starten', action: 'START_NEXT_PERIOD' }],
+      };
+    }
+    if (period === 'SHOOTOUT' && phaseState === 'ACTIVE') {
+      return {
+        label: 'Shootout läuft',
+        controls: [{ label: 'Spiel beenden', action: 'FINISH_MATCH', color: 'green' }],
+      };
+    }
+    if (period === 'SHOOTOUT' && phaseState === 'BREAK') {
+      return { label: 'Pause', controls: [resumeControl(period)] };
+    }
+  }
   if (mode === 'COMPETITION') {
     if (period === 'HALF1' && phaseState === 'ACTIVE') {
       return {
@@ -333,6 +370,8 @@ function MatchModalForm({
 
   const form = useForm({
     initialValues: {
+      stage_item_input1_score: match.stage_item_input1_score,
+      stage_item_input2_score: match.stage_item_input2_score,
       stage_item_input1_half1_score: match.stage_item_input1_half1_score,
       stage_item_input2_half1_score: match.stage_item_input2_half1_score,
       stage_item_input1_half2_score: match.stage_item_input1_half2_score,
@@ -350,6 +389,10 @@ function MatchModalForm({
     },
 
     validate: {
+      stage_item_input1_score: (value) =>
+        value >= 0 ? null : t('negative_score_validation'),
+      stage_item_input2_score: (value) =>
+        value >= 0 ? null : t('negative_score_validation'),
       stage_item_input1_half1_score: (value) =>
         value >= 0 ? null : t('negative_score_validation'),
       stage_item_input2_half1_score: (value) =>
@@ -391,14 +434,18 @@ function MatchModalForm({
   const team2Name = formatMatchInput2(t, stageItemsLookup, matchesLookup, match);
 
   const totalScore1 =
-    form.values.stage_item_input1_half1_score +
-    form.values.stage_item_input1_half2_score;
+    tournament.hockey_mode === 'GAME_SHOOTOUT'
+      ? form.values.stage_item_input1_score
+      : form.values.stage_item_input1_half1_score +
+        form.values.stage_item_input1_half2_score;
 
   const totalScore2 =
-    form.values.stage_item_input2_half1_score +
-    form.values.stage_item_input2_half2_score;
+    tournament.hockey_mode === 'GAME_SHOOTOUT'
+      ? form.values.stage_item_input2_score
+      : form.values.stage_item_input2_half1_score +
+        form.values.stage_item_input2_half2_score;
 
-  const hockeyPoints1 = getHockeyPoints(
+  const competitionPoints1 = getHockeyPoints(
     form.values.stage_item_input1_half1_score,
     form.values.stage_item_input2_half1_score,
     form.values.stage_item_input1_half2_score,
@@ -407,7 +454,7 @@ function MatchModalForm({
     form.values.stage_item_input2_penalty_score
   );
 
-  const hockeyPoints2 = getHockeyPoints(
+  const competitionPoints2 = getHockeyPoints(
     form.values.stage_item_input2_half1_score,
     form.values.stage_item_input1_half1_score,
     form.values.stage_item_input2_half2_score,
@@ -416,7 +463,28 @@ function MatchModalForm({
     form.values.stage_item_input1_penalty_score
   );
 
+  const hockeyPoints1 =
+    tournament.hockey_mode === 'GAME_SHOOTOUT'
+      ? getGameShootoutPoints(
+          form.values.stage_item_input1_score,
+          form.values.stage_item_input2_score,
+          form.values.stage_item_input1_penalty_score,
+          form.values.stage_item_input2_penalty_score
+        )
+      : competitionPoints1;
+  const hockeyPoints2 =
+    tournament.hockey_mode === 'GAME_SHOOTOUT'
+      ? getGameShootoutPoints(
+          form.values.stage_item_input2_score,
+          form.values.stage_item_input1_score,
+          form.values.stage_item_input2_penalty_score,
+          form.values.stage_item_input1_penalty_score
+        )
+      : competitionPoints2;
+
   type ScoreField =
+    | 'stage_item_input1_score'
+    | 'stage_item_input2_score'
     | 'stage_item_input1_half1_score'
     | 'stage_item_input2_half1_score'
     | 'stage_item_input1_half2_score'
@@ -429,6 +497,9 @@ function MatchModalForm({
     const firstTeam = match.stage_item_input1?.team_id === event.team_id;
     const secondTeam = match.stage_item_input2?.team_id === event.team_id;
     if (!firstTeam && !secondTeam) return null;
+    if (event.period === 'GAME') {
+      return firstTeam ? 'stage_item_input1_score' : 'stage_item_input2_score';
+    }
     if (event.period === 'HALF1') {
       return firstTeam
         ? 'stage_item_input1_half1_score'
@@ -474,6 +545,12 @@ function MatchModalForm({
       : {
           id: match.id,
           round_id: match.round_id,
+          ...(tournament.hockey_mode === 'GAME_SHOOTOUT'
+            ? {
+                stage_item_input1_score: values.stage_item_input1_score,
+                stage_item_input2_score: values.stage_item_input2_score,
+              }
+            : {}),
           stage_item_input1_half1_score: values.stage_item_input1_half1_score,
           stage_item_input2_half1_score: values.stage_item_input2_half1_score,
           stage_item_input1_half2_score: values.stage_item_input1_half2_score,
@@ -546,7 +623,8 @@ function MatchModalForm({
 
   const scorerCanEditPenaltyScore =
     isScorer &&
-    tournament.hockey_mode === 'COMPETITION' &&
+    (tournament.hockey_mode === 'COMPETITION' ||
+      tournament.hockey_mode === 'GAME_SHOOTOUT') &&
     currentStatus === 'RUNNING' &&
     currentPeriod === 'SHOOTOUT' &&
     currentPhaseState === 'ACTIVE';
@@ -617,7 +695,39 @@ function MatchModalForm({
                 </Text>
               </Grid.Col>
 
-              <Grid.Col span={4}>
+              {tournament.hockey_mode === 'GAME_SHOOTOUT' ? (
+                <>
+                  <Grid.Col span={4}>
+                    <Text size="sm">Game</Text>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    {isScorer ? (
+                      <Text ta="center">{form.values.stage_item_input1_score}</Text>
+                    ) : (
+                      <NumberInput
+                        min={0}
+                        hideControls
+                        disabled={currentStatus === 'PLANNED'}
+                        {...form.getInputProps('stage_item_input1_score')}
+                      />
+                    )}
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    {isScorer ? (
+                      <Text ta="center">{form.values.stage_item_input2_score}</Text>
+                    ) : (
+                      <NumberInput
+                        min={0}
+                        hideControls
+                        disabled={currentStatus === 'PLANNED'}
+                        {...form.getInputProps('stage_item_input2_score')}
+                      />
+                    )}
+                  </Grid.Col>
+                </>
+              ) : (
+                <>
+                  <Grid.Col span={4}>
                 <Text size="sm">1. Halbzeit</Text>
               </Grid.Col>
               <Grid.Col span={4}>
@@ -681,8 +791,12 @@ function MatchModalForm({
                 )}
               </Grid.Col>
 
+                </>
+              )}
               <Grid.Col span={4}>
-                <Text size="sm">Penalty</Text>
+                <Text size="sm">
+                  {tournament.hockey_mode === 'GAME_SHOOTOUT' ? 'Shootout' : 'Penalty'}
+                </Text>
               </Grid.Col>
               <Grid.Col span={4}>
                 {isScorer && !scorerCanEditPenaltyScore ? (

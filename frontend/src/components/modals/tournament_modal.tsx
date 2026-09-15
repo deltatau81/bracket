@@ -129,11 +129,13 @@ function GeneralTournamentForm({
         label="Turniermodus"
         description={
           'Turnier mit Technikwettbewerb: 2 Halbzeiten + Penalty-Wertung + ' +
-          'Technikwettbewerb. Standard-Eishockey: 3 Drittel, später ' +
+          'Technikwettbewerb. Game + Shootout: ein Spiel + Shootout-Wertung. ' +
+          'Standard-Eishockey: 3 Drittel, später ' +
           'Overtime/Penalty nach Spielregeln.'
         }
         data={[
           { value: 'COMPETITION', label: 'Turnier mit Technikwettbewerb' },
+          { value: 'GAME_SHOOTOUT', label: 'Game + Shootout' },
           { value: 'STANDARD', label: 'Standard-Eishockey' },
         ]}
         mt="lg"

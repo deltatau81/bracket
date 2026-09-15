@@ -201,7 +201,9 @@ function GeneralTournamentForm({
         value={
           tournament.hockey_mode === 'STANDARD'
             ? 'Standard-Eishockey'
-            : 'Turnier mit Technikwettbewerb'
+            : tournament.hockey_mode === 'GAME_SHOOTOUT'
+              ? 'Game + Shootout'
+              : 'Turnier mit Technikwettbewerb'
         }
         disabled
         mt="lg"

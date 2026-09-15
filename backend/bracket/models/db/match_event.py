@@ -28,7 +28,7 @@ class MatchEventBody(BaseModelORM):
     team_id: TeamId
     event_type: MatchEventType
     period: MatchEventPeriod
-    game_time_seconds: int = Field(ge=0)
+    game_time_seconds: int | None = Field(default=None, ge=0)
     player_id: PlayerId | None = None
     player_number: int | None = Field(default=None, ge=0)
     player_name: str | None = None

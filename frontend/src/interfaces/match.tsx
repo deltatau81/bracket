@@ -6,6 +6,7 @@ import { HockeyAgeCategory, HockeyRuleset } from './tournament';
 export type MatchStatus = 'PLANNED' | 'RUNNING' | 'FINISHED';
 
 export type MatchPeriod =
+  | 'GAME'
   | 'HALF1'
   | 'HALF2'
   | 'SHOOTOUT'
@@ -62,6 +63,8 @@ export interface MatchInterface {
 export interface MatchBodyInterface {
   id: number;
   round_id: number;
+  stage_item_input1_score?: number;
+  stage_item_input2_score?: number;
   stage_item_input1_half1_score: number;
   stage_item_input2_half1_score: number;
   stage_item_input1_half2_score: number;

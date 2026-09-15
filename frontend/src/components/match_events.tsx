@@ -49,7 +49,13 @@ function sortPenalties(penalties: PenaltyDefinition[]): PenaltyDefinition[] {
   return [...penalties].sort((a, b) => a.label.localeCompare(b.label, 'de'));
 }
 
+function matchPeriodLabel(hockeyMode: HockeyMode, period: MatchPeriod): string {
+  if (hockeyMode === 'GAME_SHOOTOUT' && period === 'SHOOTOUT') return 'Shootout';
+  return MATCH_PERIOD_LABELS[period];
+}
+
 function phaseLabel(
+  hockeyMode: HockeyMode,
   status: MatchStatus,
   period: MatchPeriod | null,
   phaseState: MatchPhaseState | null
@@ -58,7 +64,7 @@ function phaseLabel(
   if (status === 'PLANNED') return 'Spiel geplant';
   if (period == null || phaseState == null) return 'Spielphase unbekannt';
   if (phaseState === 'BREAK') return 'Pause';
-  return MATCH_PERIOD_LABELS[period];
+  return matchPeriodLabel(hockeyMode, period);
 }
 
 function eventBody(
@@ -71,7 +77,7 @@ function eventBody(
   assist2PlayerId: number | null,
   assist2Number: number | null,
   period: MatchPeriod,
-  gameTimeSeconds: number,
+  gameTimeSeconds: number | null,
   penaltyCode: string | null,
   penaltyType: PenaltyType | null,
   penaltyMinutes: number | null,
@@ -175,14 +181,19 @@ export default function MatchEvents({
     label: penaltyTypes.find((definition) => definition.type === type)?.label ?? type,
   }));
   const canCreate = status === 'RUNNING' && phaseState === 'ACTIVE' && activePeriod != null;
+  const goalTimeOptional =
+    eventType === 'GOAL' &&
+    (hockeyMode === 'COMPETITION' || hockeyMode === 'GAME_SHOOTOUT');
   const selectedTeam = teamId == null ? null : teamById[Number(teamId)];
   const editTeam = editTeamId == null ? null : teamById[Number(editTeamId)];
   const periodOptions = useMemo(
     () =>
       (hockeyMode === 'COMPETITION'
         ? (['HALF1', 'HALF2', 'SHOOTOUT'] as MatchPeriod[])
-        : (['PERIOD1', 'PERIOD2', 'PERIOD3', 'OVERTIME'] as MatchPeriod[])
-      ).map((period) => ({ value: period, label: MATCH_PERIOD_LABELS[period] })),
+        : hockeyMode === 'GAME_SHOOTOUT'
+          ? (['GAME', 'SHOOTOUT'] as MatchPeriod[])
+          : (['PERIOD1', 'PERIOD2', 'PERIOD3', 'OVERTIME'] as MatchPeriod[])
+      ).map((period) => ({ value: period, label: matchPeriodLabel(hockeyMode, period) })),
     [hockeyMode]
   );
 
@@ -207,7 +218,7 @@ export default function MatchEvents({
       setValidationError('Bitte ein Team ausw\u00e4hlen.');
       return;
     }
-    if (seconds == null) {
+    if (seconds == null && (!goalTimeOptional || gameTime.trim() !== '')) {
       setValidationError('Spielzeit im Format MM:SS eingeben (Sekunden 00\u201359).');
       return;
     }
@@ -291,7 +302,9 @@ export default function MatchEvents({
     );
     setEditAssist2Number(event.assist2_number ?? '');
     setEditPeriod(event.period);
-    setEditGameTime(formatGameTime(event.game_time_seconds));
+    setEditGameTime(
+      event.game_time_seconds == null ? '' : formatGameTime(event.game_time_seconds)
+    );
     setEditPenaltyCode(event.penalty_code ?? null);
     setEditPenaltyType((event.penalty_type as PenaltyType | null | undefined) ?? null);
     setEditPenaltyMinutes(event.penalty_minutes ?? '');
@@ -302,7 +315,10 @@ export default function MatchEvents({
   async function submitEdit() {
     if (editing == null || editTeamId == null || editPeriod == null) return;
     const seconds = parseGameTime(editGameTime);
-    if (seconds == null) {
+    const editGoalTimeOptional =
+      editing.event_type === 'GOAL' &&
+      (hockeyMode === 'COMPETITION' || hockeyMode === 'GAME_SHOOTOUT');
+    if (seconds == null && (!editGoalTimeOptional || editGameTime.trim() !== '')) {
       setEditError('Spielzeit im Format MM:SS eingeben (Sekunden 00\u201359).');
       return;
     }
@@ -355,7 +371,7 @@ export default function MatchEvents({
       <Divider my="md" label="Spielereignisse" labelPosition="left" />
       <Group justify="space-between">
         <Text fw={600}>Aktuelle Spielphase</Text>
-        <Badge size="lg">{phaseLabel(status, activePeriod, phaseState)}</Badge>
+        <Badge size="lg">{phaseLabel(hockeyMode, status, activePeriod, phaseState)}</Badge>
       </Group>
 
       {canCreate ? (
@@ -469,7 +485,7 @@ export default function MatchEvents({
               </>
             ) : null}
             <TextInput
-              label="Spielzeit (MM:SS)"
+              label={goalTimeOptional ? 'Spielzeit (MM:SS, optional)' : 'Spielzeit (MM:SS)'}
               placeholder="00:35"
               value={gameTime}
               onChange={(event) => setGameTime(event.currentTarget.value)}
@@ -535,8 +551,12 @@ export default function MatchEvents({
             <Group justify="space-between" align="flex-start">
               <div>
                 <Group gap="xs">
-                  <Badge variant="light">{MATCH_PERIOD_LABELS[event.period]}</Badge>
-                  <Text fw={600}>{formatGameTime(event.game_time_seconds)}</Text>
+                  <Badge variant="light">{matchPeriodLabel(hockeyMode, event.period)}</Badge>
+                  <Text fw={600}>
+                    {event.game_time_seconds == null
+                      ? '-'
+                      : formatGameTime(event.game_time_seconds)}
+                  </Text>
                   <Text>{event.event_type === 'GOAL' ? 'Tor' : 'Strafe'}</Text>
                 </Group>
                 <Text size="sm">
@@ -706,7 +726,12 @@ export default function MatchEvents({
               </>
             ) : null}
             <TextInput
-              label="Spielzeit (MM:SS)"
+              label={
+                editing?.event_type === 'GOAL' &&
+                (hockeyMode === 'COMPETITION' || hockeyMode === 'GAME_SHOOTOUT')
+                  ? 'Spielzeit (MM:SS, optional)'
+                  : 'Spielzeit (MM:SS)'
+              }
               value={editGameTime}
               onChange={(event) => setEditGameTime(event.currentTarget.value)}
             />

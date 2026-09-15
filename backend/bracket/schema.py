@@ -329,7 +329,7 @@ match_events = Table(
     Column("team_id", BigInteger, ForeignKey("teams.id"), nullable=False),
     Column("event_type", String(20), nullable=False),
     Column("period", String(20), nullable=False),
-    Column("game_time_seconds", Integer, nullable=False),
+    Column("game_time_seconds", Integer, nullable=True),
     Column(
         "player_id",
         BigInteger,
