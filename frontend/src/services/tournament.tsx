@@ -1,5 +1,10 @@
 import { getTournamentEndpointFromRouter } from '../components/utils/util';
-import { HockeyAgeCategory, HockeyMode, HockeyRuleset } from '../interfaces/tournament';
+import {
+  HockeyAgeCategory,
+  HockeyMode,
+  HockeyRuleset,
+  TournamentCompetitionFormat,
+} from '../interfaces/tournament';
 import { createAxios, getTournamentByEndpointName, handleRequestError } from './adapter';
 
 export async function createTournament(
@@ -15,7 +20,8 @@ export async function createTournament(
   hockey_mode: HockeyMode,
   ruleset: HockeyRuleset,
   age_category: HockeyAgeCategory,
-  ruleset_season: string
+  ruleset_season: string,
+  competition_format: TournamentCompetitionFormat
 ) {
   return createAxios()
     .post('tournaments', {
@@ -32,6 +38,7 @@ export async function createTournament(
       ruleset,
       age_category,
       ruleset_season,
+      competition_format,
     })
     .catch((response: any) => handleRequestError(response));
 }
@@ -57,7 +64,8 @@ export async function updateTournament(
   auto_assign_courts: boolean,
   start_time: string,
   duration_minutes: number,
-  margin_minutes: number
+  margin_minutes: number,
+  competition_format: TournamentCompetitionFormat
 ) {
   return createAxios()
     .put(`tournaments/${tournament_id}`, {
@@ -69,6 +77,7 @@ export async function updateTournament(
       start_time,
       duration_minutes,
       margin_minutes,
+      competition_format,
     })
     .catch((response: any) => handleRequestError(response));
 }

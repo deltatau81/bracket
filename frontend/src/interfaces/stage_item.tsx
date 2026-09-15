@@ -11,4 +11,5 @@ export interface StageItemWithRounds {
   rounds: RoundInterface[];
   inputs: StageItemInput[];
   stage_id: number;
+  is_youth_club_group: boolean;
 }

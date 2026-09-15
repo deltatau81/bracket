@@ -157,6 +157,7 @@ async def sql_update_tournament(
             duration_minutes = :duration_minutes,
             margin_minutes = :margin_minutes,
             hockey_mode = COALESCE(:hockey_mode, hockey_mode),
+            competition_format = COALESCE(:competition_format, competition_format),
             ruleset = COALESCE(:ruleset, ruleset),
             age_category = COALESCE(:age_category, age_category),
             ruleset_season = COALESCE(:ruleset_season, ruleset_season)
@@ -169,6 +170,11 @@ async def sql_update_tournament(
             **tournament.model_dump(),
             "hockey_mode": (
                 tournament.hockey_mode.value if tournament.hockey_mode is not None else None
+            ),
+            "competition_format": (
+                tournament.competition_format.value
+                if tournament.competition_format is not None
+                else None
             ),
             "ruleset": tournament.ruleset.value if tournament.ruleset is not None else None,
             "age_category": (
@@ -210,6 +216,7 @@ async def sql_create_tournament(tournament: TournamentBody) -> TournamentId:
             duration_minutes,
             margin_minutes,
             hockey_mode,
+            competition_format,
             ruleset,
             age_category,
             ruleset_season
@@ -226,6 +233,7 @@ async def sql_create_tournament(tournament: TournamentBody) -> TournamentId:
             :duration_minutes,
             :margin_minutes,
             :hockey_mode,
+            :competition_format,
             :ruleset,
             :age_category,
             :ruleset_season
@@ -234,6 +242,7 @@ async def sql_create_tournament(tournament: TournamentBody) -> TournamentId:
         """
     values = tournament.model_dump()
     values["hockey_mode"] = tournament.hockey_mode.value
+    values["competition_format"] = tournament.competition_format.value
     values["ruleset"] = tournament.ruleset.value
     values["age_category"] = tournament.age_category.value
     new_id = await database.fetch_val(query=query, values=values)

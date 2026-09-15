@@ -12,6 +12,7 @@ from bracket.models.db.tournament import (
     HockeyMode,
     HockeyRuleset,
     Tournament,
+    TournamentCompetitionFormat,
     TournamentStatus,
 )
 from bracket.models.db.stage_item_inputs import StageItemInputInsertable
@@ -91,6 +92,7 @@ async def test_tournaments_endpoint(
                 "margin_minutes": 5,
                 "status": "OPEN",
                 "hockey_mode": "COMPETITION",
+                "competition_format": "STANDARD",
                 "ruleset": "DEB",
                 "age_category": "U15",
                 "ruleset_season": "2026/27",
@@ -121,6 +123,7 @@ async def test_tournament_endpoint(
             "margin_minutes": 5,
             "status": "OPEN",
             "hockey_mode": "COMPETITION",
+            "competition_format": "STANDARD",
             "ruleset": "DEB",
             "age_category": "U15",
             "ruleset_season": "2026/27",
@@ -152,6 +155,7 @@ async def test_create_tournament(
     # Cleanup
     tournament = assert_some(await sql_get_tournament_by_endpoint_name(dashboard_endpoint))
     assert tournament.hockey_mode is HockeyMode.COMPETITION
+    assert tournament.competition_format is TournamentCompetitionFormat.STANDARD
     assert tournament.ruleset is HockeyRuleset.DEB
     assert tournament.age_category is HockeyAgeCategory.U15
     assert tournament.ruleset_season == "2026/27"
@@ -174,6 +178,7 @@ async def test_create_standard_tournament(
         "duration_minutes": 12,
         "margin_minutes": 3,
         "hockey_mode": "STANDARD",
+        "competition_format": "YOUTH_CLUB",
         "ruleset": "IIHF",
         "age_category": "SENIOR",
         "ruleset_season": "2026/27",
@@ -185,12 +190,14 @@ async def test_create_standard_tournament(
 
     tournament = assert_some(await sql_get_tournament_by_endpoint_name(dashboard_endpoint))
     assert tournament.hockey_mode is HockeyMode.STANDARD
+    assert tournament.competition_format is TournamentCompetitionFormat.YOUTH_CLUB
     assert tournament.ruleset is HockeyRuleset.IIHF
     assert tournament.age_category is HockeyAgeCategory.SENIOR
     response = await send_auth_request(
         HTTPMethod.GET, f"tournaments/{tournament.id}", auth_context, {}
     )
     assert response["data"]["hockey_mode"] == "STANDARD"
+    assert response["data"]["competition_format"] == "YOUTH_CLUB"
     assert response["data"]["ruleset"] == "IIHF"
     assert response["data"]["age_category"] == "SENIOR"
     assert response["data"]["ruleset_season"] == "2026/27"
@@ -292,6 +299,7 @@ async def test_update_tournament(
         "auto_assign_courts": True,
         "duration_minutes": 12,
         "margin_minutes": 3,
+        "competition_format": "YOUTH_CLUB",
     }
     assert (
         await send_tournament_request(HTTPMethod.PUT, "", auth_context, json=body)
@@ -304,6 +312,7 @@ async def test_update_tournament(
     )
     assert updated_tournament.name == body["name"]
     assert updated_tournament.dashboard_public == body["dashboard_public"]
+    assert updated_tournament.competition_format is TournamentCompetitionFormat.YOUTH_CLUB
 
 
 @pytest.mark.asyncio(loop_scope="session")

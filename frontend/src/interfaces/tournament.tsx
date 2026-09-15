@@ -1,5 +1,6 @@
 export type TournamentStatus = 'OPEN' | 'ARCHIVED';
 export type HockeyMode = 'COMPETITION' | 'GAME_SHOOTOUT' | 'STANDARD';
+export type TournamentCompetitionFormat = 'STANDARD' | 'YOUTH_CLUB';
 export type HockeyRuleset = 'DEB' | 'IIHF';
 export type HockeyAgeCategory = 'U9' | 'U11' | 'U13' | 'U15' | 'U17' | 'U20' | 'SENIOR';
 
@@ -20,6 +21,7 @@ export interface Tournament {
   margin_minutes: number;
   status: TournamentStatus;
   hockey_mode: HockeyMode;
+  competition_format: TournamentCompetitionFormat;
   ruleset: HockeyRuleset;
   age_category: HockeyAgeCategory;
   ruleset_season: string;

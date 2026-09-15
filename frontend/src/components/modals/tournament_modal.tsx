@@ -23,6 +23,7 @@ import {
   HockeyMode,
   HockeyRuleset,
   Tournament,
+  TournamentCompetitionFormat,
 } from '../../interfaces/tournament';
 import { getBaseApiUrl, getClubs } from '../../services/adapter';
 import { createTournament } from '../../services/tournament';
@@ -61,6 +62,7 @@ function GeneralTournamentForm({
       duration_minutes: 10,
       margin_minutes: 5,
       hockey_mode: 'COMPETITION' as HockeyMode,
+      competition_format: 'STANDARD' as TournamentCompetitionFormat,
       ruleset: 'DEB' as HockeyRuleset,
       age_category: 'U15' as HockeyAgeCategory,
       ruleset_season: '2026/27',
@@ -100,7 +102,8 @@ function GeneralTournamentForm({
           values.hockey_mode,
           values.ruleset,
           values.age_category,
-          values.ruleset_season
+          values.ruleset_season,
+          values.competition_format
         );
         await swrTournamentsResponse.mutate();
         setOpened(false);
@@ -140,6 +143,17 @@ function GeneralTournamentForm({
         ]}
         mt="lg"
         {...form.getInputProps('hockey_mode')}
+      />
+
+      <Select
+        withAsterisk
+        label="Turnierformat"
+        data={[
+          { value: 'STANDARD', label: 'Standard' },
+          { value: 'YOUTH_CLUB', label: 'U9/U11 Vereinswettbewerb' },
+        ]}
+        mt="lg"
+        {...form.getInputProps('competition_format')}
       />
 
       <Select

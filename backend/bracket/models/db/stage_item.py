@@ -27,6 +27,7 @@ class StageItemInsertable(BaseModelORM):
     type: StageType
     team_count: int = Field(ge=2, le=64)
     ranking_id: RankingId | None = None
+    is_youth_club_group: bool = False
 
 
 class StageItem(StageItemInsertable):

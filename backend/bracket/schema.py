@@ -39,6 +39,7 @@ tournaments = Table(
     Column("players_can_be_in_multiple_teams", Boolean, nullable=False, server_default="f"),
     Column("auto_assign_courts", Boolean, nullable=False, server_default="f"),
     Column("hockey_mode", String(20), nullable=False, server_default="COMPETITION"),
+    Column("competition_format", String(20), nullable=False, server_default="STANDARD"),
     Column("ruleset", String(20), nullable=False, server_default="DEB"),
     Column("age_category", String(20), nullable=False, server_default="U15"),
     Column("ruleset_season", String(7), nullable=False, server_default="2026/27"),
@@ -58,6 +59,10 @@ tournaments = Table(
     CheckConstraint(
         "hockey_mode IN ('COMPETITION', 'GAME_SHOOTOUT', 'STANDARD')",
         name="ck_tournaments_hockey_mode",
+    ),
+    CheckConstraint(
+        "competition_format IN ('STANDARD', 'YOUTH_CLUB')",
+        name="ck_tournaments_competition_format",
     ),
     CheckConstraint("ruleset IN ('DEB', 'IIHF')", name="ck_tournaments_ruleset"),
     CheckConstraint(
@@ -110,6 +115,7 @@ stage_items = Table(
     Column("stage_id", BigInteger, ForeignKey("stages.id"), index=True, nullable=False),
     Column("team_count", Integer, nullable=False),
     Column("ranking_id", BigInteger, ForeignKey("rankings.id"), nullable=False),
+    Column("is_youth_club_group", Boolean, nullable=False, server_default="false"),
     Column(
         "type",
         Enum(

@@ -12,11 +12,19 @@ from bracket.utils.id_types import StageItemId, TournamentId
 
 
 async def sql_create_stage_item(
-    tournament_id: TournamentId, stage_item: StageItemCreateBody
+    tournament_id: TournamentId,
+    stage_item: StageItemCreateBody,
+    *,
+    is_youth_club_group: bool = False,
 ) -> StageItem:
     query = """
-            INSERT INTO stage_items (type, stage_id, name, team_count, ranking_id)
-            VALUES (:stage_item_type, :stage_id, :name, :team_count, :ranking_id)
+            INSERT INTO stage_items (
+                type, stage_id, name, team_count, ranking_id, is_youth_club_group
+            )
+            VALUES (
+                :stage_item_type, :stage_id, :name, :team_count, :ranking_id,
+                :is_youth_club_group
+            )
             RETURNING *
             """
     result = await database.fetch_one(
@@ -26,6 +34,7 @@ async def sql_create_stage_item(
             "stage_id": stage_item.stage_id,
             "name": stage_item.get_name_or_default_name(),
             "team_count": stage_item.team_count,
+            "is_youth_club_group": is_youth_club_group,
             "ranking_id": stage_item.ranking_id
             if stage_item.ranking_id
             else (await get_default_rankings_in_tournament(tournament_id)).id,

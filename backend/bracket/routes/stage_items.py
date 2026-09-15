@@ -30,7 +30,7 @@ from bracket.models.db.stage_item import (
 )
 from bracket.models.db.stage_item_inputs import StageItemInputCreateBodyFinal
 from bracket.models.db.team import Team
-from bracket.models.db.tournament import Tournament
+from bracket.models.db.tournament import Tournament, TournamentCompetitionFormat
 from bracket.models.db.user import UserPublic
 from bracket.models.db.util import StageItemWithRounds
 from bracket.routes.auth import (
@@ -113,8 +113,14 @@ async def create_youth_schedule(
     stage_id: StageId,
     youth_body: YouthScheduleCreateBody,
     user: UserPublic = Depends(user_authenticated_for_tournament_admin),
-    _: Tournament = Depends(disallow_archived_tournament),
+    tournament: Tournament = Depends(disallow_archived_tournament),
 ) -> SuccessResponse:
+    if tournament.competition_format is not TournamentCompetitionFormat.YOUTH_CLUB:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Youth schedule generation requires YOUTH_CLUB competition format",
+        )
+
     stages = await get_full_tournament_details(tournament_id, stage_id=stage_id)
     if len(stages) != 1:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Could not find stage")
@@ -164,6 +170,7 @@ async def create_youth_schedule(
         selected_ids = {team.id for team in grouped_teams}
         if any(
             stage_item.type is StageType.ROUND_ROBIN
+            and stage_item.is_youth_club_group
             and {input_.team_id for input_ in stage_item.inputs if input_.team_id is not None}
             == selected_ids
             for stage_item in existing_stage_items
@@ -187,6 +194,7 @@ async def create_youth_schedule(
                     type=StageType.ROUND_ROBIN,
                     team_count=len(grouped_teams),
                 ),
+                is_youth_club_group=True,
             )
             for slot, team in enumerate(grouped_teams, start=1):
                 await sql_create_stage_item_input(

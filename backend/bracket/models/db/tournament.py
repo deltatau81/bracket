@@ -22,6 +22,11 @@ class HockeyMode(EnumAutoStr):
     STANDARD = auto()
 
 
+class TournamentCompetitionFormat(EnumAutoStr):
+    STANDARD = auto()
+    YOUTH_CLUB = auto()
+
+
 class HockeyRuleset(EnumAutoStr):
     DEB = auto()
     IIHF = auto()
@@ -61,6 +66,7 @@ class TournamentInsertable(BaseModelORM):
     auto_assign_courts: bool
     status: TournamentStatus = TournamentStatus.OPEN
     hockey_mode: HockeyMode = HockeyMode.COMPETITION
+    competition_format: TournamentCompetitionFormat = TournamentCompetitionFormat.STANDARD
     ruleset: HockeyRuleset = HockeyRuleset.DEB
     age_category: HockeyAgeCategory = HockeyAgeCategory.U15
     ruleset_season: RulesetSeason = "2026/27"
@@ -80,6 +86,7 @@ class TournamentUpdateBody(BaseModelORM):
     duration_minutes: int = Field(..., ge=1)
     margin_minutes: int = Field(..., ge=0)
     hockey_mode: HockeyMode | None = None
+    competition_format: TournamentCompetitionFormat | None = None
     ruleset: HockeyRuleset | None = None
     age_category: HockeyAgeCategory | None = None
     ruleset_season: RulesetSeason | None = None
@@ -92,6 +99,7 @@ class TournamentChangeStatusBody(BaseModelORM):
 class TournamentBody(TournamentUpdateBody):
     club_id: ClubId
     hockey_mode: HockeyMode = HockeyMode.COMPETITION
+    competition_format: TournamentCompetitionFormat = TournamentCompetitionFormat.STANDARD
     ruleset: HockeyRuleset = HockeyRuleset.DEB
     age_category: HockeyAgeCategory = HockeyAgeCategory.U15
     ruleset_season: RulesetSeason = "2026/27"

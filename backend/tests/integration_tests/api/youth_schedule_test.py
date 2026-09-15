@@ -3,10 +3,17 @@ from contextlib import AsyncExitStack
 import pytest
 
 from bracket.database import database
-from bracket.models.db.stage_item import StageType
-from bracket.models.db.tournament import HockeyMode, TournamentInsertable
+from bracket.models.db.stage_item import StageItemCreateBody, StageType
+from bracket.models.db.stage_item_inputs import StageItemInputCreateBodyFinal
+from bracket.models.db.tournament import (
+    HockeyMode,
+    TournamentCompetitionFormat,
+    TournamentInsertable,
+)
 from bracket.schema import matches, rounds, stage_items, stages, teams, tournaments
 from bracket.sql.stages import get_full_tournament_details
+from bracket.sql.stage_item_inputs import sql_create_stage_item_input
+from bracket.sql.stage_items import sql_create_stage_item
 from bracket.utils.dummy_records import DUMMY_CLUB, DUMMY_STAGE1, DUMMY_TEAM1
 from bracket.utils.http import HTTPMethod
 from tests.integration_tests.api.shared import SUCCESS_RESPONSE, send_tournament_request
@@ -41,6 +48,10 @@ async def delete_generated_stage_items(stage_id: int) -> None:
 async def create_youth_fixture(
     auth_context: AuthContext, club_count: int, groups: tuple[str, ...]
 ) -> tuple[AsyncExitStack, int, list[int]]:
+    await database.execute(
+        query=tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
+        values={"competition_format": TournamentCompetitionFormat.YOUTH_CLUB.value},
+    )
     stack = AsyncExitStack()
     await stack.__aenter__()
     stage = await stack.enter_async_context(
@@ -92,6 +103,7 @@ async def test_youth_schedule_generation(
         [stage] = await get_full_tournament_details(auth_context.tournament.id, stage_id=stage_id)
         generated_items = [item for item in stage.stage_items if item.type is StageType.ROUND_ROBIN]
         assert len(generated_items) == len(groups)
+        assert all(item.is_youth_club_group for item in generated_items)
         assert sum(len(round_.matches) for item in generated_items for round_ in item.rounds) == expected_matches
         assert all(
             match.stage_item_input1.team_id is not None
@@ -261,6 +273,41 @@ async def test_youth_schedule_rejects_duplicate_generation(
 
 
 @pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.parametrize("hockey_mode", [HockeyMode.GAME_SHOOTOUT, HockeyMode.COMPETITION])
+async def test_youth_schedule_requires_youth_club_format(
+    startup_and_shutdown_uvicorn_server: None,
+    auth_context: AuthContext,
+    hockey_mode: HockeyMode,
+) -> None:
+    stack, stage_id, team_ids = await create_youth_fixture(auth_context, 2, ("A",))
+    try:
+        await database.execute(
+            query=tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
+            values={
+                "competition_format": TournamentCompetitionFormat.STANDARD.value,
+                "hockey_mode": hockey_mode.value,
+            },
+        )
+        response = await send_tournament_request(
+            HTTPMethod.POST,
+            f"stages/{stage_id}/youth_schedule",
+            auth_context,
+            json={"team_ids": team_ids},
+        )
+        assert response["detail"] == (
+            "Youth schedule generation requires YOUTH_CLUB competition format"
+        )
+        assert await database.fetch_val(
+            stage_items.select()
+            .with_only_columns(stage_items.c.id)
+            .where(stage_items.c.stage_id == stage_id)
+        ) is None
+    finally:
+        await delete_generated_stage_items(stage_id)
+        await stack.aclose()
+
+
+@pytest.mark.asyncio(loop_scope="session")
 async def test_youth_schedule_score_source_for_game_shootout(
     startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext
 ) -> None:
@@ -287,3 +334,40 @@ async def test_youth_schedule_score_source_for_game_shootout(
             query=tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
             values={"hockey_mode": HockeyMode.COMPETITION.value},
         )
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_manual_round_robin_does_not_trigger_youth_duplicate_guard(
+    startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext
+) -> None:
+    stack, stage_id, team_ids = await create_youth_fixture(auth_context, 2, ("A",))
+    try:
+        manual_item = await sql_create_stage_item(
+            auth_context.tournament.id,
+            StageItemCreateBody(
+                stage_id=stage_id,
+                name="Manual round robin",
+                type=StageType.ROUND_ROBIN,
+                team_count=2,
+            ),
+        )
+        for slot, team_id in enumerate(team_ids, start=1):
+            await sql_create_stage_item_input(
+                auth_context.tournament.id,
+                manual_item.id,
+                StageItemInputCreateBodyFinal(slot=slot, team_id=team_id),
+            )
+        assert manual_item.is_youth_club_group is False
+
+        assert await send_tournament_request(
+            HTTPMethod.POST,
+            f"stages/{stage_id}/youth_schedule",
+            auth_context,
+            json={"team_ids": team_ids},
+        ) == SUCCESS_RESPONSE
+        [stage] = await get_full_tournament_details(auth_context.tournament.id, stage_id=stage_id)
+        assert len(stage.stage_items) == 2
+        assert sum(item.is_youth_club_group for item in stage.stage_items) == 1
+    finally:
+        await delete_generated_stage_items(stage_id)
+        await stack.aclose()

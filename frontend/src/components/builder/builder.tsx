@@ -452,13 +452,15 @@ function StageColumn({
       </Group>
       {rows}
 
-      <CreateYouthScheduleModal
-        tournamentId={tournament.id}
-        stageId={stage.id}
-        swrStagesResponse={swrStagesResponse}
-        swrAvailableInputsResponse={swrAvailableInputsResponse}
-        swrRankingsPerStageItemResponse={swrRankingsPerStageItemResponse}
-      />
+      {tournament.competition_format === 'YOUTH_CLUB' ? (
+        <CreateYouthScheduleModal
+          tournamentId={tournament.id}
+          stageId={stage.id}
+          swrStagesResponse={swrStagesResponse}
+          swrAvailableInputsResponse={swrAvailableInputsResponse}
+          swrRankingsPerStageItemResponse={swrRankingsPerStageItemResponse}
+        />
+      ) : null}
       <CreateStageItemModal
         key={-1}
         tournament={tournament}
