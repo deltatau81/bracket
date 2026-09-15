@@ -188,6 +188,13 @@ export function getCompetitionResults(
   );
 }
 
+export function getPlayerStatistics(tournament_id: number | null): SWRResponse {
+  return useSWR(
+    tournament_id == null ? null : `tournaments/${tournament_id}/player_statistics`,
+    fetcher
+  );
+}
+
 export function getCompetitionScoring(
   tournament_id: number | null,
   competition_id: number | null

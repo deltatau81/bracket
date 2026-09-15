@@ -1,4 +1,4 @@
-import { Container, Text } from '@mantine/core';
+import { Container, Text, Title } from '@mantine/core';
 import { AiOutlineHourglass } from '@react-icons/all-files/ai/AiOutlineHourglass';
 import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
@@ -12,9 +12,10 @@ import { DashboardFooter } from '../../../../components/dashboard/footer';
 import { DoubleHeader, TournamentHeadTitle } from '../../../../components/dashboard/layout';
 import { NoContent } from '../../../../components/no_content/empty_table_info';
 import { StandingsTableForStageItem } from '../../../../components/tables/standings';
+import PlayerStatisticsTable from '../../../../components/tables/player_statistics';
 import { TableSkeletonTwoColumns } from '../../../../components/utils/skeletons';
 import { responseIsValid } from '../../../../components/utils/util';
-import { getStagesLive } from '../../../../services/adapter';
+import { getPlayerStatistics, getStagesLive } from '../../../../services/adapter';
 import { getStageItemLookup, getStageItemTeamsLookup } from '../../../../services/lookups';
 import { getTournamentResponseByEndpointName } from '../../../../services/tournament';
 
@@ -67,6 +68,7 @@ export function StandingsContent({
 }
 
 export default function Standings() {
+  const { t } = useTranslation();
   const tournamentResponse = getTournamentResponseByEndpointName();
 
   const tournamentDataFull = tournamentResponse ? tournamentResponse[0] : null;
@@ -75,6 +77,7 @@ export default function Standings() {
   const tournamentId = !notFound ? tournamentDataFull.id : null;
 
   const swrStagesResponse = getStagesLive(tournamentId);
+  const playerStatisticsResponse = getPlayerStatistics(tournamentId);
 
   if (!tournamentResponse) {
     return <TableSkeletonTwoColumns />;
@@ -102,6 +105,10 @@ export default function Standings() {
             maxTeamsToDisplay={100}
           />
           <TournamentOverallStandings tournamentId={tournamentId} />
+          <Title order={2} mt="xl" mb="sm">
+            {t('players_title')} – {t('ranking_title')}
+          </Title>
+          <PlayerStatisticsTable response={playerStatisticsResponse} />
         </Container>
       </Container>
       <DashboardFooter />
