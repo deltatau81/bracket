@@ -1,12 +1,13 @@
-import { Button, Checkbox, Modal, MultiSelect, Tabs, TextInput } from '@mantine/core';
+import { Button, Checkbox, Modal, MultiSelect, Select, Tabs, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { IconUser, IconUsers, IconUsersPlus } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
 import { useState } from 'react';
 import { SWRResponse } from 'swr';
 
+import { Club } from '../../interfaces/club';
 import { Player } from '../../interfaces/player';
-import { getPlayers } from '../../services/adapter';
+import { getClubs, getPlayers } from '../../services/adapter';
 import { createTeam, createTeams } from '../../services/team';
 import SaveButton from '../buttons/save';
 import { MultiTeamsInput } from '../forms/player_create_csv_input';
@@ -15,16 +16,19 @@ function MultiTeamTab({
   tournament_id,
   swrTeamsResponse,
   setOpened,
+  clubs,
 }: {
   tournament_id: number;
   swrTeamsResponse: SWRResponse;
   setOpened: any;
+  clubs: Club[];
 }) {
   const { t } = useTranslation();
   const form = useForm({
     initialValues: {
       names: '',
       active: true,
+      participant_club_id: null as string | null,
     },
 
     validate: {
@@ -34,12 +38,27 @@ function MultiTeamTab({
   return (
     <form
       onSubmit={form.onSubmit(async (values) => {
-        await createTeams(tournament_id, values.names, values.active);
+        await createTeams(
+          tournament_id,
+          values.names,
+          values.active,
+          values.participant_club_id == null ? null : Number(values.participant_club_id)
+        );
         await swrTeamsResponse.mutate();
         setOpened(false);
       })}
     >
       <MultiTeamsInput form={form} />
+
+      <Select
+        clearable
+        searchable
+        mt="md"
+        label="Club"
+        placeholder="Optional"
+        data={clubs.map((club) => ({ value: `${club.id}`, label: club.name }))}
+        {...form.getInputProps('participant_club_id')}
+      />
 
       <Checkbox
         mt="md"
@@ -57,10 +76,12 @@ function SingleTeamTab({
   tournament_id,
   swrTeamsResponse,
   setOpened,
+  clubs,
 }: {
   tournament_id: number;
   swrTeamsResponse: SWRResponse;
   setOpened: any;
+  clubs: Club[];
 }) {
   const { t } = useTranslation();
   const { data } = getPlayers(tournament_id, false);
@@ -70,6 +91,7 @@ function SingleTeamTab({
       name: '',
       active: true,
       player_ids: [],
+      participant_club_id: null as string | null,
     },
     validate: {
       name: (value) => (value.length > 0 ? null : t('too_short_name_validation')),
@@ -78,7 +100,14 @@ function SingleTeamTab({
   return (
     <form
       onSubmit={form.onSubmit(async (values) => {
-        await createTeam(tournament_id, values.name, values.active, values.player_ids);
+        await createTeam(
+          tournament_id,
+          values.name,
+          values.active,
+          values.player_ids,
+          undefined,
+          values.participant_club_id == null ? null : Number(values.participant_club_id)
+        );
         await swrTeamsResponse.mutate();
         setOpened(false);
       })}
@@ -94,6 +123,16 @@ function SingleTeamTab({
         mt="md"
         label={t('active_teams_checkbox_label')}
         {...form.getInputProps('active', { type: 'checkbox' })}
+      />
+
+      <Select
+        clearable
+        searchable
+        mt="md"
+        label="Club"
+        placeholder="Optional"
+        data={clubs.map((club) => ({ value: `${club.id}`, label: club.name }))}
+        {...form.getInputProps('participant_club_id')}
       />
 
       <MultiSelect
@@ -122,6 +161,8 @@ export default function TeamCreateModal({
 }) {
   const { t } = useTranslation();
   const [opened, setOpened] = useState(false);
+  const clubsResponse = getClubs();
+  const clubs: Club[] = clubsResponse.data?.data ?? [];
   return (
     <>
       <Modal opened={opened} onClose={() => setOpened(false)} title="Create Team">
@@ -140,6 +181,7 @@ export default function TeamCreateModal({
               swrTeamsResponse={swrTeamsResponse}
               tournament_id={tournament_id}
               setOpened={setOpened}
+              clubs={clubs}
             />
           </Tabs.Panel>
 
@@ -148,6 +190,7 @@ export default function TeamCreateModal({
               swrTeamsResponse={swrTeamsResponse}
               tournament_id={tournament_id}
               setOpened={setOpened}
+              clubs={clubs}
             />
           </Tabs.Panel>
         </Tabs>

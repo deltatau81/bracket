@@ -18,4 +18,5 @@ export interface TeamInterface {
   draws: number;
   losses: number;
   logo_path: string;
+  participant_club_id: number | null;
 }

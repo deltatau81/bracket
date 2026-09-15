@@ -6,6 +6,7 @@ import {
   Image,
   Modal,
   MultiSelect,
+  Select,
   TextInput,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
@@ -14,10 +15,12 @@ import { useTranslation } from 'next-i18next';
 import { useState } from 'react';
 import { SWRResponse } from 'swr';
 
+import { Club } from '../../interfaces/club';
 import { Player } from '../../interfaces/player';
 import { TeamInterface } from '../../interfaces/team';
 import {
   getBaseApiUrl,
+  getClubs,
   getPlayers,
   removeTeamLogo,
   requestSucceeded,
@@ -48,6 +51,8 @@ export default function TeamUpdateModal({
   const { t } = useTranslation();
   const { data } = getPlayers(tournament_id, false);
   const players: Player[] = data != null ? data.data.players : [];
+  const clubsResponse = getClubs();
+  const clubs: Club[] = clubsResponse.data?.data ?? [];
   const [opened, setOpened] = useState(false);
 
   const form = useForm({
@@ -55,6 +60,8 @@ export default function TeamUpdateModal({
       name: team.name,
       active: team.active,
       player_ids: team.players.map((player) => `${player.id}`),
+      participant_club_id:
+        team.participant_club_id == null ? null : `${team.participant_club_id}`,
     },
 
     validate: {
@@ -72,7 +79,9 @@ export default function TeamUpdateModal({
               team.id,
               values.name,
               values.active,
-              values.player_ids
+              values.player_ids,
+              undefined,
+              values.participant_club_id == null ? null : Number(values.participant_club_id)
             );
             if (requestSucceeded(result)) {
               await swrTeamsResponse.mutate();
@@ -91,6 +100,16 @@ export default function TeamUpdateModal({
             mt="md"
             label={t('active_team_checkbox_label')}
             {...form.getInputProps('active', { type: 'checkbox' })}
+          />
+
+          <Select
+            clearable
+            searchable
+            mt="md"
+            label="Club"
+            placeholder="Optional"
+            data={clubs.map((club) => ({ value: `${club.id}`, label: club.name }))}
+            {...form.getInputProps('participant_club_id')}
           />
 
           <MultiSelect
