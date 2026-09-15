@@ -26,7 +26,10 @@ from bracket.models.db.stage_item import (
     StageItemCreateBody,
     StageItemUpdateBody,
     StageType,
+    YouthScheduleCreateBody,
 )
+from bracket.models.db.stage_item_inputs import StageItemInputCreateBodyFinal
+from bracket.models.db.team import Team
 from bracket.models.db.tournament import Tournament
 from bracket.models.db.user import UserPublic
 from bracket.models.db.util import StageItemWithRounds
@@ -48,18 +51,21 @@ from bracket.sql.rounds import (
     sql_create_round,
 )
 from bracket.sql.shared import sql_delete_stage_item_with_foreign_keys
+from bracket.sql.stage_item_inputs import sql_create_stage_item_input
 from bracket.sql.stage_items import (
     get_stage_item,
+    sql_create_stage_item,
     sql_create_stage_item_with_empty_inputs,
 )
 from bracket.sql.stages import get_full_tournament_details
+from bracket.sql.teams import get_teams_by_id
 from bracket.sql.tournaments import sql_get_tournament
 from bracket.sql.validation import check_foreign_keys_belong_to_tournament
 from bracket.utils.errors import (
     ForeignKey,
     check_foreign_key_violation,
 )
-from bracket.utils.id_types import StageItemId, TournamentId
+from bracket.utils.id_types import StageId, StageItemId, TournamentId
 
 router = APIRouter()
 
@@ -95,6 +101,101 @@ async def create_stage_item(
 
     stage_item = await sql_create_stage_item_with_empty_inputs(tournament_id, stage_body)
     await build_matches_for_stage_item(stage_item, tournament_id)
+    return SuccessResponse()
+
+
+@router.post(
+    "/tournaments/{tournament_id}/stages/{stage_id}/youth_schedule",
+    response_model=SuccessResponse,
+)
+async def create_youth_schedule(
+    tournament_id: TournamentId,
+    stage_id: StageId,
+    youth_body: YouthScheduleCreateBody,
+    user: UserPublic = Depends(user_authenticated_for_tournament_admin),
+    _: Tournament = Depends(disallow_archived_tournament),
+) -> SuccessResponse:
+    stages = await get_full_tournament_details(tournament_id, stage_id=stage_id)
+    if len(stages) != 1:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Could not find stage")
+
+    if len(youth_body.team_ids) != len(set(youth_body.team_ids)):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Selected team IDs must be unique",
+        )
+
+    teams = await get_teams_by_id(set(youth_body.team_ids), tournament_id)
+    if len(teams) != len(youth_body.team_ids):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="All selected teams must belong to the tournament",
+        )
+
+    teams_by_group: dict[str, list[Team]] = {}
+    for team in teams:
+        if team.participant_club_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Team {team.id} must have a participant club",
+            )
+        if team.pairing_group is None or not team.pairing_group.strip():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Team {team.id} must have a pairing group",
+            )
+        teams_by_group.setdefault(team.pairing_group, []).append(team)
+
+    for pairing_group, grouped_teams in teams_by_group.items():
+        if len(grouped_teams) < 2:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Pairing group {pairing_group} must contain at least two teams",
+            )
+        clubs = [team.participant_club_id for team in grouped_teams]
+        if len(clubs) != len(set(clubs)):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Pairing group {pairing_group} contains a club more than once",
+            )
+
+    existing_stage_items = [stage_item for stage in stages for stage_item in stage.stage_items]
+    for pairing_group, grouped_teams in teams_by_group.items():
+        selected_ids = {team.id for team in grouped_teams}
+        if any(
+            stage_item.type is StageType.ROUND_ROBIN
+            and {input_.team_id for input_ in stage_item.inputs if input_.team_id is not None}
+            == selected_ids
+            for stage_item in existing_stage_items
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Pairing group {pairing_group} has already been generated",
+            )
+
+    check_requirement(existing_stage_items, user, "max_stage_items", additions=len(teams_by_group))
+    tournament = await sql_get_tournament(tournament_id)
+
+    async with database.transaction():
+        for pairing_group in sorted(teams_by_group):
+            grouped_teams = sorted(teams_by_group[pairing_group], key=lambda team: team.id)
+            stage_item = await sql_create_stage_item(
+                tournament_id,
+                StageItemCreateBody(
+                    stage_id=stage_id,
+                    name=f"Group {pairing_group}",
+                    type=StageType.ROUND_ROBIN,
+                    team_count=len(grouped_teams),
+                ),
+            )
+            for slot, team in enumerate(grouped_teams, start=1):
+                await sql_create_stage_item_input(
+                    tournament_id,
+                    stage_item.id,
+                    StageItemInputCreateBodyFinal(slot=slot, team_id=team.id),
+                )
+            await build_matches_for_stage_item(stage_item, tournament_id)
+
     return SuccessResponse()
 
 
