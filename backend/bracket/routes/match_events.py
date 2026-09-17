@@ -40,7 +40,9 @@ from bracket.sql.match_events import (
     get_match_team_ids,
     get_player_snapshot,
     get_tournament_match_events,
+    recalculate_youth_club_game_score,
     update_match_event,
+    youth_club_game_score_uses_events,
 )
 from bracket.sql.matches import sql_get_match
 from bracket.sql.tournaments import sql_get_tournament
@@ -344,7 +346,12 @@ async def create_event(
     )
     async with database.transaction():
         created_event = await create_match_event(event)
-        await apply_goal_contribution(created_event, match_id, 1)
+        if not (
+            created_event.event_type is MatchEventType.GOAL
+            and created_event.period is MatchEventPeriod.GAME
+            and await recalculate_youth_club_game_score(match_id)
+        ):
+            await apply_goal_contribution(created_event, match_id, 1)
 
     return SingleMatchEventResponse(data=created_event)
 
@@ -375,10 +382,26 @@ async def update_event(
     old_contribution = (old_event.event_type, old_event.team_id, old_event.period)
     new_contribution = (event_body.event_type, event_body.team_id, event_body.period)
     async with database.transaction():
-        if old_contribution != new_contribution:
+        youth_game_event_changed = (
+            old_contribution != new_contribution
+            and await youth_club_game_score_uses_events(match_id)
+            and (
+                (
+                    old_event.event_type is MatchEventType.GOAL
+                    and old_event.period is MatchEventPeriod.GAME
+                )
+                or (
+                    event_body.event_type is MatchEventType.GOAL
+                    and event_body.period is MatchEventPeriod.GAME
+                )
+            )
+        )
+        if old_contribution != new_contribution and not youth_game_event_changed:
             await apply_goal_contribution(old_event, match_id, -1)
         event = await update_match_event(match_id, event_id, event_body)
-        if old_contribution != new_contribution:
+        if youth_game_event_changed:
+            await recalculate_youth_club_game_score(match_id)
+        elif old_contribution != new_contribution:
             await apply_goal_contribution(event_body, match_id, 1)
 
     assert event is not None
@@ -399,8 +422,16 @@ async def delete_event(
     await validate_match_and_team(tournament_id, match_id)
     event = await event_or_404(match_id, event_id)
     async with database.transaction():
-        await apply_goal_contribution(event, match_id, -1)
+        youth_game_goal = (
+            event.event_type is MatchEventType.GOAL
+            and event.period is MatchEventPeriod.GAME
+            and await youth_club_game_score_uses_events(match_id)
+        )
+        if not youth_game_goal:
+            await apply_goal_contribution(event, match_id, -1)
         deleted = await delete_match_event(match_id, event_id)
+        if youth_game_goal:
+            await recalculate_youth_club_game_score(match_id)
     if not deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

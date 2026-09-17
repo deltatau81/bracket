@@ -139,6 +139,63 @@ async def adjust_goal_score(
     return result is not None
 
 
+async def youth_club_game_score_uses_events(match_id: MatchId) -> bool:
+    result = await database.fetch_one(
+        query="""
+            SELECT stage_items.is_youth_club_group
+                AND tournaments.competition_format = 'YOUTH_CLUB'
+                AND tournaments.hockey_mode = 'GAME_SHOOTOUT' AS uses_events
+            FROM matches
+            JOIN rounds ON rounds.id = matches.round_id
+            JOIN stage_items ON stage_items.id = rounds.stage_item_id
+            JOIN stages ON stages.id = stage_items.stage_id
+            JOIN tournaments ON tournaments.id = stages.tournament_id
+            WHERE matches.id = :match_id
+            FOR UPDATE OF matches
+        """,
+        values={"match_id": match_id},
+    )
+    return result is not None and bool(result["uses_events"])
+
+
+async def recalculate_youth_club_game_score(match_id: MatchId) -> bool:
+    result = await database.fetch_one(
+        query="""
+            UPDATE matches
+            SET stage_item_input1_score = (
+                    SELECT COUNT(*) FROM match_events
+                    WHERE match_events.match_id = matches.id
+                    AND match_events.event_type = 'GOAL'
+                    AND match_events.period = 'GAME'
+                    AND match_events.team_id = input1.team_id
+                ),
+                stage_item_input2_score = (
+                    SELECT COUNT(*) FROM match_events
+                    WHERE match_events.match_id = matches.id
+                    AND match_events.event_type = 'GOAL'
+                    AND match_events.period = 'GAME'
+                    AND match_events.team_id = input2.team_id
+                )
+            FROM rounds
+            JOIN stage_items ON stage_items.id = rounds.stage_item_id
+            JOIN stages ON stages.id = stage_items.stage_id
+            JOIN tournaments ON tournaments.id = stages.tournament_id
+            CROSS JOIN stage_item_inputs input1
+            CROSS JOIN stage_item_inputs input2
+            WHERE matches.id = :match_id
+            AND matches.round_id = rounds.id
+            AND input1.id = matches.stage_item_input1_id
+            AND input2.id = matches.stage_item_input2_id
+            AND stage_items.is_youth_club_group
+            AND tournaments.competition_format = 'YOUTH_CLUB'
+            AND tournaments.hockey_mode = 'GAME_SHOOTOUT'
+            RETURNING matches.id
+        """,
+        values={"match_id": match_id},
+    )
+    return result is not None
+
+
 async def get_player_snapshot(
     player_id: PlayerId, team_id: TeamId
 ) -> tuple[str, int | None] | None:

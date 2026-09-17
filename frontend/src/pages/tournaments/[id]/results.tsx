@@ -22,6 +22,11 @@ import TournamentOverallStandings from '../../../components/competition/tourname
 import MatchModal from '../../../components/modals/match_modal';
 import { NoContent } from '../../../components/no_content/empty_table_info';
 import { Time, formatTime } from '../../../components/utils/datetime';
+import {
+  formatHockeyPoints,
+  getCompetitionMatchPoints,
+  getGameShootoutMatchPoints,
+} from '../../../components/utils/hockey_points';
 import { Translator } from '../../../components/utils/types';
 import { getTournamentIdFromRouter, responseIsValid } from '../../../components/utils/util';
 import { CompetitionInterface } from '../../../interfaces/competition';
@@ -41,74 +46,27 @@ import {
 } from '../../../services/lookups';
 import TournamentLayout from '../_tournament_layout';
 
-function segmentPoints(
-  score1: number,
-  score2: number,
-  winPoints: number,
-  drawPoints: number
-) {
-  if (score1 > score2) {
-    return [winPoints, 0];
-  }
-
-  if (score2 > score1) {
-    return [0, winPoints];
-  }
-
-  return [drawPoints, drawPoints];
-}
-
-function getGamePoints(match: MatchInterface) {
-  const half1 = segmentPoints(
-    match.stage_item_input1_half1_score,
-    match.stage_item_input2_half1_score,
-    2,
-    1
-  );
-
-  const half2 = segmentPoints(
-    match.stage_item_input1_half2_score,
-    match.stage_item_input2_half2_score,
-    2,
-    1
-  );
-
-  const penalty = segmentPoints(
-    match.stage_item_input1_penalty_score,
-    match.stage_item_input2_penalty_score,
-    1,
-    0.5
-  );
-
-  return [
-    half1[0] + half2[0] + penalty[0],
-    half1[1] + half2[1] + penalty[1],
-  ];
-}
-
-function formatPoints(points: number) {
-  return Number.isInteger(points)
-    ? `${points}`
-    : points.toFixed(1).replace('.', ',');
-}
-
 function ScheduleRow({
   data,
   openMatchModal,
   stageItemsLookup,
   matchesLookup,
+  isYouthGameShootout,
 }: {
   data: any;
   openMatchModal: any;
   stageItemsLookup: any;
   matchesLookup: any;
+  isYouthGameShootout: boolean;
 }) {
   const { t } = useTranslation();
   const winColor = '#2a8f37';
   const drawColor = '#656565';
   const loseColor = '#af4034';
 
-  const gamePoints = getGamePoints(data.match);
+  const gamePoints = isYouthGameShootout
+    ? getGameShootoutMatchPoints(data.match)
+    : getCompetitionMatchPoints(data.match);
 
   const team1_color =
     gamePoints[0] > gamePoints[1]
@@ -196,8 +154,18 @@ function ScheduleRow({
                   textAlign: 'center',
                 }}
               >
-                {data.match.stage_item_input1_score} Tore /{' '}
-                {formatPoints(gamePoints[0])} Pkt.
+                {isYouthGameShootout ? (
+                  <>
+                    Game {data.match.stage_item_input1_score} &middot; Shootout{' '}
+                    {data.match.stage_item_input1_penalty_score} &middot;{' '}
+                    {formatHockeyPoints(gamePoints[0])} Pkt.
+                  </>
+                ) : (
+                  <>
+                    {data.match.stage_item_input1_score} Tore /{' '}
+                    {formatHockeyPoints(gamePoints[0])} Pkt.
+                  </>
+                )}
               </div>
             </Grid.Col>
           </Grid>
@@ -227,8 +195,18 @@ function ScheduleRow({
                   textAlign: 'center',
                 }}
               >
-                {data.match.stage_item_input2_score} Tore /{' '}
-                {formatPoints(gamePoints[1])} Pkt.
+                {isYouthGameShootout ? (
+                  <>
+                    Game {data.match.stage_item_input2_score} &middot; Shootout{' '}
+                    {data.match.stage_item_input2_penalty_score} &middot;{' '}
+                    {formatHockeyPoints(gamePoints[1])} Pkt.
+                  </>
+                ) : (
+                  <>
+                    {data.match.stage_item_input2_score} Tore /{' '}
+                    {formatHockeyPoints(gamePoints[1])} Pkt.
+                  </>
+                )}
               </div>
             </Grid.Col>
           </Grid>
@@ -243,11 +221,13 @@ function Schedule({
   stageItemsLookup,
   openMatchModal,
   matchesLookup,
+  isYouthGameShootout,
 }: {
   t: Translator;
   stageItemsLookup: any;
   openMatchModal: CallableFunction;
   matchesLookup: any;
+  isYouthGameShootout: boolean;
 }) {
   const matches: any[] = Object.values(matchesLookup);
 
@@ -289,6 +269,7 @@ function Schedule({
         openMatchModal={openMatchModal}
         stageItemsLookup={stageItemsLookup}
         matchesLookup={matchesLookup}
+        isYouthGameShootout={isYouthGameShootout}
       />
     );
   }
@@ -357,6 +338,10 @@ export default function SchedulePage() {
 
   const teams: TeamInterface[] =
     swrTeamsResponse.data.data;
+  const tournament = swrTournamentResponse.data.data;
+  const isYouthGameShootout =
+    tournament.competition_format === 'YOUTH_CLUB' &&
+    tournament.hockey_mode === 'GAME_SHOOTOUT';
 
   function openMatchModal(matchToOpen: MatchInterface) {
     setMatch(matchToOpen);
@@ -391,6 +376,7 @@ export default function SchedulePage() {
           matchesLookup={matchesLookup}
           stageItemsLookup={stageItemsLookup}
           openMatchModal={openMatchModal}
+          isYouthGameShootout={isYouthGameShootout}
         />
       </Center>
 
@@ -430,7 +416,7 @@ export default function SchedulePage() {
           <TournamentOverallStandings
             tournamentId={tournamentData.id}
             teams={teams}
-            competitionFormat={swrTournamentResponse.data.data.competition_format}
+            competitionFormat={tournament.competition_format}
           />
         </Stack>
       ) : null}

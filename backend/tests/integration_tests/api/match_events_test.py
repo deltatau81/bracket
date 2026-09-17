@@ -53,13 +53,18 @@ async def event_match_context(
     status: MatchStatus = MatchStatus.RUNNING,
     active_period: MatchPeriod | None = MatchPeriod.HALF1,
     phase_state: MatchPhaseState | None = MatchPhaseState.ACTIVE,
+    is_youth_club_group: bool = False,
 ) -> AsyncIterator[dict[str, Any]]:
     tournament_id = auth_context.tournament.id
     async with (
         inserted_stage(DUMMY_STAGE1.model_copy(update={"tournament_id": tournament_id})) as stage,
         inserted_stage_item(
             DUMMY_STAGE_ITEM1.model_copy(
-                update={"stage_id": stage.id, "ranking_id": auth_context.ranking.id}
+                update={
+                    "stage_id": stage.id,
+                    "ranking_id": auth_context.ranking.id,
+                    "is_youth_club_group": is_youth_club_group,
+                }
             )
         ) as stage_item,
         inserted_round(DUMMY_ROUND1.model_copy(update={"stage_item_id": stage_item.id})) as round_,
@@ -126,6 +131,7 @@ async def event_match_context(
         yield {
             "match": match,
             "round": round_,
+            "stage_item": stage_item,
             "team1": team1,
             "team2": team2,
             "team3": team3,
@@ -649,6 +655,137 @@ async def test_game_shootout_goal_score_reconciliation(
             tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
             values={"hockey_mode": "COMPETITION"},
         )
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_youth_club_game_score_is_recalculated_from_goal_events(
+    startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext
+) -> None:
+    await database.execute(
+        tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
+        values={
+            "hockey_mode": "GAME_SHOOTOUT",
+            "competition_format": "YOUTH_CLUB",
+        },
+    )
+    try:
+        async with event_match_context(
+            auth_context,
+            active_period=MatchPeriod.GAME,
+            is_youth_club_group=True,
+        ) as context:
+            await database.execute(
+                matches.update().where(matches.c.id == context["match"].id),
+                values={"score_entry_source": MatchScoreEntrySource.MANUAL.value},
+            )
+            body = goal_body(context) | {
+                "period": "GAME",
+                "game_time_seconds": None,
+                "player_number": None,
+            }
+
+            match = await sql_get_match(context["match"].id)
+            assert (match.stage_item_input1_score, match.stage_item_input2_score) == (0, 0)
+
+            goals = [
+                (
+                    await event_request(
+                        HTTPMethod.POST,
+                        context,
+                        auth_context,
+                        body=body,
+                    )
+                )["data"]
+            ]
+            match = await sql_get_match(context["match"].id)
+            assert (match.stage_item_input1_score, match.stage_item_input2_score) == (1, 0)
+
+            for team_key, count in (("team1", 1), ("team2", 3)):
+                for _ in range(count):
+                    goals.append(
+                        (
+                            await event_request(
+                                HTTPMethod.POST,
+                                context,
+                                auth_context,
+                                body=body | {"team_id": context[team_key].id},
+                            )
+                        )["data"]
+                    )
+
+            match = await sql_get_match(context["match"].id)
+            assert (match.stage_item_input1_score, match.stage_item_input2_score) == (2, 3)
+
+            team2_goal = next(
+                goal for goal in goals if goal["team_id"] == context["team2"].id
+            )
+            await event_request(
+                HTTPMethod.DELETE,
+                context,
+                auth_context,
+                suffix=f"/{team2_goal['id']}",
+            )
+            match = await sql_get_match(context["match"].id)
+            assert (match.stage_item_input1_score, match.stage_item_input2_score) == (2, 2)
+
+            team1_goal = next(
+                goal for goal in goals if goal["team_id"] == context["team1"].id
+            )
+            await event_request(
+                HTTPMethod.PUT,
+                context,
+                auth_context,
+                suffix=f"/{team1_goal['id']}",
+                body=body | {"team_id": context["team2"].id},
+            )
+            match = await sql_get_match(context["match"].id)
+            assert (match.stage_item_input1_score, match.stage_item_input2_score) == (1, 3)
+
+            await database.execute(
+                matches.update().where(matches.c.id == context["match"].id),
+                values={
+                    "stage_item_input1_penalty_score": 3,
+                    "stage_item_input2_penalty_score": 1,
+                },
+            )
+            await set_match_state(
+                context,
+                status=MatchStatus.RUNNING,
+                active_period=MatchPeriod.SHOOTOUT,
+                phase_state=MatchPhaseState.ACTIVE,
+            )
+            shootout_goal = (
+                await event_request(HTTPMethod.POST, context, auth_context, body=body)
+            )["data"]
+            assert shootout_goal["period"] == "SHOOTOUT"
+            match = await sql_get_match(context["match"].id)
+            assert (match.stage_item_input1_score, match.stage_item_input2_score) == (1, 3)
+            assert (
+                match.stage_item_input1_penalty_score,
+                match.stage_item_input2_penalty_score,
+            ) == (3, 1)
+
+            await set_match_state(
+                context,
+                status=MatchStatus.FINISHED,
+                active_period=MatchPeriod.GAME,
+                phase_state=MatchPhaseState.BREAK,
+            )
+            reopened = await phase_request(context, auth_context, "REOPEN_MATCH")
+            assert reopened["data"]["status"] == "RUNNING"
+            await phase_request(context, auth_context, "RESUME_PERIOD")
+            await event_request(HTTPMethod.POST, context, auth_context, body=body)
+            match = await sql_get_match(context["match"].id)
+            assert (match.stage_item_input1_score, match.stage_item_input2_score) == (2, 3)
+    finally:
+        await database.execute(
+            tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
+            values={
+                "hockey_mode": "COMPETITION",
+                "competition_format": "STANDARD",
+            },
+        )
+
 
 @pytest.mark.parametrize(
     ("hockey_mode", "active_period"),

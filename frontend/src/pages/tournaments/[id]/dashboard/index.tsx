@@ -249,6 +249,8 @@ export default function SchedulePage() {
       teams={teams}
       matchesLookup={matchesLookup}
       stageItemsLookup={stageItemsLookup}
+      competitionFormat={tournamentDataFull?.competition_format}
+      hockeyMode={tournamentDataFull?.hockey_mode}
     />
   );
   const overallStandings = ( 

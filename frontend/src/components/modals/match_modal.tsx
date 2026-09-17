@@ -629,6 +629,9 @@ function MatchModalForm({
     currentPeriod === 'SHOOTOUT' &&
     currentPhaseState === 'ACTIVE';
   const eventsAreAuthoritative = match.score_entry_source === 'EVENTS';
+  const youthGameEventsAreAuthoritative =
+    tournament.competition_format === 'YOUTH_CLUB' &&
+    tournament.hockey_mode === 'GAME_SHOOTOUT';
   const scoresAreEditable = !eventsAreAuthoritative;
 
   return (
@@ -671,7 +674,11 @@ function MatchModalForm({
               activePeriod={currentPeriod}
               phaseState={currentPhaseState}
               refreshMatch={() => swrStagesResponse.mutate()}
-              onGoalMutation={eventsAreAuthoritative ? applyGoalMutation : () => undefined}
+              onGoalMutation={
+                eventsAreAuthoritative || youthGameEventsAreAuthoritative
+                  ? applyGoalMutation
+                  : () => undefined
+              }
             />
           </Grid.Col>
 
@@ -681,7 +688,7 @@ function MatchModalForm({
             </Text>
             {tournament.hockey_mode !== 'STANDARD' && (
               <Text size="sm" c="dimmed" mb="sm">
-                {eventsAreAuthoritative
+                {eventsAreAuthoritative || youthGameEventsAreAuthoritative
                   ? 'Das Ergebnis wird aus den Torereignissen berechnet.'
                   : 'Torerereignisse dienen der Statistik und ändern das Ergebnis nicht.'}
               </Text>
@@ -710,7 +717,7 @@ function MatchModalForm({
                     <Text size="sm">Game</Text>
                   </Grid.Col>
                   <Grid.Col span={4}>
-                    {isScorer || eventsAreAuthoritative ? (
+                    {isScorer || eventsAreAuthoritative || youthGameEventsAreAuthoritative ? (
                       <Text ta="center">{form.values.stage_item_input1_score}</Text>
                     ) : (
                       <NumberInput
@@ -722,7 +729,7 @@ function MatchModalForm({
                     )}
                   </Grid.Col>
                   <Grid.Col span={4}>
-                    {isScorer ? (
+                    {isScorer || youthGameEventsAreAuthoritative ? (
                       <Text ta="center">{form.values.stage_item_input2_score}</Text>
                     ) : (
                       <NumberInput
@@ -840,19 +847,23 @@ function MatchModalForm({
             <Divider my="md" />
 
             <Grid>
-              <Grid.Col span={4}>
-                <Text fw={600}>Gesamttore</Text>
-              </Grid.Col>
-              <Grid.Col span={4}>
-                <Text fw={600} ta="center">
-                  {totalScore1}
-                </Text>
-              </Grid.Col>
-              <Grid.Col span={4}>
-                <Text fw={600} ta="center">
-                  {totalScore2}
-                </Text>
-              </Grid.Col>
+              {!youthGameEventsAreAuthoritative ? (
+                <>
+                  <Grid.Col span={4}>
+                    <Text fw={600}>Gesamttore</Text>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Text fw={600} ta="center">
+                      {totalScore1}
+                    </Text>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Text fw={600} ta="center">
+                      {totalScore2}
+                    </Text>
+                  </Grid.Col>
+                </>
+              ) : null}
 
               <Grid.Col span={4}>
                 <Text fw={600}>Spielpunkte</Text>
