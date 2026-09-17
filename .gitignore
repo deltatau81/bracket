@@ -18,3 +18,8 @@ backend/yarn.lock
 backend/static
 
 /process-compose.yml
+
+# Local development / deployment files
+.vscode/
+/backups/
+/static/
