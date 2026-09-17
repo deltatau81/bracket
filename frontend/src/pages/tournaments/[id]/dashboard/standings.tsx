@@ -15,7 +15,7 @@ import { StandingsTableForStageItem } from '../../../../components/tables/standi
 import PlayerStatisticsTable from '../../../../components/tables/player_statistics';
 import { TableSkeletonTwoColumns } from '../../../../components/utils/skeletons';
 import { responseIsValid } from '../../../../components/utils/util';
-import { getPlayerStatistics, getStagesLive } from '../../../../services/adapter';
+import { getPlayerStatistics, getStagesLive, getTeamsLive } from '../../../../services/adapter';
 import { getStageItemLookup, getStageItemTeamsLookup } from '../../../../services/lookups';
 import { getTournamentResponseByEndpointName } from '../../../../services/tournament';
 
@@ -77,19 +77,23 @@ export default function Standings() {
   const tournamentId = !notFound ? tournamentDataFull.id : null;
 
   const swrStagesResponse = getStagesLive(tournamentId);
+  const swrTeamsResponse = getTeamsLive(tournamentId);
   const playerStatisticsResponse = getPlayerStatistics(tournamentId);
 
   if (!tournamentResponse) {
     return <TableSkeletonTwoColumns />;
   }
 
-  if (swrStagesResponse.isLoading) {
+  if (swrStagesResponse.isLoading || swrTeamsResponse.isLoading) {
     return <TableSkeletonTwoColumns />;
   }
 
   if (notFound) {
     return <NotFoundTitle />;
   }
+
+  const teamsData = swrTeamsResponse.data?.data ?? [];
+  const teams = Array.isArray(teamsData) ? teamsData : teamsData.teams ?? [];
 
   return (
     <>
@@ -104,7 +108,11 @@ export default function Standings() {
             fontSizeInPixels={16}
             maxTeamsToDisplay={100}
           />
-          <TournamentOverallStandings tournamentId={tournamentId} />
+          <TournamentOverallStandings
+            tournamentId={tournamentId}
+            teams={teams}
+            competitionFormat={tournamentDataFull.competition_format}
+          />
           <Title order={2} mt="xl" mb="sm">
             {t('players_title')} – {t('ranking_title')}
           </Title>

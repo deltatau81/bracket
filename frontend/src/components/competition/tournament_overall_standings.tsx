@@ -12,8 +12,10 @@ import {
 import React from 'react';
 
 import { TournamentOverallStandingInterface } from '../../interfaces/competition';
+import { Club } from '../../interfaces/club';
 import { TeamInterface } from '../../interfaces/team';
-import { getBaseApiUrl } from '../../services/adapter';
+import { TournamentCompetitionFormat } from '../../interfaces/tournament';
+import { getBaseApiUrl, getClubs } from '../../services/adapter';
 import { getTournamentOverallStandings } from '../../services/competition';
 
 const pointsFormatter = new Intl.NumberFormat('de-DE', {
@@ -40,11 +42,14 @@ function TeamLogo({ team }: { team: TeamInterface | undefined }) {
 export default function TournamentOverallStandings({
   tournamentId,
   teams = [],
+  competitionFormat = 'STANDARD',
 }: {
   tournamentId: number | null;
   teams?: TeamInterface[];
+  competitionFormat?: TournamentCompetitionFormat;
 }) {
   const swrStandingsResponse = getTournamentOverallStandings(tournamentId);
+  const swrClubsResponse = getClubs();
 
   if (swrStandingsResponse.error != null) {
     return (
@@ -65,13 +70,60 @@ export default function TournamentOverallStandings({
     teams.map((team) => [team.id, team])
   );
 
+  const clubs: Club[] = swrClubsResponse.data?.data ?? [];
+  const clubsById = new Map(
+    clubs.map((club) => [club.id, club])
+  );
+
+  const displayStandings =
+    competitionFormat === 'YOUTH_CLUB'
+      ? Array.from(
+          standings.reduce<
+            Map<string, TournamentOverallStandingInterface>
+          >((totals, standing) => {
+            const team = teamsById.get(standing.team_id);
+            const clubId = team?.participant_club_id ?? null;
+            const key =
+              clubId == null
+                ? `team-${standing.team_id}`
+                : `club-${clubId}`;
+            const current = totals.get(key);
+
+            totals.set(key, {
+              team_id:
+                clubId == null ? standing.team_id : -clubId,
+              team_name:
+                clubId == null
+                  ? standing.team_name
+                  : clubsById.get(clubId)?.name ??
+                    `Verein #${clubId}`,
+              game_points:
+                (current?.game_points ?? 0) +
+                standing.game_points,
+              competition_points:
+                (current?.competition_points ?? 0) +
+                standing.competition_points,
+              total_points:
+                (current?.total_points ?? 0) +
+                standing.total_points,
+            });
+
+            return totals;
+          }, new Map()).values()
+        ).sort(
+          (a, b) =>
+            b.total_points - a.total_points ||
+            a.team_name.localeCompare(b.team_name, 'de')
+        )
+      : standings;
+
   return (
     <Card withBorder padding="md" radius="md" mt="lg">
       <Title order={3} mb="sm">
         Gesamtwertung
       </Title>
 
-      {standings.length === 0 ? (
+      {displayStandings.length === 0 ? (
         <Text c="dimmed">Noch keine Mannschaften vorhanden.</Text>
       ) : (
                 <Box style={{ width: '100%', overflow: 'hidden' }}>
@@ -103,7 +155,7 @@ export default function TournamentOverallStandings({
                     paddingRight: '0.25rem',
                   }}
                 >
-                  Mannschaft
+                  {competitionFormat === 'YOUTH_CLUB' ? 'Verein' : 'Mannschaft'}
                 </Table.Th>
 
                 <Table.Th
@@ -145,7 +197,7 @@ export default function TournamentOverallStandings({
             </Table.Thead>
 
             <Table.Tbody>
-              {standings.map((standing, index) => {
+              {displayStandings.map((standing, index) => {
                 const team = teamsById.get(standing.team_id);
 
                 return (

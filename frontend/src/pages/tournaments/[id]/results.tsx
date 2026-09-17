@@ -32,6 +32,7 @@ import {
   getCourts,
   getStages,
   getTeams,
+  getTournamentById,
 } from '../../../services/adapter';
 import {
   getMatchLookup,
@@ -335,6 +336,7 @@ export default function SchedulePage() {
   const swrCourtsResponse = getCourts(tournamentData.id);
   const swrCompetitionsResponse = getCompetitions(tournamentData.id);
   const swrTeamsResponse = getTeams(tournamentData.id);
+  const swrTournamentResponse = getTournamentById(tournamentData.id);
 
   const stageItemsLookup = responseIsValid(swrStagesResponse)
     ? getStageItemLookup(swrStagesResponse)
@@ -348,6 +350,7 @@ export default function SchedulePage() {
   if (!responseIsValid(swrCourtsResponse)) return null;
   if (!responseIsValid(swrCompetitionsResponse)) return null;
   if (!responseIsValid(swrTeamsResponse)) return null;
+  if (!responseIsValid(swrTournamentResponse)) return null;
 
   const competitions: CompetitionInterface[] =
     swrCompetitionsResponse.data.data;
@@ -426,6 +429,8 @@ export default function SchedulePage() {
 
           <TournamentOverallStandings
             tournamentId={tournamentData.id}
+            teams={teams}
+            competitionFormat={swrTournamentResponse.data.data.competition_format}
           />
         </Stack>
       ) : null}

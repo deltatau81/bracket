@@ -255,6 +255,7 @@ export default function SchedulePage() {
     <TournamentOverallStandings
       tournamentId={tournamentId}
       teams={teams}
+      competitionFormat={tournamentDataFull?.competition_format}
     />
   );
 

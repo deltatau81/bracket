@@ -22,10 +22,12 @@ import {
   CompetitionResultBodyInterface,
   CompetitionResultInterface,
 } from '../../interfaces/competition';
+import { Club } from '../../interfaces/club';
 import { TeamInterface } from '../../interfaces/team';
 import {
   getCompetitionDisciplines,
   getCompetitionResults,
+  getClubs,
 } from '../../services/adapter';
 import {
   calculateCompetitionResults,
@@ -510,12 +512,14 @@ export default function CompetitionDisciplines({
   tournamentId,
   competitionId,
   teams = [],
+  competitionFormat = 'STANDARD',
   onPointsChange,
   mode = 'manage',
 }: {
   tournamentId: number;
   competitionId: number;
   teams?: TeamInterface[];
+  competitionFormat?: 'STANDARD' | 'YOUTH_CLUB';
   onPointsChange?: (
     competitionId: number,
     pointsByTeam: Record<number, number>
@@ -527,6 +531,7 @@ export default function CompetitionDisciplines({
       tournamentId,
       competitionId
     );
+  const clubsResponse = getClubs();
 
   const [
     rankedByDiscipline,
@@ -603,19 +608,65 @@ export default function CompetitionDisciplines({
       ? teams
       : (teams as any)?.teams ?? [];
 
-  const standings = teamList
-    .map((team) => ({
-      team,
-      points:
-        totalPointsByTeam[team.id] ?? 0,
-    }))
-    .sort(
-      (a, b) =>
-        b.points - a.points ||
-        a.team.name.localeCompare(
-          b.team.name
-        )
-    );
+  const standings =
+    competitionFormat === 'YOUTH_CLUB'
+      ? (() => {
+          const clubs: Club[] =
+            clubsResponse.data?.data ?? [];
+          const clubNames = Object.fromEntries(
+            clubs.map((club) => [club.id, club.name])
+          );
+
+          return Array.from(
+            teamList.reduce<
+              Map<
+                string,
+                {
+                  id: string;
+                  name: string;
+                  points: number;
+                }
+              >
+            >((totals, team) => {
+              const clubId = team.participant_club_id;
+              const id =
+                clubId == null
+                  ? `team-${team.id}`
+                  : `club-${clubId}`;
+              const name =
+                clubId == null
+                  ? team.name
+                  : clubNames[clubId] ??
+                    `Verein #${clubId}`;
+              const current = totals.get(id);
+
+              totals.set(id, {
+                id,
+                name,
+                points:
+                  (current?.points ?? 0) +
+                  (totalPointsByTeam[team.id] ?? 0),
+              });
+
+              return totals;
+            }, new Map()).values()
+          ).sort(
+            (a, b) =>
+              b.points - a.points ||
+              a.name.localeCompare(b.name, 'de')
+          );
+        })()
+      : teamList
+          .map((team) => ({
+            id: `team-${team.id}`,
+            name: team.name,
+            points: totalPointsByTeam[team.id] ?? 0,
+          }))
+          .sort(
+            (a, b) =>
+              b.points - a.points ||
+              a.name.localeCompare(b.name, 'de')
+          );
 
   return (
     <Stack gap="lg">
@@ -770,7 +821,7 @@ export default function CompetitionDisciplines({
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Rang</Table.Th>
-                <Table.Th>Team</Table.Th>
+                <Table.Th>{competitionFormat === 'YOUTH_CLUB' ? 'Verein' : 'Team'}</Table.Th>
                 <Table.Th>Punkte</Table.Th>
               </Table.Tr>
             </Table.Thead>
@@ -778,16 +829,16 @@ export default function CompetitionDisciplines({
             <Table.Tbody>
               {standings.map(
                 (
-                  { team, points },
+                  { id, name, points },
                   index
                 ) => (
-                  <Table.Tr key={team.id}>
+                  <Table.Tr key={id}>
                     <Table.Td>
                       {index + 1}
                     </Table.Td>
 
                     <Table.Td>
-                      {team.name}
+                      {name}
                     </Table.Td>
 
                     <Table.Td>
