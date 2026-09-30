@@ -66,6 +66,82 @@ async def sql_delete_tournament(tournament_id: TournamentId) -> None:
     await database.fetch_one(query=query, values={"tournament_id": tournament_id})
 
 
+async def sql_delete_tournament_owned_data(tournament_id: TournamentId) -> None:
+    match_ids = """
+        SELECT matches.id
+        FROM matches
+        JOIN rounds ON rounds.id = matches.round_id
+        JOIN stage_items ON stage_items.id = rounds.stage_item_id
+        JOIN stages ON stages.id = stage_items.stage_id
+        WHERE stages.tournament_id = :tournament_id
+    """
+    values = {"tournament_id": tournament_id}
+
+    await database.execute(
+        query=f"""
+            UPDATE matches
+            SET
+                stage_item_input1_winner_from_match_id = CASE
+                    WHEN stage_item_input1_winner_from_match_id IN ({match_ids}) THEN NULL
+                    ELSE stage_item_input1_winner_from_match_id
+                END,
+                stage_item_input2_winner_from_match_id = CASE
+                    WHEN stage_item_input2_winner_from_match_id IN ({match_ids}) THEN NULL
+                    ELSE stage_item_input2_winner_from_match_id
+                END
+            WHERE stage_item_input1_winner_from_match_id IN ({match_ids})
+               OR stage_item_input2_winner_from_match_id IN ({match_ids})
+        """,
+        values=values,
+    )
+    await database.execute(
+        query=f"DELETE FROM matches WHERE matches.id IN ({match_ids})", values=values
+    )
+    await database.execute(
+        query="""
+            DELETE FROM rounds
+            WHERE rounds.stage_item_id IN (
+                SELECT stage_items.id
+                FROM stage_items
+                JOIN stages ON stages.id = stage_items.stage_id
+                WHERE stages.tournament_id = :tournament_id
+            )
+        """,
+        values=values,
+    )
+    await database.execute(
+        query="DELETE FROM stage_item_inputs WHERE tournament_id = :tournament_id",
+        values=values,
+    )
+    await database.execute(
+        query="""
+            DELETE FROM stage_items
+            WHERE stage_items.stage_id IN (
+                SELECT stages.id
+                FROM stages
+                WHERE stages.tournament_id = :tournament_id
+            )
+        """,
+        values=values,
+    )
+    await database.execute(
+        query="DELETE FROM stages WHERE tournament_id = :tournament_id", values=values
+    )
+    await database.execute(
+        query="DELETE FROM rankings WHERE tournament_id = :tournament_id", values=values
+    )
+    await database.execute(
+        query="DELETE FROM players WHERE tournament_id = :tournament_id", values=values
+    )
+    await database.execute(
+        query="DELETE FROM teams WHERE tournament_id = :tournament_id", values=values
+    )
+    await database.execute(
+        query="DELETE FROM courts WHERE tournament_id = :tournament_id", values=values
+    )
+    await sql_delete_tournament(tournament_id)
+
+
 async def sql_update_tournament(
     tournament_id: TournamentId, tournament: TournamentUpdateBody
 ) -> None:
@@ -79,12 +155,33 @@ async def sql_update_tournament(
             players_can_be_in_multiple_teams = :players_can_be_in_multiple_teams,
             auto_assign_courts = :auto_assign_courts,
             duration_minutes = :duration_minutes,
-            margin_minutes = :margin_minutes
+            margin_minutes = :margin_minutes,
+            hockey_mode = COALESCE(:hockey_mode, hockey_mode),
+            competition_format = COALESCE(:competition_format, competition_format),
+            ruleset = COALESCE(:ruleset, ruleset),
+            age_category = COALESCE(:age_category, age_category),
+            ruleset_season = COALESCE(:ruleset_season, ruleset_season)
         WHERE tournaments.id = :tournament_id
         """
     await database.execute(
         query=query,
-        values={"tournament_id": tournament_id, **tournament.model_dump()},
+        values={
+            "tournament_id": tournament_id,
+            **tournament.model_dump(),
+            "hockey_mode": (
+                tournament.hockey_mode.value if tournament.hockey_mode is not None else None
+            ),
+            "competition_format": (
+                tournament.competition_format.value
+                if tournament.competition_format is not None
+                else None
+            ),
+            "ruleset": tournament.ruleset.value if tournament.ruleset is not None else None,
+            "age_category": (
+                tournament.age_category.value if tournament.age_category is not None else None
+            ),
+            "ruleset_season": tournament.ruleset_season,
+        },
     )
 
 
@@ -117,7 +214,12 @@ async def sql_create_tournament(tournament: TournamentBody) -> TournamentId:
             players_can_be_in_multiple_teams,
             auto_assign_courts,
             duration_minutes,
-            margin_minutes
+            margin_minutes,
+            hockey_mode,
+            competition_format,
+            ruleset,
+            age_category,
+            ruleset_season
         )
         VALUES (
             :name,
@@ -129,9 +231,19 @@ async def sql_create_tournament(tournament: TournamentBody) -> TournamentId:
             :players_can_be_in_multiple_teams,
             :auto_assign_courts,
             :duration_minutes,
-            :margin_minutes
+            :margin_minutes,
+            :hockey_mode,
+            :competition_format,
+            :ruleset,
+            :age_category,
+            :ruleset_season
         )
         RETURNING id
         """
-    new_id = await database.fetch_val(query=query, values=tournament.model_dump())
+    values = tournament.model_dump()
+    values["hockey_mode"] = tournament.hockey_mode.value
+    values["competition_format"] = tournament.competition_format.value
+    values["ruleset"] = tournament.ruleset.value
+    values["age_category"] = tournament.age_category.value
+    new_id = await database.fetch_val(query=query, values=values)
     return TournamentId(new_id)

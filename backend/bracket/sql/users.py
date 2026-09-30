@@ -136,3 +136,21 @@ async def delete_user_and_owned_clubs(user_id: UserId) -> None:
         await sql_delete_club(club.id)
 
     await delete_user(user_id)
+
+
+async def get_users_for_club(club_id: ClubId) -> list[UserPublic]:
+    query = """
+        SELECT u.*
+        FROM users u
+        JOIN users_x_clubs uxc ON u.id = uxc.user_id
+        WHERE uxc.club_id = :club_id
+        ORDER BY u.name, u.email
+    """
+    results = await database.fetch_all(
+        query=query,
+        values={"club_id": club_id},
+    )
+    return [
+        UserPublic.model_validate(dict(result._mapping))
+        for result in results
+    ]

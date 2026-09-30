@@ -3,8 +3,17 @@ from datetime import datetime
 from heliclockter import datetime_utc
 
 from bracket.database import database
-from bracket.models.db.match import Match, MatchBody, MatchCreateBody
-from bracket.models.db.tournament import Tournament
+from bracket.logic.match_phase import MatchPhaseTransition
+from bracket.models.db.match import (
+    Match,
+    MatchBody,
+    MatchCreateBody,
+    MatchPeriod,
+    MatchPhaseState,
+    MatchScoreEntrySource,
+    MatchStatus,
+)
+from bracket.models.db.tournament import HockeyMode, Tournament
 from bracket.utils.id_types import (
     CourtId,
     MatchId,
@@ -13,6 +22,26 @@ from bracket.utils.id_types import (
     StageItemInputId,
     TournamentId,
 )
+
+
+class ScoreEntrySourceConflictError(ValueError):
+    pass
+
+
+def default_score_entry_source(hockey_mode: HockeyMode) -> MatchScoreEntrySource | None:
+    if hockey_mode in {HockeyMode.COMPETITION, HockeyMode.GAME_SHOOTOUT}:
+        return MatchScoreEntrySource.MANUAL
+    return None
+
+
+def _ensure_score_update_allowed(match: Match, values: dict[str, int]) -> None:
+    if match.score_entry_source is MatchScoreEntrySource.EVENTS and any(
+        values[field] != getattr(match, field)
+        for field in values
+    ):
+        raise ScoreEntrySourceConflictError(
+            "Cannot edit scores for a match whose score is derived from events"
+        )
 
 
 async def sql_delete_match(match_id: MatchId) -> None:
@@ -36,7 +65,7 @@ async def sql_delete_matches_for_stage_item_id(stage_item_id: StageItemId) -> No
     await database.execute(query=query, values={"stage_item_id": stage_item_id})
 
 
-async def sql_create_match(match: MatchCreateBody) -> Match:
+async def sql_create_match(match: MatchCreateBody, hockey_mode: HockeyMode) -> Match:
     query = """
         INSERT INTO matches (
             round_id,
@@ -53,6 +82,7 @@ async def sql_create_match(match: MatchCreateBody) -> Match:
             stage_item_input2_score,
             stage_item_input1_conflict,
             stage_item_input2_conflict,
+            score_entry_source,
             created
         )
         VALUES (
@@ -70,11 +100,15 @@ async def sql_create_match(match: MatchCreateBody) -> Match:
             0,
             false,
             false,
+            :score_entry_source,
             NOW()
         )
         RETURNING *
     """
-    result = await database.fetch_one(query=query, values=match.model_dump())
+    values = match.model_dump()
+    default_source = default_score_entry_source(hockey_mode)
+    values["score_entry_source"] = default_source.value if default_source is not None else None
+    result = await database.fetch_one(query=query, values=values)
 
     if result is None:
         raise ValueError("Could not create stage")
@@ -82,17 +116,212 @@ async def sql_create_match(match: MatchCreateBody) -> Match:
     return Match.model_validate(dict(result._mapping))
 
 
+async def sql_transition_match_phase(
+    match_id: MatchId,
+    expected_status: MatchStatus,
+    expected_active_period: MatchPeriod | None,
+    expected_phase_state: MatchPhaseState | None,
+    next_state: MatchPhaseTransition,
+) -> Match | None:
+    query = """
+        UPDATE matches
+        SET status = :next_status,
+            active_period = :next_active_period,
+            phase_state = :next_phase_state
+        WHERE id = :match_id
+          AND status = :expected_status
+          AND active_period IS NOT DISTINCT FROM :expected_active_period
+          AND phase_state IS NOT DISTINCT FROM :expected_phase_state
+        RETURNING *
+    """
+    result = await database.fetch_one(
+        query=query,
+        values={
+            "match_id": match_id,
+            "expected_status": expected_status.value,
+            "expected_active_period": (
+                expected_active_period.value if expected_active_period is not None else None
+            ),
+            "expected_phase_state": (
+                expected_phase_state.value if expected_phase_state is not None else None
+            ),
+            "next_status": next_state.status.value,
+            "next_active_period": (
+                next_state.active_period.value
+                if next_state.active_period is not None
+                else None
+            ),
+            "next_phase_state": (
+                next_state.phase_state.value
+                if next_state.phase_state is not None
+                else None
+            ),
+        },
+    )
+    if result is None:
+        return None
+    return Match.model_validate(dict(result._mapping))
+
+
+async def sql_update_match_results(
+    match_id: MatchId,
+    match: Match,
+    match_body: MatchBody,
+    hockey_mode: HockeyMode,
+) -> None:
+    fields_set = match_body.model_fields_set
+
+    half1_score1 = (
+        match_body.stage_item_input1_half1_score
+        if "stage_item_input1_half1_score" in fields_set
+        else match.stage_item_input1_half1_score
+    )
+    half1_score2 = (
+        match_body.stage_item_input2_half1_score
+        if "stage_item_input2_half1_score" in fields_set
+        else match.stage_item_input2_half1_score
+    )
+    half2_score1 = (
+        match_body.stage_item_input1_half2_score
+        if "stage_item_input1_half2_score" in fields_set
+        else match.stage_item_input1_half2_score
+    )
+    half2_score2 = (
+        match_body.stage_item_input2_half2_score
+        if "stage_item_input2_half2_score" in fields_set
+        else match.stage_item_input2_half2_score
+    )
+    penalty_score1 = (
+        match_body.stage_item_input1_penalty_score
+        if "stage_item_input1_penalty_score" in fields_set
+        else match.stage_item_input1_penalty_score
+    )
+    penalty_score2 = (
+        match_body.stage_item_input2_penalty_score
+        if "stage_item_input2_penalty_score" in fields_set
+        else match.stage_item_input2_penalty_score
+    )
+
+    _ensure_score_update_allowed(
+        match,
+        {
+            "stage_item_input1_score": (
+                match.stage_item_input1_score
+                if hockey_mode is HockeyMode.GAME_SHOOTOUT
+                else half1_score1 + half2_score1
+            ),
+            "stage_item_input2_score": (
+                match.stage_item_input2_score
+                if hockey_mode is HockeyMode.GAME_SHOOTOUT
+                else half1_score2 + half2_score2
+            ),
+            "stage_item_input1_half1_score": half1_score1,
+            "stage_item_input2_half1_score": half1_score2,
+            "stage_item_input1_half2_score": half2_score1,
+            "stage_item_input2_half2_score": half2_score2,
+            "stage_item_input1_penalty_score": penalty_score1,
+            "stage_item_input2_penalty_score": penalty_score2,
+        },
+    )
+
+    query = """
+        UPDATE matches
+        SET stage_item_input1_score = :stage_item_input1_score,
+            stage_item_input2_score = :stage_item_input2_score,
+            stage_item_input1_half1_score = :stage_item_input1_half1_score,
+            stage_item_input2_half1_score = :stage_item_input2_half1_score,
+            stage_item_input1_half2_score = :stage_item_input1_half2_score,
+            stage_item_input2_half2_score = :stage_item_input2_half2_score,
+            stage_item_input1_penalty_score = :stage_item_input1_penalty_score,
+            stage_item_input2_penalty_score = :stage_item_input2_penalty_score
+        WHERE matches.id = :match_id
+    """
+
+    await database.execute(
+        query=query,
+        values={
+            "match_id": match_id,
+            "stage_item_input1_score": (
+                match.stage_item_input1_score
+                if hockey_mode is HockeyMode.GAME_SHOOTOUT
+                else half1_score1 + half2_score1
+            ),
+            "stage_item_input2_score": (
+                match.stage_item_input2_score
+                if hockey_mode is HockeyMode.GAME_SHOOTOUT
+                else half1_score2 + half2_score2
+            ),
+            "stage_item_input1_half1_score": half1_score1,
+            "stage_item_input2_half1_score": half1_score2,
+            "stage_item_input1_half2_score": half2_score1,
+            "stage_item_input2_half2_score": half2_score2,
+            "stage_item_input1_penalty_score": penalty_score1,
+            "stage_item_input2_penalty_score": penalty_score2,
+        },
+    )
+
+
 async def sql_update_match(match_id: MatchId, match: MatchBody, tournament: Tournament) -> None:
+    current_match = await sql_get_match(match_id)
+    if tournament.hockey_mode is HockeyMode.GAME_SHOOTOUT:
+        score1 = (
+            match.stage_item_input1_score
+            if match.stage_item_input1_score is not None
+            else current_match.stage_item_input1_score
+        )
+        score2 = (
+            match.stage_item_input2_score
+            if match.stage_item_input2_score is not None
+            else current_match.stage_item_input2_score
+        )
+    else:
+        score1 = match.stage_item_input1_half1_score + match.stage_item_input1_half2_score
+        score2 = match.stage_item_input2_half1_score + match.stage_item_input2_half2_score
+
+    _ensure_score_update_allowed(
+        current_match,
+        {
+            "stage_item_input1_score": score1,
+            "stage_item_input2_score": score2,
+            "stage_item_input1_half1_score": match.stage_item_input1_half1_score,
+            "stage_item_input2_half1_score": match.stage_item_input2_half1_score,
+            "stage_item_input1_half2_score": match.stage_item_input1_half2_score,
+            "stage_item_input2_half2_score": match.stage_item_input2_half2_score,
+            "stage_item_input1_penalty_score": match.stage_item_input1_penalty_score,
+            "stage_item_input2_penalty_score": match.stage_item_input2_penalty_score,
+        },
+    )
+
     query = """
         UPDATE matches
         SET round_id = :round_id,
             stage_item_input1_score = :stage_item_input1_score,
             stage_item_input2_score = :stage_item_input2_score,
+            stage_item_input1_half1_score = :stage_item_input1_half1_score,
+            stage_item_input2_half1_score = :stage_item_input2_half1_score,
+            stage_item_input1_half2_score = :stage_item_input1_half2_score,
+            stage_item_input2_half2_score = :stage_item_input2_half2_score,
+            stage_item_input1_penalty_score = :stage_item_input1_penalty_score,
+            stage_item_input2_penalty_score = :stage_item_input2_penalty_score,
             court_id = :court_id,
+            start_time = COALESCE(:start_time, start_time),
             custom_duration_minutes = :custom_duration_minutes,
             custom_margin_minutes = :custom_margin_minutes,
             duration_minutes = :duration_minutes,
-            margin_minutes = :margin_minutes
+            margin_minutes = :margin_minutes,
+            status = COALESCE(:status, status),
+            ruleset_override = CASE
+                WHEN :ruleset_override_is_set THEN :ruleset_override
+                ELSE ruleset_override
+            END,
+            age_category_override = CASE
+                WHEN :age_category_override_is_set THEN :age_category_override
+                ELSE age_category_override
+            END,
+            ruleset_season_override = CASE
+                WHEN :ruleset_season_override_is_set THEN :ruleset_season_override
+                ELSE ruleset_season_override
+            END
         WHERE matches.id = :match_id
         RETURNING *
         """
@@ -111,9 +340,26 @@ async def sql_update_match(match_id: MatchId, match: MatchBody, tournament: Tour
         query=query,
         values={
             "match_id": match_id,
-            **match.model_dump(),
+            **match.model_dump(exclude={"status", "id"}),
+            "stage_item_input1_score": score1,
+            "stage_item_input2_score": score2,
+            "status": match.status.value if match.status is not None else None,
             "duration_minutes": duration_minutes,
             "margin_minutes": margin_minutes,
+            "ruleset_override_is_set": "ruleset_override" in match.model_fields_set,
+            "ruleset_override": (
+                match.ruleset_override.value if match.ruleset_override is not None else None
+            ),
+            "age_category_override_is_set": "age_category_override" in match.model_fields_set,
+            "age_category_override": (
+                match.age_category_override.value
+                if match.age_category_override is not None
+                else None
+            ),
+            "ruleset_season_override_is_set": (
+                "ruleset_season_override" in match.model_fields_set
+            ),
+            "ruleset_season_override": match.ruleset_season_override,
         },
     )
 
@@ -232,7 +478,14 @@ async def clear_scores_for_matches_in_stage_item(
     query = """
         UPDATE matches
         SET stage_item_input1_score = 0,
-            stage_item_input2_score = 0
+            stage_item_input2_score = 0,
+            stage_item_input1_half1_score = 0,
+            stage_item_input2_half1_score = 0,
+            stage_item_input1_half2_score = 0,
+            stage_item_input2_half2_score = 0,
+            stage_item_input1_penalty_score = 0,
+            stage_item_input2_penalty_score = 0,
+            status = 'PLANNED'
         FROM rounds
         JOIN stage_items ON rounds.stage_item_id = stage_items.id
         JOIN stages ON stages.id = stage_items.stage_id

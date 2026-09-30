@@ -1,17 +1,26 @@
 from bracket.database import database
 from bracket.models.db.club import Club, ClubCreateBody, ClubUpdateBody
+from bracket.models.db.user_x_club import UserXClubRelation
 from bracket.utils.id_types import ClubId, UserId
 from bracket.utils.types import assert_some
 
 
-async def sql_give_user_access_to_club(user_id: UserId, club_id: ClubId) -> None:
+async def sql_give_user_access_to_club(
+    user_id: UserId,
+    club_id: ClubId,
+    relation: UserXClubRelation = UserXClubRelation.OWNER,
+) -> None:
     query_many_to_many = """
         INSERT INTO users_x_clubs (club_id, user_id, relation)
-        VALUES (:club_id, :user_id, 'OWNER')
+        VALUES (:club_id, :user_id, :relation)
         """
     await database.execute(
         query=query_many_to_many,
-        values={"club_id": assert_some(club_id), "user_id": user_id},
+        values={
+            "club_id": assert_some(club_id),
+            "user_id": user_id,
+            "relation": relation.value,
+        },
     )
 
 
@@ -50,6 +59,11 @@ async def sql_delete_club(club_id: ClubId) -> None:
         WHERE id = :club_id
         """
     await database.execute(query=query, values={"club_id": club_id})
+
+
+async def get_all_clubs() -> list[Club]:
+    results = await database.fetch_all("SELECT * FROM clubs")
+    return [Club.model_validate(dict(result._mapping)) for result in results]
 
 
 async def get_clubs_for_user_id(user_id: UserId) -> list[Club]:
