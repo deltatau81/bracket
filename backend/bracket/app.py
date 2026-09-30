@@ -20,8 +20,10 @@ from bracket.routes import (
     auth,
     clubs,
     courts,
+    competitions,
     internals,
     matches,
+    match_events,
     players,
     rankings,
     rounds,
@@ -31,6 +33,7 @@ from bracket.routes import (
     teams,
     tournaments,
     users,
+    tournament_sponsors,
 )
 from bracket.utils.alembic import alembic_run_migrations
 from bracket.utils.asyncio import AsyncioTasksManager
@@ -66,8 +69,10 @@ routers = {
     "Auth": auth.router,
     "Clubs": clubs.router,
     "Courts": courts.router,
+    "Competitions": competitions.router,
     "Internals": internals.router,
     "Matches": matches.router,
+    "Match Events": match_events.router,
     "Players": players.router,
     "Rankings": rankings.router,
     "Rounds": rounds.router,
@@ -76,6 +81,7 @@ routers = {
     "Stages": stages.router,
     "Teams": teams.router,
     "Tournaments": tournaments.router,
+    "Tournament Sponsors": tournament_sponsors.router,
     "Users": users.router,
 }
 
