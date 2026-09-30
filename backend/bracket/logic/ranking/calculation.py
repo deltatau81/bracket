@@ -3,17 +3,85 @@ from collections import defaultdict
 from decimal import Decimal
 
 from bracket.logic.ranking.statistics import START_ELO, TeamStatistics
-from bracket.models.db.match import MatchWithDetailsDefinitive
+from bracket.models.db.match import MatchStatus, MatchWithDetailsDefinitive
 from bracket.models.db.ranking import Ranking
 from bracket.models.db.stage_item import StageType
+from bracket.models.db.tournament import HockeyMode
 from bracket.models.db.util import StageItemWithRounds
 from bracket.sql.rankings import get_ranking_for_stage_item
 from bracket.sql.teams import update_team_stats
+from bracket.sql.tournaments import sql_get_tournament
 from bracket.utils.id_types import StageItemInputId, TournamentId
 
 K = 32
 D = 400
 
+
+def get_part_points(team_score: int, opponent_score: int, win_points: Decimal, draw_points: Decimal) -> Decimal:
+    if team_score > opponent_score:
+        return win_points
+    if team_score == opponent_score:
+        return draw_points
+    return Decimal("0.0")
+
+
+def get_hockey_match_points(
+    match: MatchWithDetailsDefinitive,
+    is_team1: bool,
+) -> Decimal:
+    if is_team1:
+        half1_team = match.stage_item_input1_half1_score
+        half1_opponent = match.stage_item_input2_half1_score
+        half2_team = match.stage_item_input1_half2_score
+        half2_opponent = match.stage_item_input2_half2_score
+        penalty_team = match.stage_item_input1_penalty_score
+        penalty_opponent = match.stage_item_input2_penalty_score
+    else:
+        half1_team = match.stage_item_input2_half1_score
+        half1_opponent = match.stage_item_input1_half1_score
+        half2_team = match.stage_item_input2_half2_score
+        half2_opponent = match.stage_item_input1_half2_score
+        penalty_team = match.stage_item_input2_penalty_score
+        penalty_opponent = match.stage_item_input1_penalty_score
+
+    return (
+        get_part_points(
+            half1_team,
+            half1_opponent,
+            Decimal("2.0"),
+            Decimal("1.0"),
+        )
+        + get_part_points(
+            half2_team,
+            half2_opponent,
+            Decimal("2.0"),
+            Decimal("1.0"),
+        )
+        + get_part_points(
+            penalty_team,
+            penalty_opponent,
+            Decimal("1.0"),
+            Decimal("0.5"),
+        )
+    )
+
+
+def get_game_shootout_match_points(
+    match: MatchWithDetailsDefinitive,
+    is_team1: bool,
+) -> Decimal:
+    if is_team1:
+        game_team, game_opponent = match.stage_item_input1_score, match.stage_item_input2_score
+        shootout_team = match.stage_item_input1_penalty_score
+        shootout_opponent = match.stage_item_input2_penalty_score
+    else:
+        game_team, game_opponent = match.stage_item_input2_score, match.stage_item_input1_score
+        shootout_team = match.stage_item_input2_penalty_score
+        shootout_opponent = match.stage_item_input1_penalty_score
+
+    return get_part_points(game_team, game_opponent, Decimal("2"), Decimal("1")) + get_part_points(
+        shootout_team, shootout_opponent, Decimal("1"), Decimal("0.5")
+    )
 
 def set_statistics_for_stage_item_input(
     team_index: int,
@@ -22,6 +90,7 @@ def set_statistics_for_stage_item_input(
     stage_item_input_id: StageItemInputId,
     ranking: Ranking,
     stage_item: StageItemWithRounds,
+    hockey_mode: HockeyMode,
 ) -> None:
     is_team1 = team_index == 0
     team_score = match.stage_item_input1_score if is_team1 else match.stage_item_input2_score
@@ -32,15 +101,28 @@ def set_statistics_for_stage_item_input(
 
     if has_won:
         stats[stage_item_input_id].wins += 1
-        swiss_score_diff = ranking.win_points
     elif was_draw:
         stats[stage_item_input_id].draws += 1
-        swiss_score_diff = ranking.draw_points
     else:
         stats[stage_item_input_id].losses += 1
-        swiss_score_diff = ranking.loss_points
 
-    if ranking.add_score_points:
+    uses_fixed_hockey_scoring = (
+        stage_item.type == StageType.ROUND_ROBIN
+        and hockey_mode in {HockeyMode.COMPETITION, HockeyMode.GAME_SHOOTOUT}
+    )
+    if stage_item.type == StageType.ROUND_ROBIN and hockey_mode is HockeyMode.COMPETITION:
+        swiss_score_diff = get_hockey_match_points(match, is_team1)
+    elif stage_item.type == StageType.ROUND_ROBIN and hockey_mode is HockeyMode.GAME_SHOOTOUT:
+        swiss_score_diff = get_game_shootout_match_points(match, is_team1)
+    else:
+        if has_won:
+            swiss_score_diff = ranking.win_points
+        elif was_draw:
+            swiss_score_diff = ranking.draw_points
+        else:
+            swiss_score_diff = ranking.loss_points
+
+    if ranking.add_score_points and not uses_fixed_hockey_scoring:
         swiss_score_diff += (
             match.stage_item_input1_score if is_team1 else match.stage_item_input2_score
         )
@@ -63,6 +145,7 @@ def set_statistics_for_stage_item_input(
 def determine_ranking_for_stage_item(
     stage_item: StageItemWithRounds,
     ranking: Ranking,
+    hockey_mode: HockeyMode,
 ) -> defaultdict[StageItemInputId, TeamStatistics]:
     input_x_stats: defaultdict[StageItemInputId, TeamStatistics] = defaultdict(TeamStatistics)
 
@@ -75,7 +158,10 @@ def determine_ranking_for_stage_item(
         for round_ in stage_item.rounds
         if not round_.is_draft
         for match in round_.matches
-        if isinstance(match, MatchWithDetailsDefinitive)
+        if (
+            isinstance(match, MatchWithDetailsDefinitive)
+            and match.status == MatchStatus.FINISHED
+        )
     ]
     for match in matches:
         for team_index, stage_item_input in enumerate(match.stage_item_inputs):
@@ -86,6 +172,7 @@ def determine_ranking_for_stage_item(
                 stage_item_input.id,
                 ranking,
                 stage_item,
+                hockey_mode,
             )
 
     return input_x_stats
@@ -94,8 +181,9 @@ def determine_ranking_for_stage_item(
 def determine_team_ranking_for_stage_item(
     stage_item: StageItemWithRounds,
     ranking: Ranking,
+    hockey_mode: HockeyMode,
 ) -> list[tuple[StageItemInputId, TeamStatistics]]:
-    team_ranking = determine_ranking_for_stage_item(stage_item, ranking)
+    team_ranking = determine_ranking_for_stage_item(stage_item, ranking, hockey_mode)
     return sorted(team_ranking.items(), key=lambda x: x[1].points, reverse=True)
 
 
@@ -104,6 +192,7 @@ async def recalculate_ranking_for_stage_item(
     stage_item: StageItemWithRounds,
 ) -> None:
     ranking = await get_ranking_for_stage_item(tournament_id, stage_item.id)
+    tournament = await sql_get_tournament(tournament_id)
     assert stage_item, "Stage item not found"
     assert ranking, "Ranking not found"
 
@@ -113,7 +202,9 @@ async def recalculate_ranking_for_stage_item(
         if stage_item_input.team_id is not None
     }
 
-    elo_per_input = determine_ranking_for_stage_item(stage_item, ranking)
+    elo_per_input = determine_ranking_for_stage_item(
+        stage_item, ranking, tournament.hockey_mode
+    )
 
     for stage_item_input_id in team_x_stage_item_input_lookup.values():
         await update_team_stats(

@@ -21,6 +21,13 @@ def matches_overlap(match1: Match, match2: Match) -> bool:
     )
 
 
+def _match_input_identity(match: MatchWithDetailsDefinitive, side: int) -> tuple[str, int]:
+    stage_item_input = getattr(match, f"stage_item_input{side}")
+    if stage_item_input.team_id is not None:
+        return "team", stage_item_input.team_id
+    return "input", getattr(match, f"stage_item_input{side}_id")
+
+
 def get_conflicting_matches(
     stages: list[StageWithStageItems],
 ) -> tuple[
@@ -45,26 +52,23 @@ def get_conflicting_matches(
             if match1.id == match2.id:
                 continue
 
-            conflicting_input_ids = []
+            match1_inputs = [_match_input_identity(match1, side) for side in (1, 2)]
+            match2_inputs = [_match_input_identity(match2, side) for side in (1, 2)]
+            conflicting_sides = [
+                side2
+                for side2, input2 in enumerate(match2_inputs)
+                if input2 in match1_inputs
+            ]
 
-            if match2.stage_item_input1_id in match1.stage_item_input_ids:
-                conflicting_input_ids.append(match2.stage_item_input1_id)
-            if match2.stage_item_input2_id in match1.stage_item_input_ids:
-                conflicting_input_ids.append(match2.stage_item_input2_id)
-
-            if len(conflicting_input_ids) < 1:
+            if len(conflicting_sides) < 1:
                 continue
 
             if matches_overlap(match1, match2):
-                for match in (match1, match2):
-                    if not conflicts_to_set[match.id][0]:
-                        conflicts_to_set[match.id][0] = (
-                            match.stage_item_input1_id in conflicting_input_ids
-                        )
-                    if not conflicts_to_set[match.id][1]:
-                        conflicts_to_set[match.id][1] = (
-                            match.stage_item_input2_id in conflicting_input_ids
-                        )
+                for side2 in conflicting_sides:
+                    conflicts_to_set[match2.id][side2] = True
+                    for side1, input1 in enumerate(match1_inputs):
+                        if input1 == match2_inputs[side2]:
+                            conflicts_to_set[match1.id][side1] = True
 
                 matches_with_conflicts.add(match1.id)
                 matches_with_conflicts.add(match2.id)

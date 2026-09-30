@@ -74,13 +74,13 @@ async def build_single_elimination_stage_item(
     first_round = rounds[0]
 
     prev_matches = [
-        await sql_create_match(match)
+        await sql_create_match(match, tournament.hockey_mode)
         for match in determine_matches_first_round(first_round, stage_item, tournament)
     ]
 
     for round_ in rounds[1:]:
         prev_matches = [
-            await sql_create_match(match)
+            await sql_create_match(match, tournament.hockey_mode)
             for match in determine_matches_subsequent_round(prev_matches, round_, tournament)
         ]
 

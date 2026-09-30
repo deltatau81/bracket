@@ -57,8 +57,10 @@ regular_subscription = Subscription(
 )
 
 subscription_lookup = {
+    UserAccountType.ADMIN: regular_subscription,
     UserAccountType.DEMO: demo_subscription,
     UserAccountType.REGULAR: regular_subscription,
+    UserAccountType.SCORER: regular_subscription,
 }
 
 

@@ -61,7 +61,7 @@ async def build_round_robin_stage_item(
                     custom_duration_minutes=None,
                     custom_margin_minutes=None,
                 )
-                await sql_create_match(match)
+                await sql_create_match(match, tournament.hockey_mode)
 
 
 def get_number_of_rounds_to_create_round_robin(team_count: int) -> int:
