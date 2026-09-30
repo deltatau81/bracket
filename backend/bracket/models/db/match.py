@@ -1,13 +1,56 @@
 from decimal import Decimal
+from enum import auto
 
 from heliclockter import datetime_utc, timedelta
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from bracket.models.db.court import Court
 from bracket.models.db.shared import BaseModelORM
 from bracket.models.db.stage_item_inputs import StageItemInput
+from bracket.models.db.tournament import HockeyAgeCategory, HockeyRuleset, RulesetSeason
 from bracket.utils.id_types import CourtId, MatchId, RoundId, StageItemInputId
-from bracket.utils.types import assert_some
+from bracket.utils.types import EnumAutoStr, assert_some
+
+
+class MatchStatus(EnumAutoStr):
+    PLANNED = auto()
+    RUNNING = auto()
+    FINISHED = auto()
+
+
+class MatchPeriod(EnumAutoStr):
+    GAME = auto()
+    HALF1 = auto()
+    HALF2 = auto()
+    SHOOTOUT = auto()
+    PERIOD1 = auto()
+    PERIOD2 = auto()
+    PERIOD3 = auto()
+    OVERTIME = auto()
+
+
+class MatchPhaseState(EnumAutoStr):
+    ACTIVE = auto()
+    BREAK = auto()
+
+
+class MatchPhaseAction(EnumAutoStr):
+    START_MATCH = auto()
+    END_PERIOD = auto()
+    START_NEXT_PERIOD = auto()
+    START_OVERTIME = auto()
+    FINISH_MATCH = auto()
+    REOPEN_MATCH = auto()
+    RESUME_PERIOD = auto()
+
+
+class MatchScoreEntrySource(EnumAutoStr):
+    MANUAL = auto()
+    EVENTS = auto()
+
+
+class MatchPhaseBody(BaseModelORM):
+    action: MatchPhaseAction
 
 
 class MatchBaseInsertable(BaseModelORM):
@@ -21,9 +64,22 @@ class MatchBaseInsertable(BaseModelORM):
     round_id: RoundId
     stage_item_input1_score: int
     stage_item_input2_score: int
+    stage_item_input1_half1_score: int = 0
+    stage_item_input2_half1_score: int = 0
+    stage_item_input1_half2_score: int = 0
+    stage_item_input2_half2_score: int = 0
+    stage_item_input1_penalty_score: int = 0
+    stage_item_input2_penalty_score: int = 0
     court_id: CourtId | None = None
     stage_item_input1_conflict: bool
     stage_item_input2_conflict: bool
+    status: MatchStatus = MatchStatus.PLANNED
+    active_period: MatchPeriod | None = None
+    phase_state: MatchPhaseState | None = None
+    ruleset_override: HockeyRuleset | None = None
+    age_category_override: HockeyAgeCategory | None = None
+    ruleset_season_override: RulesetSeason | None = None
+    score_entry_source: MatchScoreEntrySource | None = None
 
     @property
     def end_time(self) -> datetime_utc:
@@ -44,6 +100,9 @@ class Match(MatchInsertable):
     stage_item_input2: StageItemInput | None = None
 
     def get_winner(self) -> StageItemInput | None:
+        if self.status != MatchStatus.FINISHED:
+            return None
+
         if self.stage_item_input1_score > self.stage_item_input2_score:
             return self.stage_item_input1
         if self.stage_item_input1_score < self.stage_item_input2_score:
@@ -88,14 +147,31 @@ class MatchWithDetailsDefinitive(Match):
 
 class MatchBody(BaseModelORM):
     round_id: RoundId
-    stage_item_input1_score: int = 0
-    stage_item_input2_score: int = 0
+    stage_item_input1_score: int | None = None
+    stage_item_input2_score: int | None = None
+    stage_item_input1_half1_score: int = 0
+    stage_item_input2_half1_score: int = 0
+    stage_item_input1_half2_score: int = 0
+    stage_item_input2_half2_score: int = 0
+    stage_item_input1_penalty_score: int = 0
+    stage_item_input2_penalty_score: int = 0
     court_id: CourtId | None = None
+    start_time: datetime_utc | None = None
     custom_duration_minutes: int | None = None
     custom_margin_minutes: int | None = None
+    status: MatchStatus | None = None
+    ruleset_override: HockeyRuleset | None = None
+    age_category_override: HockeyAgeCategory | None = None
+    ruleset_season_override: RulesetSeason | None = None
 
+
+class MatchUpdateBody(MatchBody):
+    model_config = ConfigDict(extra="forbid")
+
+    id: MatchId | None = None
 
 class MatchCreateBodyFrontend(BaseModelORM):
+
     round_id: RoundId
     court_id: CourtId | None = None
     stage_item_input1_id: StageItemInputId | None = None

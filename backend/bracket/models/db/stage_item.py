@@ -6,7 +6,7 @@ from pydantic import Field, model_validator
 
 from bracket.models.db.shared import BaseModelORM
 from bracket.models.db.stage_item_inputs import StageItemInputCreateBody
-from bracket.utils.id_types import RankingId, StageId, StageItemId
+from bracket.utils.id_types import RankingId, StageId, StageItemId, TeamId
 from bracket.utils.types import EnumAutoStr
 
 
@@ -27,6 +27,7 @@ class StageItemInsertable(BaseModelORM):
     type: StageType
     team_count: int = Field(ge=2, le=64)
     ranking_id: RankingId | None = None
+    is_youth_club_group: bool = False
 
 
 class StageItem(StageItemInsertable):
@@ -40,6 +41,10 @@ class StageItemUpdateBody(BaseModelORM):
 
 class StageItemActivateNextBody(BaseModelORM):
     adjust_to_time: datetime_utc | None = None
+
+
+class YouthScheduleCreateBody(BaseModelORM):
+    team_ids: list[TeamId]
 
 
 class StageItemCreateBody(BaseModelORM):
