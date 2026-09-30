@@ -17,3 +17,9 @@ backend/static
 backend/frontend-dist
 
 /process-compose.yml
+
+# Local development / deployment files
+.vscode/
+/backups/
+/static/
+/backend/Pipfile.lock
