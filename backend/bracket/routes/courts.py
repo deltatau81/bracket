@@ -10,6 +10,7 @@ from bracket.models.db.tournament import Tournament
 from bracket.models.db.user import UserPublic
 from bracket.routes.auth import (
     user_authenticated_for_tournament,
+    user_authenticated_for_tournament_admin,
     user_authenticated_or_public_dashboard,
 )
 from bracket.routes.models import CourtsResponse, SingleCourtResponse, SuccessResponse
@@ -37,7 +38,7 @@ async def update_court_by_id(
     tournament_id: TournamentId,
     court_id: CourtId,
     court_body: CourtBody,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> SingleCourtResponse:
     await update_court(
@@ -62,7 +63,7 @@ async def update_court_by_id(
 async def delete_court(
     tournament_id: TournamentId,
     court_id: CourtId,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> SuccessResponse:
     stages = await get_full_tournament_details(tournament_id, no_draft_rounds=False)
@@ -88,7 +89,7 @@ async def delete_court(
 async def create_court(
     court_body: CourtBody,
     tournament_id: TournamentId,
-    user: UserPublic = Depends(user_authenticated_for_tournament),
+    user: UserPublic = Depends(user_authenticated_for_tournament_admin),
     _: Tournament = Depends(disallow_archived_tournament),
 ) -> SingleCourtResponse:
     existing_courts = await get_all_courts_in_tournament(tournament_id)

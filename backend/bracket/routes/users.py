@@ -5,10 +5,12 @@ from heliclockter import datetime_utc, timedelta
 from starlette import status
 
 from bracket.config import config
+from bracket.database import database
 from bracket.logic.subscriptions import setup_demo_account
 from bracket.models.db.account import UserAccountType
 from bracket.models.db.user import (
     DemoUserToRegister,
+    UserAdminCreateBody,
     UserInsertable,
     UserPasswordToUpdate,
     UserPublic,
@@ -20,16 +22,25 @@ from bracket.routes.auth import (
     Token,
     create_access_token,
     user_authenticated,
+    user_authenticated_for_club_admin,
 )
-from bracket.routes.models import SuccessResponse, TokenResponse, UserPublicResponse
+from bracket.routes.models import (
+    SuccessResponse,
+    TokenResponse,
+    UserPublicResponse,
+    UsersResponse,
+)
 from bracket.sql.users import (
     check_whether_email_is_in_use,
     create_user,
     get_user_by_id,
+    get_users_for_club,
     update_user,
     update_user_password,
 )
-from bracket.utils.id_types import UserId
+from bracket.sql.clubs import sql_give_user_access_to_club
+from bracket.models.db.user_x_club import UserXClubRelation
+from bracket.utils.id_types import ClubId, UserId
 from bracket.utils.security import hash_password, verify_captcha_token
 from bracket.utils.types import assert_some
 
@@ -82,26 +93,9 @@ async def register_user(user_to_register: UserToRegister) -> TokenResponse:
     if not config.allow_user_registration:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Account creation is unavailable for now")
 
-    if not await verify_captcha_token(user_to_register.captcha_token):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Failed to validate captcha")
-
-    user = UserInsertable(
-        email=user_to_register.email,
-        password_hash=hash_password(user_to_register.password),
-        name=user_to_register.name,
-        created=datetime_utc.now(),
-        account_type=UserAccountType.REGULAR,
-    )
-    if await check_whether_email_is_in_use(user.email):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Email address already in use")
-
-    user_created = await create_user(user)
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"user": user_created.email}, expires_delta=access_token_expires
-    )
-    return TokenResponse(
-        data=Token(access_token=access_token, token_type="bearer", user_id=user_created.id)
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Public registration cannot create administrative accounts",
     )
 
 
@@ -134,4 +128,59 @@ async def register_demo_user(user_to_register: DemoUserToRegister) -> TokenRespo
     await setup_demo_account(user_created.id)
     return TokenResponse(
         data=Token(access_token=access_token, token_type="bearer", user_id=user_created.id)
+    )
+
+
+@router.get("/clubs/{club_id}/users", response_model=UsersResponse)
+async def get_club_users(
+    club_id: ClubId,
+    _: UserPublic = Depends(user_authenticated_for_club_admin),
+) -> UsersResponse:
+    return UsersResponse(data=await get_users_for_club(club_id))
+
+
+@router.post("/clubs/{club_id}/users", response_model=UserPublicResponse)
+async def create_club_user(
+    club_id: ClubId,
+    body: UserAdminCreateBody,
+    caller: UserPublic = Depends(user_authenticated_for_club_admin),
+) -> UserPublicResponse:
+    allowed_account_types = {
+        UserAccountType.REGULAR: {
+            UserAccountType.ADMIN,
+            UserAccountType.SCORER,
+        },
+        UserAccountType.ADMIN: {UserAccountType.SCORER},
+    }
+    if body.account_type not in allowed_account_types.get(caller.account_type, set()):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"{caller.account_type.value} cannot create {body.account_type.value} accounts",
+        )
+
+    if await check_whether_email_is_in_use(body.email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email address already in use",
+        )
+
+    async with database.transaction():
+        user = await create_user(
+            UserInsertable(
+                email=body.email,
+                name=body.name,
+                password_hash=hash_password(body.password),
+                created=datetime_utc.now(),
+                account_type=body.account_type,
+            )
+        )
+
+        await sql_give_user_access_to_club(
+            user.id,
+            club_id,
+            relation=UserXClubRelation.COLLABORATOR,
+        )
+
+    return UserPublicResponse(
+        data=UserPublic.model_validate(user)
     )

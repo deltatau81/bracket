@@ -10,7 +10,7 @@ from bracket.config import config
 from bracket.database import database
 from bracket.logic.planning.matches import update_start_times_of_matches
 from bracket.logic.subscriptions import check_requirement
-from bracket.logic.tournaments import get_tournament_logo_path
+from bracket.logic.tournaments import get_tournament_logo_path, sql_delete_tournament_completely
 from bracket.models.db.ranking import RankingCreateBody
 from bracket.models.db.tournament import (
     Tournament,
@@ -20,6 +20,8 @@ from bracket.models.db.tournament import (
 )
 from bracket.models.db.user import UserPublic
 from bracket.routes.auth import (
+    ensure_user_can_administer_club,
+    user_authenticated_for_tournament_admin,
     user_authenticated,
     user_authenticated_for_tournament,
     user_authenticated_or_public_dashboard,
@@ -28,37 +30,38 @@ from bracket.routes.auth import (
 from bracket.routes.models import SuccessResponse, TournamentResponse, TournamentsResponse
 from bracket.routes.util import disallow_archived_tournament
 from bracket.schema import tournaments
-from bracket.sql.rankings import (
-    get_all_rankings_in_tournament,
-    sql_create_ranking,
-    sql_delete_ranking,
-)
+from bracket.sql.rankings import sql_create_ranking
 from bracket.sql.tournaments import (
     sql_create_tournament,
-    sql_delete_tournament,
     sql_get_tournament,
     sql_get_tournament_by_endpoint_name,
     sql_get_tournaments,
     sql_update_tournament,
     sql_update_tournament_status,
 )
-from bracket.sql.users import get_user_access_to_club, get_which_clubs_has_user_access_to
-from bracket.utils.errors import (
-    ForeignKey,
-    UniqueIndex,
-    check_foreign_key_violation,
-    check_unique_constraint_violation,
-)
+from bracket.sql.users import get_which_clubs_has_user_access_to
+from bracket.utils.errors import UniqueIndex, check_unique_constraint_violation
 from bracket.utils.id_types import TournamentId
 from bracket.utils.logging import logger
 
 router = APIRouter(prefix=config.api_prefix)
-
 unauthorized_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="You don't have access to this tournament",
     headers={"WWW-Authenticate": "Bearer"},
 )
+
+
+def validate_immutable_tournament_fields(
+    tournament: Tournament, tournament_body: TournamentUpdateBody
+) -> None:
+    for field in ("hockey_mode", "ruleset", "age_category", "ruleset_season"):
+        requested_value = getattr(tournament_body, field)
+        if requested_value is not None and requested_value != getattr(tournament, field):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"{field} cannot be changed after tournament creation",
+            )
 
 
 @router.get("/tournaments/{tournament_id}", response_model=TournamentResponse)
@@ -103,9 +106,10 @@ async def get_tournaments(
 async def update_tournament_by_id(
     tournament_id: TournamentId,
     tournament_body: TournamentUpdateBody,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
-    __: Tournament = Depends(disallow_archived_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
+    tournament: Tournament = Depends(disallow_archived_tournament),
 ) -> SuccessResponse:
+    validate_immutable_tournament_fields(tournament, tournament_body)
     with check_unique_constraint_violation({UniqueIndex.ix_tournaments_dashboard_endpoint}):
         await sql_update_tournament(tournament_id, tournament_body)
 
@@ -115,21 +119,9 @@ async def update_tournament_by_id(
 
 @router.delete("/tournaments/{tournament_id}", response_model=SuccessResponse)
 async def delete_tournament(
-    tournament_id: TournamentId, _: UserPublic = Depends(user_authenticated_for_tournament)
+    tournament_id: TournamentId, _: UserPublic = Depends(user_authenticated_for_tournament_admin)
 ) -> SuccessResponse:
-    for ranking in await get_all_rankings_in_tournament(tournament_id):
-        await sql_delete_ranking(tournament_id, ranking.id)
-
-    with check_foreign_key_violation(
-        {
-            ForeignKey.stages_tournament_id_fkey,
-            ForeignKey.teams_tournament_id_fkey,
-            ForeignKey.players_tournament_id_fkey,
-            ForeignKey.courts_tournament_id_fkey,
-        }
-    ):
-        await sql_delete_tournament(tournament_id)
-
+    await sql_delete_tournament_completely(tournament_id)
     return SuccessResponse()
 
 
@@ -137,7 +129,7 @@ async def delete_tournament(
 async def change_status(
     tournament_id: TournamentId,
     body: TournamentChangeStatusBody,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
 ) -> SuccessResponse:
     """
     Make a tournament archived or non-archived.
@@ -159,16 +151,9 @@ async def change_status(
 async def create_tournament(
     tournament_to_insert: TournamentBody, user: UserPublic = Depends(user_authenticated)
 ) -> SuccessResponse:
+    await ensure_user_can_administer_club(user, tournament_to_insert.club_id)
     existing_tournaments = await sql_get_tournaments((tournament_to_insert.club_id,))
     check_requirement(existing_tournaments, user, "max_tournaments")
-
-    has_access_to_club = await get_user_access_to_club(tournament_to_insert.club_id, user.id)
-    if not has_access_to_club:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Club ID is invalid",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
 
     async with database.transaction():
         with check_unique_constraint_violation({UniqueIndex.ix_tournaments_dashboard_endpoint}):
@@ -184,7 +169,7 @@ async def create_tournament(
 async def upload_logo(
     tournament_id: TournamentId,
     file: UploadFile | None = None,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> TournamentResponse:
     old_logo_path = await get_tournament_logo_path(tournament_id)

@@ -4,14 +4,16 @@ from uuid import uuid4
 
 import aiofiles
 import aiofiles.os
-from fastapi import APIRouter, Depends, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from heliclockter import datetime_utc
+from starlette import status
 
 from bracket.config import config
 from bracket.database import database
 from bracket.logic.subscriptions import check_requirement
 from bracket.logic.teams import get_team_logo_path
 from bracket.models.db.player import PlayerBody
+from bracket.models.db.player_x_team import PlayerTeamAssignmentBody
 from bracket.models.db.team import (
     FullTeamWithPlayers,
     Team,
@@ -23,6 +25,7 @@ from bracket.models.db.tournament import Tournament
 from bracket.models.db.user import UserPublic
 from bracket.routes.auth import (
     user_authenticated_for_tournament,
+    user_authenticated_for_tournament_admin,
     user_authenticated_or_public_dashboard,
 )
 from bracket.routes.models import (
@@ -36,7 +39,7 @@ from bracket.routes.util import (
     team_dependency,
     team_with_players_dependency,
 )
-from bracket.schema import players_x_teams, teams
+from bracket.schema import clubs, players_x_teams, teams
 from bracket.sql.players import get_all_players_in_tournament, insert_player
 from bracket.sql.teams import (
     get_team_by_id,
@@ -47,7 +50,7 @@ from bracket.sql.teams import (
 from bracket.sql.validation import check_foreign_keys_belong_to_tournament
 from bracket.utils.db import fetch_one_parsed
 from bracket.utils.errors import ForeignKey, check_foreign_key_violation
-from bracket.utils.id_types import PlayerId, TeamId, TournamentId
+from bracket.utils.id_types import ClubId, PlayerId, TeamId, TournamentId
 from bracket.utils.logging import logger
 from bracket.utils.pagination import PaginationTeams
 from bracket.utils.types import assert_some
@@ -55,17 +58,56 @@ from bracket.utils.types import assert_some
 router = APIRouter(prefix=config.api_prefix)
 
 
+async def validate_participant_club_id(participant_club_id: ClubId | None) -> None:
+    if participant_club_id is None:
+        return
+
+    club_exists = await database.fetch_val(
+        clubs.select().with_only_columns(clubs.c.id).where(clubs.c.id == participant_club_id)
+    )
+    if club_exists is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not find Club(s) with ID {participant_club_id}",
+        )
+
+
 async def update_team_members(
-    team_id: TeamId, tournament_id: TournamentId, player_ids: set[PlayerId]
+    team_id: TeamId,
+    tournament_id: TournamentId,
+    player_ids: set[PlayerId],
+    player_assignments: list[PlayerTeamAssignmentBody] | None = None,
 ) -> None:
     [team] = await get_teams_with_members(tournament_id, team_id=team_id)
+    assignments = {assignment.player_id: assignment for assignment in player_assignments or []}
+
+    def assignment_values(assignment: PlayerTeamAssignmentBody) -> dict[str, int | str | None]:
+        return {"number": assignment.number, "position": assignment.position}
 
     # Add members to the team
     for player_id in player_ids:
         if player_id not in team.player_ids:
             await database.execute(
                 query=players_x_teams.insert(),
-                values={"team_id": team_id, "player_id": player_id},
+                values={
+                    "team_id": team_id,
+                    "player_id": player_id,
+                    **assignment_values(
+                        assignments.get(
+                            player_id, PlayerTeamAssignmentBody(player_id=player_id)
+                        )
+                    ),
+                },
+            )
+
+    for player_id, assignment in assignments.items():
+        if player_id in team.player_ids:
+            await database.execute(
+                query=players_x_teams.update().where(
+                    (players_x_teams.c.player_id == player_id)
+                    & (players_x_teams.c.team_id == team_id)
+                ),
+                values=assignment_values(assignment),
             )
 
     # Remove old members from the team
@@ -95,19 +137,26 @@ async def get_teams(
 async def update_team_by_id(
     tournament_id: TournamentId,
     team_body: TeamBody,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
     team: Team = Depends(team_dependency),
 ) -> SingleTeamResponse:
     await check_foreign_keys_belong_to_tournament(team_body, tournament_id)
+    await validate_participant_club_id(team_body.participant_club_id)
 
     await database.execute(
         query=teams.update().where(
             (teams.c.id == team.id) & (teams.c.tournament_id == tournament_id)
         ),
-        values=team_body.model_dump(exclude={"player_ids"}),
+        values=team_body.model_dump(exclude={"player_ids", "player_assignments"})
+        | {
+            "participant_club_id": team_body.participant_club_id,
+            "pairing_group": team_body.pairing_group,
+        },
     )
-    await update_team_members(team.id, tournament_id, team_body.player_ids)
+    await update_team_members(
+        team.id, tournament_id, team_body.player_ids, team_body.player_assignments
+    )
 
     return SingleTeamResponse(
         data=assert_some(
@@ -126,7 +175,7 @@ async def update_team_by_id(
 async def update_team_logo(
     tournament_id: TournamentId,
     file: UploadFile | None = None,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
     team: Team = Depends(team_dependency),
 ) -> SingleTeamResponse:
@@ -163,7 +212,7 @@ async def update_team_logo(
 @router.delete("/tournaments/{tournament_id}/teams/{team_id}", response_model=SuccessResponse)
 async def delete_team(
     tournament_id: TournamentId,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
     team: FullTeamWithPlayers = Depends(team_with_players_dependency),
 ) -> SuccessResponse:
@@ -183,10 +232,11 @@ async def delete_team(
 async def create_team(
     team_to_insert: TeamBody,
     tournament_id: TournamentId,
-    user: UserPublic = Depends(user_authenticated_for_tournament),
+    user: UserPublic = Depends(user_authenticated_for_tournament_admin),
     _: Tournament = Depends(disallow_archived_tournament),
 ) -> SingleTeamResponse:
     await check_foreign_keys_belong_to_tournament(team_to_insert, tournament_id)
+    await validate_participant_club_id(team_to_insert.participant_club_id)
 
     existing_teams = await get_teams_with_members(tournament_id)
     check_requirement(existing_teams, user, "max_teams")
@@ -194,12 +244,17 @@ async def create_team(
     last_record_id = await database.execute(
         query=teams.insert(),
         values=TeamInsertable(
-            **team_to_insert.model_dump(exclude={"player_ids"}),
+            **team_to_insert.model_dump(exclude={"player_ids", "player_assignments"}),
             created=datetime_utc.now(),
             tournament_id=tournament_id,
         ).model_dump(),
     )
-    await update_team_members(last_record_id, tournament_id, team_to_insert.player_ids)
+    await update_team_members(
+        last_record_id,
+        tournament_id,
+        team_to_insert.player_ids,
+        team_to_insert.player_assignments,
+    )
 
     team_result = await get_team_by_id(last_record_id, tournament_id)
     assert team_result is not None
@@ -210,7 +265,7 @@ async def create_team(
 async def create_multiple_teams(
     team_body: TeamMultiBody,
     tournament_id: TournamentId,
-    user: UserPublic = Depends(user_authenticated_for_tournament),
+    user: UserPublic = Depends(user_authenticated_for_tournament_admin),
     _: Tournament = Depends(disallow_archived_tournament),
 ) -> SuccessResponse:
     reader = list(csv.reader(team_body.names.split("\n"), delimiter=","))
@@ -226,6 +281,7 @@ async def create_multiple_teams(
 
     check_requirement(existing_teams, user, "max_teams", additions=len(reader))
     check_requirement(existing_players, user, "max_players", additions=len(players))
+    await validate_participant_club_id(team_body.participant_club_id)
 
     async with database.transaction():
         for team_name, players in teams_and_players:
@@ -234,6 +290,8 @@ async def create_multiple_teams(
                 values=TeamInsertable(
                     name=team_name,
                     active=team_body.active,
+                    participant_club_id=team_body.participant_club_id,
+                    pairing_group=team_body.pairing_group,
                     created=datetime_utc.now(),
                     tournament_id=tournament_id,
                 ).model_dump(),

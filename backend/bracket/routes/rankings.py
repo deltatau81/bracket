@@ -12,6 +12,7 @@ from bracket.models.db.tournament import Tournament
 from bracket.models.db.user import UserPublic
 from bracket.routes.auth import (
     user_authenticated_for_tournament,
+    user_authenticated_for_tournament_admin,
     user_authenticated_or_public_dashboard,
 )
 from bracket.routes.models import (
@@ -45,7 +46,7 @@ async def update_ranking_by_id(
     tournament_id: TournamentId,
     ranking_id: RankingId,
     ranking_body: RankingBody,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> SuccessResponse:
     await sql_update_ranking(
@@ -67,7 +68,7 @@ async def update_ranking_by_id(
 async def delete_ranking(
     tournament_id: TournamentId,
     ranking_id: RankingId,
-    _: UserPublic = Depends(user_authenticated_for_tournament),
+    _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> SuccessResponse:
     await sql_delete_ranking(tournament_id, ranking_id)
@@ -78,7 +79,7 @@ async def delete_ranking(
 async def create_ranking(
     ranking_body: RankingCreateBody,
     tournament_id: TournamentId,
-    user: UserPublic = Depends(user_authenticated_for_tournament),
+    user: UserPublic = Depends(user_authenticated_for_tournament_admin),
     _: Tournament = Depends(disallow_archived_tournament),
 ) -> SuccessResponse:
     existing_rankings = await get_all_rankings_in_tournament(tournament_id)
