@@ -52,7 +52,7 @@ class UserPasswordToUpdate(BaseModel):
 class UserAdminCreateBody(BaseModel):
     email: str
     name: str
-    password: constr(min_length=8, max_length=48)  # type: ignore[valid-type]
+    password: Annotated[str, StringConstraints(min_length=8, max_length=48)]
     account_type: UserAccountType
 
 
