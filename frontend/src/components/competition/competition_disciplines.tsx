@@ -14,6 +14,7 @@ import {
 import { useState } from 'react';
 
 import CompetitionScoring from '@components/competition/competition_scoring';
+import CompetitionOverallStandings from '@components/competition/tournament_overall_standings';
 import {
   AddDisciplineButton,
   DisciplineActions,
@@ -24,6 +25,7 @@ import {
   CompetitionRankedResult,
   CompetitionResult,
   CompetitionResultBody,
+  TournamentCompetitionFormat,
   Team,
 } from '@openapi';
 import {
@@ -421,9 +423,10 @@ type DisciplinesProps = {
   competitionId: number;
   teams?: Team[];
   mode?: 'manage' | 'results';
+  competitionFormat?: TournamentCompetitionFormat;
 };
 
-function CompetitionTeams({
+export function CompetitionTeams({
   tournamentId,
   offset = 0,
   teams = [],
@@ -463,6 +466,7 @@ function DisciplineList({
   teams,
   mode,
   mutateDisciplines,
+  competitionFormat,
 }: {
   tournamentId: number;
   competitionId: number;
@@ -470,6 +474,7 @@ function DisciplineList({
   teams: Team[];
   mode: 'manage' | 'results';
   mutateDisciplines: () => Promise<unknown>;
+  competitionFormat: TournamentCompetitionFormat;
 }) {
   const nextSortOrder =
     disciplines.length === 0 ? 0 : Math.max(...disciplines.map((item) => item.sort_order)) + 1;
@@ -538,6 +543,15 @@ function DisciplineList({
           ))}
         </Accordion>
       )}
+      {mode === 'results' && (
+        <CompetitionOverallStandings
+          tournamentId={tournamentId}
+          competitionId={competitionId}
+          disciplines={disciplines}
+          teams={teams}
+          competitionFormat={competitionFormat}
+        />
+      )}
     </Stack>
   );
 }
@@ -547,6 +561,7 @@ export default function CompetitionDisciplines({
   competitionId,
   teams,
   mode = 'manage',
+  competitionFormat = 'STANDARD',
 }: DisciplinesProps) {
   const response = getCompetitionDisciplines(tournamentId, competitionId);
   if (response.error)
@@ -564,6 +579,7 @@ export default function CompetitionDisciplines({
         teams={teamList}
         mode={mode}
         mutateDisciplines={response.mutate}
+        competitionFormat={competitionFormat}
       />
     );
   }

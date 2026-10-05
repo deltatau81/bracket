@@ -6,6 +6,7 @@ import {
   Flex,
   Grid,
   Group,
+  Loader,
   Stack,
   Text,
   Title,
@@ -16,6 +17,9 @@ import { IconAlertCircle } from '@tabler/icons-react';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import CompetitionDisciplines, {
+  CompetitionTeams,
+} from '@components/competition/competition_disciplines';
 import MatchModal from '@components/modals/match_modal';
 import { NoContent } from '@components/no_content/empty_table_info';
 import { Time, formatTime } from '@components/utils/datetime';
@@ -24,7 +28,7 @@ import { Translator } from '@components/utils/types';
 import { getTournamentIdFromRouter, responseIsValid } from '@components/utils/util';
 import { MatchWithDetails } from '@openapi';
 import TournamentLayout from '@pages/tournaments/_tournament_layout';
-import { getCourts, getStages } from '@services/adapter';
+import { getCompetitions, getCourts, getStages, getTournamentById } from '@services/adapter';
 import { getMatchLookup, getStageItemLookup, stringToColour } from '@services/lookups';
 
 function ScheduleRow({
@@ -224,6 +228,58 @@ function Schedule({
   );
 }
 
+function CompetitionResults({ tournamentId }: { tournamentId: number }) {
+  const competitions = getCompetitions(tournamentId);
+  const tournament = getTournamentById(tournamentId);
+  if (competitions.error) {
+    return (
+      <Alert mt="xl" color="red">
+        Die Competitions konnten nicht geladen werden.
+      </Alert>
+    );
+  }
+  if (!competitions.data) return <Loader mt="xl" />;
+  if (competitions.data.data.length === 0) return null;
+  if (tournament.error) {
+    return (
+      <Alert mt="xl" color="red">
+        Die Turniereinstellungen für die Competitions konnten nicht geladen werden.
+      </Alert>
+    );
+  }
+  if (!tournament.data) return <Loader mt="xl" />;
+  const competitionFormat = tournament.data.data.competition_format;
+  return (
+    <Stack mt="xl" gap="lg">
+      <Title order={2}>Technikwettbewerb</Title>
+      <CompetitionTeams
+        tournamentId={tournamentId}
+        render={(teams) => (
+          <Stack gap="lg">
+            {competitions.data?.data.map((competition) => (
+              <Card key={competition.id} withBorder radius="md" padding="lg">
+                <Title order={3}>{competition.name}</Title>
+                {competition.description && (
+                  <Text mt="xs" mb="md" c="dimmed">
+                    {competition.description}
+                  </Text>
+                )}
+                <CompetitionDisciplines
+                  tournamentId={tournamentId}
+                  competitionId={competition.id}
+                  teams={teams}
+                  mode="results"
+                  competitionFormat={competitionFormat}
+                />
+              </Card>
+            ))}
+          </Stack>
+        )}
+      />
+    </Stack>
+  );
+}
+
 export default function ResultsPage() {
   const [modalOpened, modalSetOpened] = useState(false);
   const [match, setMatch] = useState<MatchWithDetails | null>(null);
@@ -273,6 +329,7 @@ export default function ResultsPage() {
           openMatchModal={openMatchModal}
         />
       </Center>
+      <CompetitionResults key={tournamentData.id} tournamentId={tournamentData.id} />
     </TournamentLayout>
   );
 }
