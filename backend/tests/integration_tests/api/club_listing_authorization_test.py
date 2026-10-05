@@ -77,7 +77,7 @@ async def test_club_listing_role_matrix(
         club_listing_context["users"].get(user_key)
         or club_listing_context[user_key]
     )
-    headers = {"Authorization": f"Bearer {get_mock_token(user)}"}
+    headers = {"Authorization": f"Bearer {get_mock_token(user.email)}"}
 
     async with aiohttp.ClientSession() as session:
         async with session.get(get_root_uvicorn_url() + "clubs", headers=headers) as response:

@@ -84,14 +84,14 @@ async def validate_match_and_team(
         )
     if event_body is not None and event_body.team_id not in team_ids:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Event team is not a resolved participant of this match",
         )
     if event_body is not None and validate_period:
         tournament = await sql_get_tournament(tournament_id)
         if event_body.period not in ALLOWED_EVENT_PERIODS[tournament.hockey_mode]:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=(
                     f"Period {event_body.period.value} is not allowed for "
                     f"{tournament.hockey_mode.value} tournaments"
@@ -112,7 +112,7 @@ async def apply_player_snapshots(event_body: MatchEventBody) -> MatchEventBody:
         snapshot = await get_player_snapshot(player_id, event_body.team_id)
         if snapshot is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Player {player_id} does not belong to event team {event_body.team_id}",
             )
         player_name, player_number = snapshot
@@ -131,7 +131,7 @@ def effective_penalty_catalog(match: Match, tournament: Tournament) -> PenaltyCa
         )
     except UnsupportedPenaltyCatalogError as error:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(error),
         ) from error
 
@@ -153,7 +153,7 @@ def apply_penalty_snapshot(
     )
     if definition is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Unknown penalty code {event_body.penalty_code}",
         )
 
@@ -165,13 +165,13 @@ def apply_penalty_snapshot(
         )
     except ValueError as error:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Unknown penalty type {event_body.penalty_type}",
         ) from error
 
     if selected_type not in definition.allowed_penalty_types:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=(
                 f"Penalty type {selected_type.value} is not allowed for "
                 f"{definition.code}"
@@ -181,7 +181,7 @@ def apply_penalty_snapshot(
     if definition.code == "OTHER":
         if not event_body.infraction:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="OTHER/CUSTOM penalties require a manual infraction",
             )
         return event_body.model_copy(
@@ -229,7 +229,7 @@ def validate_game_time(event_body: MatchEventBody, tournament: Tournament) -> No
     ):
         return
     raise HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         detail="Game time is required for this event",
     )
 
@@ -250,7 +250,7 @@ async def apply_goal_contribution(event: MatchEventBody, match_id: MatchId, delt
         return
     if not await adjust_goal_score(match_id, event.team_id, event.period, delta):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=(
                 "Could not adjust goal score; verify the participant and that the score "
                 "cannot become negative"
@@ -318,7 +318,7 @@ async def create_event(
         or match.active_period is None
     ):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="New match events require a running match with an active period",
         )
 
@@ -326,7 +326,7 @@ async def create_event(
     active_period = MatchEventPeriod(match.active_period.value)
     if active_period not in ALLOWED_EVENT_PERIODS[tournament.hockey_mode]:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=(
                 f"Period {active_period.value} is not allowed for "
                 f"{tournament.hockey_mode.value} tournaments"

@@ -52,7 +52,7 @@ async def scorer_auth_context(
     )
 
     headers = {
-        "Authorization": f"Bearer {get_mock_token(mock_user)}",
+        "Authorization": f"Bearer {get_mock_token(mock_user.email)}",
     }
 
     async with (
@@ -90,7 +90,7 @@ async def test_supported_account_types_are_persisted_and_serialized(
     user = get_mock_user().model_copy(
         update={"account_type": account_type}
     )
-    headers = {"Authorization": f"Bearer {get_mock_token(user)}"}
+    headers = {"Authorization": f"Bearer {get_mock_token(user.email)}"}
 
     async with inserted_user(user):
         async with aiohttp.ClientSession() as session:

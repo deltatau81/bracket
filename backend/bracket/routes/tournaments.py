@@ -59,7 +59,7 @@ def validate_immutable_tournament_fields(
         requested_value = getattr(tournament_body, field)
         if requested_value is not None and requested_value != getattr(tournament, field):
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"{field} cannot be changed after tournament creation",
             )
 

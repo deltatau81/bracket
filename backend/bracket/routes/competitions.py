@@ -404,7 +404,7 @@ async def set_competition_scoring(
 
     if len(places) != len(set(places)):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Each place may only occur once",
         )
 
@@ -490,7 +490,7 @@ async def set_competition_result(
         and body.successes > body.attempts
     ):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Successes cannot be greater than attempts",
         )
 

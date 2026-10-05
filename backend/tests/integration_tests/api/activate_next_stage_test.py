@@ -1,7 +1,7 @@
 import pytest
 
 from bracket.logic.scheduling.builder import build_matches_for_stage_item
-from bracket.models.db.match import MatchBody, MatchWithDetailsDefinitive
+from bracket.models.db.match import MatchBody, MatchStatus, MatchWithDetailsDefinitive
 from bracket.models.db.stage_item import StageItemWithInputsCreate
 from bracket.models.db.stage_item_inputs import (
     StageItemInputCreateBodyFinal,
@@ -116,7 +116,14 @@ async def test_activate_next_stage(
         assert match1.stage_item_input2.team_id == team_inserted_2.id
         await sql_update_match(
             match1.id,
-            MatchBody(**match1.model_copy(update={"stage_item_input2_score": 42}).model_dump()),
+            MatchBody(
+                **match1.model_copy(
+                    update={
+                        "stage_item_input2_score": 42,
+                        "status": MatchStatus.FINISHED,
+                    }
+                ).model_dump()
+            ),
             auth_context.tournament,
         )
 

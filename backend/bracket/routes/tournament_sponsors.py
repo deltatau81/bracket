@@ -120,7 +120,7 @@ async def upload_tournament_sponsor_logo(
 
     if file.content_type not in SPONSOR_LOGO_CONTENT_TYPES:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Only PNG and JPEG sponsor logos are supported",
         )
 
@@ -128,14 +128,14 @@ async def upload_tournament_sponsor_logo(
     extension = os.path.splitext(file.filename)[1].lower()
     if extension not in (".png", ".jpg", ".jpeg"):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Only PNG and JPEG sponsor logos are supported",
         )
 
     content = await file.read(MAX_SPONSOR_LOGO_SIZE + 1)
     if len(content) > MAX_SPONSOR_LOGO_SIZE:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Sponsor logos may not exceed 5 MB",
         )
 

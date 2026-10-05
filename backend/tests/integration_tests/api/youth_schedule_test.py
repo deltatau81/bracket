@@ -48,12 +48,27 @@ async def delete_generated_stage_items(stage_id: int) -> None:
 async def create_youth_fixture(
     auth_context: AuthContext, club_count: int, groups: tuple[str, ...]
 ) -> tuple[AsyncExitStack, int, list[int]]:
+    original_competition_format = await database.fetch_val(
+        tournaments.select()
+        .with_only_columns(tournaments.c.competition_format)
+        .where(tournaments.c.id == auth_context.tournament.id)
+    )
+
     await database.execute(
         query=tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
         values={"competition_format": TournamentCompetitionFormat.YOUTH_CLUB.value},
     )
+
     stack = AsyncExitStack()
     await stack.__aenter__()
+
+    async def restore_competition_format() -> None:
+        await database.execute(
+            query=tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
+            values={"competition_format": original_competition_format},
+        )
+
+    stack.push_async_callback(restore_competition_format)
     stage = await stack.enter_async_context(
         inserted_stage(DUMMY_STAGE1.model_copy(update={"tournament_id": auth_context.tournament.id}))
     )
@@ -178,7 +193,6 @@ async def test_youth_schedule_rejects_invalid_team_metadata(
 ) -> None:
     stack, stage_id, team_ids = await create_youth_fixture(auth_context, 2, ("A", "B"))
     try:
-        team_rows = await database.fetch_all(teams.select().where(teams.c.id.in_(team_ids)))
         if mutation == "missing_club":
             await database.execute(
                 query=teams.update().where(teams.c.id == team_ids[0]),
@@ -190,10 +204,17 @@ async def test_youth_schedule_rejects_invalid_team_metadata(
                 values={"pairing_group": None if mutation == "null_group" else "  "},
             )
         else:
+            first_team_club_id = await database.fetch_val(
+                teams.select()
+                .with_only_columns(teams.c.participant_club_id)
+                .where(teams.c.id == team_ids[0])
+            )
+            assert first_team_club_id is not None
+
             await database.execute(
                 query=teams.update().where(teams.c.id == team_ids[2]),
                 values={
-                    "participant_club_id": team_rows[0]["participant_club_id"],
+                    "participant_club_id": first_team_club_id,
                     "pairing_group": "A",
                 },
             )

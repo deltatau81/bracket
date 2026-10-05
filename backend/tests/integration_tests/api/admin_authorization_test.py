@@ -62,7 +62,7 @@ async def authorization_context() -> AsyncIterator[dict[str, Any]]:
             )
             users[account_type] = {
                 "user": user,
-                "headers": {"Authorization": f"Bearer {get_mock_token(user)}"},
+                "headers": {"Authorization": f"Bearer {get_mock_token(user.email)}"},
             }
 
         for account_type in (

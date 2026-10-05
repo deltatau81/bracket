@@ -93,9 +93,30 @@ async def register_user(user_to_register: UserToRegister) -> TokenResponse:
     if not config.allow_user_registration:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Account creation is unavailable for now")
 
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Public registration cannot create administrative accounts",
+    if not await verify_captcha_token(user_to_register.captcha_token):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Failed to validate captcha")
+
+    user = UserInsertable(
+        email=user_to_register.email,
+        password_hash=hash_password(user_to_register.password),
+        name=user_to_register.name,
+        created=datetime_utc.now(),
+        account_type=UserAccountType.REGULAR,
+    )
+    if await check_whether_email_is_in_use(user.email):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Email address already in use")
+
+    user_created = await create_user(user)
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"user": user_created.email}, expires_delta=access_token_expires
+    )
+    return TokenResponse(
+        data=Token(
+            access_token=access_token,
+            token_type="bearer",
+            user_id=user_created.id,
+        )
     )
 
 
@@ -154,7 +175,7 @@ async def create_club_user(
     }
     if body.account_type not in allowed_account_types.get(caller.account_type, set()):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"{caller.account_type.value} cannot create {body.account_type.value} accounts",
         )
 

@@ -33,7 +33,7 @@ async def user_creation_context() -> AsyncIterator[dict[str, Any]]:
             )
             users[account_type] = {
                 "user": user,
-                "headers": {"Authorization": f"Bearer {get_mock_token(user)}"},
+                "headers": {"Authorization": f"Bearer {get_mock_token(user.email)}"},
             }
 
         await stack.enter_async_context(
@@ -119,6 +119,7 @@ async def test_public_registration_creates_no_admin_account(
     startup_and_shutdown_uvicorn_server: None,
 ) -> None:
     email = "public-registration@creation.test"
+
     async with aiohttp.ClientSession() as session:
         async with session.post(
             get_root_uvicorn_url() + "users/register",
@@ -130,9 +131,20 @@ async def test_public_registration_creates_no_admin_account(
             },
         ) as response:
             body = await response.json()
-            assert response.status == 403, body
-            assert body == {
-                "detail": "Public registration cannot create administrative accounts"
-            }
+            assert response.status == 200, body
 
-    assert not await check_whether_email_is_in_use(email)
+    created_user_id = body["data"]["user_id"]
+
+    try:
+        created_user = await database.fetch_one(
+            """
+            SELECT account_type
+            FROM users
+            WHERE id = :user_id
+            """,
+            values={"user_id": created_user_id},
+        )
+        assert created_user is not None
+        assert created_user["account_type"] == UserAccountType.REGULAR.value
+    finally:
+        await delete_user(created_user_id)

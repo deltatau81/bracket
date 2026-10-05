@@ -118,7 +118,7 @@ async def create_youth_schedule(
 ) -> SuccessResponse:
     if tournament.competition_format is not TournamentCompetitionFormat.YOUTH_CLUB:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Youth schedule generation requires YOUTH_CLUB competition format",
         )
 
@@ -128,14 +128,14 @@ async def create_youth_schedule(
 
     if len(youth_body.team_ids) != len(set(youth_body.team_ids)):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Selected team IDs must be unique",
         )
 
     teams = await get_teams_by_id(set(youth_body.team_ids), tournament_id)
     if len(teams) != len(youth_body.team_ids):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="All selected teams must belong to the tournament",
         )
 
@@ -143,12 +143,12 @@ async def create_youth_schedule(
     for team in teams:
         if team.participant_club_id is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Team {team.id} must have a participant club",
             )
         if team.pairing_group is None or not team.pairing_group.strip():
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Team {team.id} must have a pairing group",
             )
         teams_by_group.setdefault(team.pairing_group, []).append(team)
@@ -156,13 +156,13 @@ async def create_youth_schedule(
     for pairing_group, grouped_teams in teams_by_group.items():
         if len(grouped_teams) < 2:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Pairing group {pairing_group} must contain at least two teams",
             )
         clubs = [team.participant_club_id for team in grouped_teams]
         if len(clubs) != len(set(clubs)):
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Pairing group {pairing_group} contains a club more than once",
             )
 

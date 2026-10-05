@@ -197,7 +197,7 @@ async def transition_match_phase_by_id(
         )
     except MatchPhaseTransitionError as error:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=str(error),
         ) from error
 
@@ -248,7 +248,7 @@ async def update_match_by_id(
         }
         if match_body.status not in allowed_transitions[match.status]:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Invalid match status transition: {match.status} -> {match_body.status}",
             )
 
