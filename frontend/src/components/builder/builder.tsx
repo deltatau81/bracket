@@ -24,6 +24,7 @@ import { SWRResponse } from 'swr';
 
 import CreateStageButton from '@components/buttons/create_stage';
 import { CreateStageItemModal } from '@components/modals/create_stage_item';
+import CreateYouthScheduleModal from '@components/modals/create_youth_schedule';
 import { UpdateStageModal } from '@components/modals/update_stage';
 import { UpdateStageItemModal } from '@components/modals/update_stage_item';
 import { assert_not_none } from '@components/utils/assert';
@@ -452,6 +453,15 @@ function StageColumn({
         </Menu>
       </Group>
       {rows}
+      {tournament.competition_format === 'YOUTH_CLUB' ? (
+        <CreateYouthScheduleModal
+          tournamentId={tournament.id}
+          stageId={stage.id}
+          swrStagesResponse={swrStagesResponse}
+          swrAvailableInputsResponse={swrAvailableInputsResponse}
+          swrRankingsPerStageItemResponse={swrRankingsPerStageItemResponse}
+        />
+      ) : null}
       <CreateStageItemModal
         key={-1}
         tournament={tournament}

@@ -11,6 +11,16 @@ export async function createStageItem(
     .catch((response: any) => handleRequestError(response));
 }
 
+export async function createYouthSchedule(
+  tournament_id: number,
+  stage_id: number,
+  team_ids: number[],
+) {
+  return createAxios().post(`tournaments/${tournament_id}/stages/${stage_id}/youth_schedule`, {
+    team_ids,
+  });
+}
+
 export async function updateStageItem(
   tournament_id: number,
   stage_item_id: number,
