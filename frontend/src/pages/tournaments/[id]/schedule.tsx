@@ -7,13 +7,20 @@ import {
   Card,
   Grid,
   Group,
+  Loader,
   Menu,
   Stack,
   Text,
   Title,
 } from '@mantine/core';
 import { AiFillWarning } from '@react-icons/all-files/ai/AiFillWarning';
-import { IconAlertCircle, IconCalendarPlus, IconDots, IconTrash } from '@tabler/icons-react';
+import {
+  IconAlertCircle,
+  IconCalendarPlus,
+  IconDots,
+  IconTrash,
+  IconTrophy,
+} from '@tabler/icons-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SWRResponse } from 'swr';
@@ -26,9 +33,14 @@ import { formatMatchInput1, formatMatchInput2 } from '@components/utils/match';
 import { TournamentMinimal } from '@components/utils/tournament';
 import { Translator } from '@components/utils/types';
 import { getTournamentIdFromRouter, responseIsValid } from '@components/utils/util';
-import { Court, CourtsResponse, MatchWithDetails } from '@openapi';
+import { Competition, Court, CourtsResponse, MatchWithDetails } from '@openapi';
 import TournamentLayout from '@pages/tournaments/_tournament_layout';
-import { getCourts, getStages } from '@services/adapter';
+import {
+  getCompetitionDisciplines,
+  getCompetitions,
+  getCourts,
+  getStages,
+} from '@services/adapter';
 import { deleteCourt } from '@services/court';
 import {
   getMatchLookup,
@@ -38,6 +50,99 @@ import {
   stringToColour,
 } from '@services/lookups';
 import { rescheduleMatch, scheduleMatches } from '@services/match';
+
+function sortCompetitions(competitions: Competition[]): Competition[] {
+  return [...competitions].sort(
+    (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime() || a.id - b.id,
+  );
+}
+
+type ScheduleTimelineItem =
+  | { kind: 'match'; match: MatchWithDetails; index: number }
+  | { kind: 'competition'; competition: Competition };
+
+function mergeScheduleTimeline(
+  matches: MatchWithDetails[],
+  competitions: Competition[],
+): ScheduleTimelineItem[] {
+  const sortedCompetitions = sortCompetitions(competitions);
+  const items: ScheduleTimelineItem[] = [];
+  let competitionIndex = 0;
+  matches.forEach((match, index) => {
+    const startTime = match.start_time == null ? null : new Date(match.start_time).getTime();
+    while (
+      startTime != null &&
+      competitionIndex < sortedCompetitions.length &&
+      new Date(sortedCompetitions[competitionIndex].start_time).getTime() <= startTime
+    ) {
+      items.push({ kind: 'competition', competition: sortedCompetitions[competitionIndex] });
+      competitionIndex += 1;
+    }
+    // Drag-and-drop and the backend use match-only indices, not timeline indices.
+    items.push({ kind: 'match', match, index });
+  });
+  for (const competition of sortedCompetitions.slice(competitionIndex)) {
+    items.push({ kind: 'competition', competition });
+  }
+  return items;
+}
+
+function CompetitionCard({
+  competition,
+  tournamentId,
+}: {
+  competition: Competition;
+  tournamentId: number;
+}) {
+  const response = getCompetitionDisciplines(tournamentId, competition.id);
+  const disciplines = response.data?.data ?? [];
+  return (
+    <Card shadow="sm" padding="lg" radius="md" withBorder mt="md">
+      <Grid>
+        <Grid.Col span="auto">
+          <Group gap="xs">
+            <IconTrophy size="1.25rem" />
+            <Text fw={700}>{competition.name}</Text>
+            <Badge variant="light">Competition</Badge>
+          </Group>
+          {competition.description && (
+            <Text size="sm" c="dimmed" mt="xs">
+              {competition.description}
+            </Text>
+          )}
+          {response.error ? (
+            <Text size="sm" c="red" mt="sm" role="alert">
+              Die Disziplinen konnten nicht geladen werden.
+            </Text>
+          ) : !response.data ? (
+            <Loader size="xs" mt="sm" />
+          ) : disciplines.length > 0 ? (
+            <Stack gap={4} mt="sm">
+              {disciplines.map((discipline) => (
+                <Group key={discipline.id} gap="xs" justify="space-between" wrap="nowrap">
+                  <Text size="sm">{discipline.name}</Text>
+                  <Badge size="xs" variant="light">
+                    {discipline.metric_type}
+                  </Badge>
+                </Group>
+              ))}
+            </Stack>
+          ) : null}
+        </Grid.Col>
+        <Grid.Col span="content">
+          <Stack gap="xs" align="end">
+            <Badge variant="default" size="lg">
+              <Time datetime={competition.start_time} />
+            </Badge>
+            <Text size="sm" c="dimmed">
+              {competition.duration_minutes} Min.
+            </Text>
+          </Stack>
+        </Grid.Col>
+      </Grid>
+    </Card>
+  );
+}
 
 function ScheduleRow({
   index,
@@ -108,6 +213,7 @@ function ScheduleColumn({
   tournamentId,
   court,
   matches,
+  competitions,
   openMatchModal,
   stageItemsLookup,
   swrCourtsResponse,
@@ -116,22 +222,31 @@ function ScheduleColumn({
   tournamentId: number;
   court: Court;
   matches: MatchWithDetails[];
+  competitions: Competition[];
   openMatchModal: any;
   stageItemsLookup: any;
   swrCourtsResponse: SWRResponse<CourtsResponse>;
   matchesLookup: any;
 }) {
   const { t } = useTranslation();
-  const rows = matches.map((match: MatchWithDetails, index: number) => (
-    <ScheduleRow
-      index={index}
-      stageItemsLookup={stageItemsLookup}
-      matchesLookup={matchesLookup}
-      match={match}
-      openMatchModal={openMatchModal}
-      key={match.id}
-    />
-  ));
+  const rows = mergeScheduleTimeline(matches, competitions).map((item) =>
+    item.kind === 'competition' ? (
+      <CompetitionCard
+        key={`competition-${item.competition.id}`}
+        competition={item.competition}
+        tournamentId={tournamentId}
+      />
+    ) : (
+      <ScheduleRow
+        index={item.index}
+        stageItemsLookup={stageItemsLookup}
+        matchesLookup={matchesLookup}
+        match={item.match}
+        openMatchModal={openMatchModal}
+        key={item.match.id}
+      />
+    ),
+  );
 
   const noItemsAlert =
     matches.length < 1 ? (
@@ -193,6 +308,7 @@ function Schedule({
   stageItemsLookup,
   matchesLookup,
   schedule,
+  competitions,
   openMatchModal,
 }: {
   t: Translator;
@@ -201,6 +317,7 @@ function Schedule({
   stageItemsLookup: any;
   matchesLookup: any;
   schedule: { court: Court; matches: MatchWithDetails[] }[];
+  competitions: Competition[];
   openMatchModal: CallableFunction;
 }) {
   const columns = schedule.map((item) => (
@@ -212,6 +329,7 @@ function Schedule({
       key={item.court.id}
       court={item.court}
       matches={item.matches}
+      competitions={competitions.filter((competition) => competition.court_id === item.court.id)}
       openMatchModal={openMatchModal}
     />
   ));
@@ -253,6 +371,7 @@ export default function SchedulePage() {
   const { tournamentData } = getTournamentIdFromRouter();
   const swrStagesResponse = getStages(tournamentData.id);
   const swrCourtsResponse = getCourts(tournamentData.id);
+  const swrCompetitionsResponse = getCompetitions(tournamentData.id);
 
   const stageItemsLookup = responseIsValid(swrStagesResponse)
     ? getStageItemLookup(swrStagesResponse)
@@ -269,6 +388,13 @@ export default function SchedulePage() {
 
   if (!responseIsValid(swrStagesResponse)) return null;
   if (!responseIsValid(swrCourtsResponse)) return null;
+
+  const competitions = swrCompetitionsResponse.error
+    ? []
+    : (swrCompetitionsResponse.data?.data ?? []);
+  const tournamentCompetitions = sortCompetitions(
+    competitions.filter((competition) => competition.court_id == null),
+  );
 
   function openMatchModal(matchToOpen: MatchWithDetails) {
     setMatch(matchToOpen);
@@ -312,6 +438,20 @@ export default function SchedulePage() {
           )}
         </Grid.Col>
       </Grid>
+      {swrCompetitionsResponse.error ? (
+        <Alert color="red" mt="md">
+          Die Competitions konnten nicht geladen werden.
+        </Alert>
+      ) : !swrCompetitionsResponse.data ? (
+        <Loader mt="md" />
+      ) : null}
+      {tournamentCompetitions.map((competition) => (
+        <CompetitionCard
+          key={`competition-${competition.id}`}
+          competition={competition}
+          tournamentId={tournamentData.id}
+        />
+      ))}
       <Group grow mt="1rem">
         <DragDropContext
           onDragEnd={async ({ destination, source, draggableId: matchId }) => {
@@ -330,6 +470,7 @@ export default function SchedulePage() {
             tournament={tournamentData}
             swrCourtsResponse={swrCourtsResponse}
             schedule={data}
+            competitions={competitions}
             stageItemsLookup={stageItemsLookup}
             matchesLookup={matchesLookup}
             openMatchModal={openMatchModal}
