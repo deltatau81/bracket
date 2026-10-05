@@ -2,8 +2,10 @@
 
 import {
   type Client,
+  type ClientMeta,
   formDataBodySerializer,
   type Options as Options2,
+  type RequestResult,
   type TDataShape,
   urlSearchParamsBodySerializer,
 } from './client';
@@ -12,12 +14,27 @@ import type {
   ActivateNextStageTournamentsTournamentIdStagesActivatePostData,
   ActivateNextStageTournamentsTournamentIdStagesActivatePostErrors,
   ActivateNextStageTournamentsTournamentIdStagesActivatePostResponses,
+  CalculateCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdCalculatePostData,
+  CalculateCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdCalculatePostErrors,
+  CalculateCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdCalculatePostResponses,
   ChangeStatusTournamentsTournamentIdChangeStatusPostData,
   ChangeStatusTournamentsTournamentIdChangeStatusPostErrors,
   ChangeStatusTournamentsTournamentIdChangeStatusPostResponses,
+  CreateClubUserClubsClubIdUsersPostData,
+  CreateClubUserClubsClubIdUsersPostErrors,
+  CreateClubUserClubsClubIdUsersPostResponses,
+  CreateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesPostData,
+  CreateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesPostErrors,
+  CreateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesPostResponses,
+  CreateCompetitionRouteTournamentsTournamentIdCompetitionsPostData,
+  CreateCompetitionRouteTournamentsTournamentIdCompetitionsPostErrors,
+  CreateCompetitionRouteTournamentsTournamentIdCompetitionsPostResponses,
   CreateCourtTournamentsTournamentIdCourtsPostData,
   CreateCourtTournamentsTournamentIdCourtsPostErrors,
   CreateCourtTournamentsTournamentIdCourtsPostResponses,
+  CreateEventTournamentsTournamentIdMatchesMatchIdEventsPostData,
+  CreateEventTournamentsTournamentIdMatchesMatchIdEventsPostErrors,
+  CreateEventTournamentsTournamentIdMatchesMatchIdEventsPostResponses,
   CreateMatchTournamentsTournamentIdMatchesPostData,
   CreateMatchTournamentsTournamentIdMatchesPostErrors,
   CreateMatchTournamentsTournamentIdMatchesPostResponses,
@@ -48,15 +65,30 @@ import type {
   CreateTeamTournamentsTournamentIdTeamsPostData,
   CreateTeamTournamentsTournamentIdTeamsPostErrors,
   CreateTeamTournamentsTournamentIdTeamsPostResponses,
+  CreateTournamentSponsorRouteTournamentsTournamentIdSponsorsPostData,
+  CreateTournamentSponsorRouteTournamentsTournamentIdSponsorsPostErrors,
+  CreateTournamentSponsorRouteTournamentsTournamentIdSponsorsPostResponses,
   CreateTournamentTournamentsPostData,
   CreateTournamentTournamentsPostErrors,
   CreateTournamentTournamentsPostResponses,
+  CreateYouthScheduleTournamentsTournamentIdStagesStageIdYouthSchedulePostData,
+  CreateYouthScheduleTournamentsTournamentIdStagesStageIdYouthSchedulePostErrors,
+  CreateYouthScheduleTournamentsTournamentIdStagesStageIdYouthSchedulePostResponses,
   DeleteClubClubsClubIdDeleteData,
   DeleteClubClubsClubIdDeleteErrors,
   DeleteClubClubsClubIdDeleteResponses,
+  DeleteCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdDeleteData,
+  DeleteCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdDeleteErrors,
+  DeleteCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdDeleteResponses,
+  DeleteCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdDeleteData,
+  DeleteCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdDeleteErrors,
+  DeleteCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdDeleteResponses,
   DeleteCourtTournamentsTournamentIdCourtsCourtIdDeleteData,
   DeleteCourtTournamentsTournamentIdCourtsCourtIdDeleteErrors,
   DeleteCourtTournamentsTournamentIdCourtsCourtIdDeleteResponses,
+  DeleteEventTournamentsTournamentIdMatchesMatchIdEventsEventIdDeleteData,
+  DeleteEventTournamentsTournamentIdMatchesMatchIdEventsEventIdDeleteErrors,
+  DeleteEventTournamentsTournamentIdMatchesMatchIdEventsEventIdDeleteResponses,
   DeleteMatchTournamentsTournamentIdMatchesMatchIdDeleteData,
   DeleteMatchTournamentsTournamentIdMatchesMatchIdDeleteErrors,
   DeleteMatchTournamentsTournamentIdMatchesMatchIdDeleteResponses,
@@ -78,6 +110,9 @@ import type {
   DeleteTeamTournamentsTournamentIdTeamsTeamIdDeleteData,
   DeleteTeamTournamentsTournamentIdTeamsTeamIdDeleteErrors,
   DeleteTeamTournamentsTournamentIdTeamsTeamIdDeleteResponses,
+  DeleteTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdDeleteData,
+  DeleteTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdDeleteErrors,
+  DeleteTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdDeleteResponses,
   DeleteTournamentTournamentsTournamentIdDeleteData,
   DeleteTournamentTournamentsTournamentIdDeleteErrors,
   DeleteTournamentTournamentsTournamentIdDeleteResponses,
@@ -86,12 +121,33 @@ import type {
   GetAvailableInputsTournamentsTournamentIdAvailableInputsGetResponses,
   GetClubsClubsGetData,
   GetClubsClubsGetResponses,
+  GetClubUsersClubsClubIdUsersGetData,
+  GetClubUsersClubsClubIdUsersGetErrors,
+  GetClubUsersClubsClubIdUsersGetResponses,
+  GetCompetitionByIdTournamentsTournamentIdCompetitionsCompetitionIdGetData,
+  GetCompetitionByIdTournamentsTournamentIdCompetitionsCompetitionIdGetErrors,
+  GetCompetitionByIdTournamentsTournamentIdCompetitionsCompetitionIdGetResponses,
+  GetCompetitionDisciplinesTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesGetData,
+  GetCompetitionDisciplinesTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesGetErrors,
+  GetCompetitionDisciplinesTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesGetResponses,
+  GetCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsGetData,
+  GetCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsGetErrors,
+  GetCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsGetResponses,
+  GetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringGetData,
+  GetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringGetErrors,
+  GetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringGetResponses,
+  GetCompetitionsTournamentsTournamentIdCompetitionsGetData,
+  GetCompetitionsTournamentsTournamentIdCompetitionsGetErrors,
+  GetCompetitionsTournamentsTournamentIdCompetitionsGetResponses,
   GetCourtsTournamentsTournamentIdCourtsGetData,
   GetCourtsTournamentsTournamentIdCourtsGetErrors,
   GetCourtsTournamentsTournamentIdCourtsGetResponses,
   GetMatchesToScheduleTournamentsTournamentIdStageItemsStageItemIdUpcomingMatchesGetData,
   GetMatchesToScheduleTournamentsTournamentIdStageItemsStageItemIdUpcomingMatchesGetErrors,
   GetMatchesToScheduleTournamentsTournamentIdStageItemsStageItemIdUpcomingMatchesGetResponses,
+  GetMatchPenaltyCatalogTournamentsTournamentIdMatchesMatchIdPenaltiesCatalogGetData,
+  GetMatchPenaltyCatalogTournamentsTournamentIdMatchesMatchIdPenaltiesCatalogGetErrors,
+  GetMatchPenaltyCatalogTournamentsTournamentIdMatchesMatchIdPenaltiesCatalogGetResponses,
   GetMetricsMetricsGetData,
   GetMetricsMetricsGetResponses,
   GetMeUsersUserIdGetData,
@@ -100,6 +156,9 @@ import type {
   GetNextStageRankingsTournamentsTournamentIdNextStageRankingsGetData,
   GetNextStageRankingsTournamentsTournamentIdNextStageRankingsGetErrors,
   GetNextStageRankingsTournamentsTournamentIdNextStageRankingsGetResponses,
+  GetOverallStandingsTournamentsTournamentIdOverallStandingsGetData,
+  GetOverallStandingsTournamentsTournamentIdOverallStandingsGetErrors,
+  GetOverallStandingsTournamentsTournamentIdOverallStandingsGetResponses,
   GetPlayersTournamentsTournamentIdPlayersGetData,
   GetPlayersTournamentsTournamentIdPlayersGetErrors,
   GetPlayersTournamentsTournamentIdPlayersGetResponses,
@@ -120,11 +179,23 @@ import type {
   GetTournamentTournamentsTournamentIdGetResponses,
   GetUserUsersMeGetData,
   GetUserUsersMeGetResponses,
+  ListMatchEventsTournamentsTournamentIdMatchesMatchIdEventsGetData,
+  ListMatchEventsTournamentsTournamentIdMatchesMatchIdEventsGetErrors,
+  ListMatchEventsTournamentsTournamentIdMatchesMatchIdEventsGetResponses,
+  ListTournamentMatchEventsTournamentsTournamentIdEventsGetData,
+  ListTournamentMatchEventsTournamentsTournamentIdEventsGetErrors,
+  ListTournamentMatchEventsTournamentsTournamentIdEventsGetResponses,
+  ListTournamentSponsorsTournamentsTournamentIdSponsorsGetData,
+  ListTournamentSponsorsTournamentsTournamentIdSponsorsGetErrors,
+  ListTournamentSponsorsTournamentsTournamentIdSponsorsGetResponses,
   LoginForAccessTokenTokenPostData,
   LoginForAccessTokenTokenPostErrors,
   LoginForAccessTokenTokenPostResponses,
   PingPingGetData,
   PingPingGetResponses,
+  PlayerStatisticsTournamentsTournamentIdPlayerStatisticsGetData,
+  PlayerStatisticsTournamentsTournamentIdPlayerStatisticsGetErrors,
+  PlayerStatisticsTournamentsTournamentIdPlayerStatisticsGetResponses,
   PutUserPasswordUsersUserIdPasswordPutData,
   PutUserPasswordUsersUserIdPasswordPutErrors,
   PutUserPasswordUsersUserIdPasswordPutResponses,
@@ -140,21 +211,42 @@ import type {
   ScheduleMatchesTournamentsTournamentIdScheduleMatchesPostData,
   ScheduleMatchesTournamentsTournamentIdScheduleMatchesPostErrors,
   ScheduleMatchesTournamentsTournamentIdScheduleMatchesPostResponses,
+  SetCompetitionResultTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsPutData,
+  SetCompetitionResultTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsPutErrors,
+  SetCompetitionResultTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsPutResponses,
+  SetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringPutData,
+  SetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringPutErrors,
+  SetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringPutResponses,
   StartNextRoundTournamentsTournamentIdStageItemsStageItemIdStartNextRoundPostData,
   StartNextRoundTournamentsTournamentIdStageItemsStageItemIdStartNextRoundPostErrors,
   StartNextRoundTournamentsTournamentIdStageItemsStageItemIdStartNextRoundPostResponses,
+  TransitionMatchPhaseByIdTournamentsTournamentIdMatchesMatchIdPhasePostData,
+  TransitionMatchPhaseByIdTournamentsTournamentIdMatchesMatchIdPhasePostErrors,
+  TransitionMatchPhaseByIdTournamentsTournamentIdMatchesMatchIdPhasePostResponses,
   UpdateClubClubsClubIdPutData,
   UpdateClubClubsClubIdPutErrors,
   UpdateClubClubsClubIdPutResponses,
+  UpdateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdPutData,
+  UpdateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdPutErrors,
+  UpdateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdPutResponses,
+  UpdateCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdPutData,
+  UpdateCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdPutErrors,
+  UpdateCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdPutResponses,
   UpdateCourtByIdTournamentsTournamentIdCourtsCourtIdPutData,
   UpdateCourtByIdTournamentsTournamentIdCourtsCourtIdPutErrors,
   UpdateCourtByIdTournamentsTournamentIdCourtsCourtIdPutResponses,
+  UpdateEventTournamentsTournamentIdMatchesMatchIdEventsEventIdPutData,
+  UpdateEventTournamentsTournamentIdMatchesMatchIdEventsEventIdPutErrors,
+  UpdateEventTournamentsTournamentIdMatchesMatchIdEventsEventIdPutResponses,
   UpdateMatchByIdTournamentsTournamentIdMatchesMatchIdPutData,
   UpdateMatchByIdTournamentsTournamentIdMatchesMatchIdPutErrors,
   UpdateMatchByIdTournamentsTournamentIdMatchesMatchIdPutResponses,
   UpdatePlayerByIdTournamentsTournamentIdPlayersPlayerIdPutData,
   UpdatePlayerByIdTournamentsTournamentIdPlayersPlayerIdPutErrors,
   UpdatePlayerByIdTournamentsTournamentIdPlayersPlayerIdPutResponses,
+  UpdatePlayerTeamTournamentsTournamentIdPlayersPlayerIdTeamPutData,
+  UpdatePlayerTeamTournamentsTournamentIdPlayersPlayerIdTeamPutErrors,
+  UpdatePlayerTeamTournamentsTournamentIdPlayersPlayerIdTeamPutResponses,
   UpdateRankingByIdTournamentsTournamentIdRankingsRankingIdPutData,
   UpdateRankingByIdTournamentsTournamentIdRankingsRankingIdPutErrors,
   UpdateRankingByIdTournamentsTournamentIdRankingsRankingIdPutResponses,
@@ -179,18 +271,25 @@ import type {
   UpdateTournamentByIdTournamentsTournamentIdPutData,
   UpdateTournamentByIdTournamentsTournamentIdPutErrors,
   UpdateTournamentByIdTournamentsTournamentIdPutResponses,
+  UpdateTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdPutData,
+  UpdateTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdPutErrors,
+  UpdateTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdPutResponses,
   UpdateUserDetailsUsersUserIdPutData,
   UpdateUserDetailsUsersUserIdPutErrors,
   UpdateUserDetailsUsersUserIdPutResponses,
   UploadLogoTournamentsTournamentIdLogoPostData,
   UploadLogoTournamentsTournamentIdLogoPostErrors,
   UploadLogoTournamentsTournamentIdLogoPostResponses,
+  UploadTournamentSponsorLogoTournamentsTournamentIdSponsorsSponsorIdLogoPostData,
+  UploadTournamentSponsorLogoTournamentsTournamentIdSponsorsSponsorIdLogoPostErrors,
+  UploadTournamentSponsorLogoTournamentsTournamentIdSponsorsSponsorIdLogoPostResponses,
 } from './types.gen';
 
 export type Options<
   TData extends TDataShape = TDataShape,
   ThrowOnError extends boolean = boolean,
-> = Options2<TData, ThrowOnError> & {
+  TResponse = unknown,
+> = Options2<TData, ThrowOnError, TResponse> & {
   /**
    * You can provide a client instance returned by `createClient()` instead of
    * individual options. This might be also useful if you want to implement a
@@ -201,7 +300,7 @@ export type Options<
    * You can pass arbitrary values through the `meta` object. This can be
    * used to access values that aren't defined as part of the SDK function.
    */
-  meta?: Record<string, unknown>;
+  meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
 
 /**
@@ -209,7 +308,7 @@ export type Options<
  */
 export const getClubsClubsGet = <ThrowOnError extends boolean = false>(
   options?: Options<GetClubsClubsGetData, ThrowOnError>,
-) =>
+): RequestResult<GetClubsClubsGetResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<GetClubsClubsGetResponses, unknown, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -222,7 +321,7 @@ export const getClubsClubsGet = <ThrowOnError extends boolean = false>(
  */
 export const createNewClubClubsPost = <ThrowOnError extends boolean = false>(
   options: Options<CreateNewClubClubsPostData, ThrowOnError>,
-) =>
+): RequestResult<CreateNewClubClubsPostResponses, CreateNewClubClubsPostErrors, ThrowOnError> =>
   (options.client ?? client).post<
     CreateNewClubClubsPostResponses,
     CreateNewClubClubsPostErrors,
@@ -243,7 +342,11 @@ export const createNewClubClubsPost = <ThrowOnError extends boolean = false>(
  */
 export const deleteClubClubsClubIdDelete = <ThrowOnError extends boolean = false>(
   options: Options<DeleteClubClubsClubIdDeleteData, ThrowOnError>,
-) =>
+): RequestResult<
+  DeleteClubClubsClubIdDeleteResponses,
+  DeleteClubClubsClubIdDeleteErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).delete<
     DeleteClubClubsClubIdDeleteResponses,
     DeleteClubClubsClubIdDeleteErrors,
@@ -260,7 +363,7 @@ export const deleteClubClubsClubIdDelete = <ThrowOnError extends boolean = false
  */
 export const updateClubClubsClubIdPut = <ThrowOnError extends boolean = false>(
   options: Options<UpdateClubClubsClubIdPutData, ThrowOnError>,
-) =>
+): RequestResult<UpdateClubClubsClubIdPutResponses, UpdateClubClubsClubIdPutErrors, ThrowOnError> =>
   (options.client ?? client).put<
     UpdateClubClubsClubIdPutResponses,
     UpdateClubClubsClubIdPutErrors,
@@ -277,11 +380,57 @@ export const updateClubClubsClubIdPut = <ThrowOnError extends boolean = false>(
   });
 
 /**
+ * Get Club Users
+ */
+export const getClubUsersClubsClubIdUsersGet = <ThrowOnError extends boolean = false>(
+  options: Options<GetClubUsersClubsClubIdUsersGetData, ThrowOnError>,
+): RequestResult<
+  GetClubUsersClubsClubIdUsersGetResponses,
+  GetClubUsersClubsClubIdUsersGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    GetClubUsersClubsClubIdUsersGetResponses,
+    GetClubUsersClubsClubIdUsersGetErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/clubs/{club_id}/users',
+    ...options,
+  });
+
+/**
+ * Create Club User
+ */
+export const createClubUserClubsClubIdUsersPost = <ThrowOnError extends boolean = false>(
+  options: Options<CreateClubUserClubsClubIdUsersPostData, ThrowOnError>,
+): RequestResult<
+  CreateClubUserClubsClubIdUsersPostResponses,
+  CreateClubUserClubsClubIdUsersPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    CreateClubUserClubsClubIdUsersPostResponses,
+    CreateClubUserClubsClubIdUsersPostErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/clubs/{club_id}/users',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
  * Get Metrics
  */
 export const getMetricsMetricsGet = <ThrowOnError extends boolean = false>(
   options?: Options<GetMetricsMetricsGetData, ThrowOnError>,
-) =>
+): RequestResult<GetMetricsMetricsGetResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<GetMetricsMetricsGetResponses, unknown, ThrowOnError>({
     responseType: 'text',
     url: '/metrics',
@@ -293,7 +442,7 @@ export const getMetricsMetricsGet = <ThrowOnError extends boolean = false>(
  */
 export const pingPingGet = <ThrowOnError extends boolean = false>(
   options?: Options<PingPingGetData, ThrowOnError>,
-) =>
+): RequestResult<PingPingGetResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<PingPingGetResponses, unknown, ThrowOnError>({
     responseType: 'json',
     url: '/ping',
@@ -305,7 +454,11 @@ export const pingPingGet = <ThrowOnError extends boolean = false>(
  */
 export const loginForAccessTokenTokenPost = <ThrowOnError extends boolean = false>(
   options: Options<LoginForAccessTokenTokenPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  LoginForAccessTokenTokenPostResponses,
+  LoginForAccessTokenTokenPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     LoginForAccessTokenTokenPostResponses,
     LoginForAccessTokenTokenPostErrors,
@@ -326,7 +479,11 @@ export const loginForAccessTokenTokenPost = <ThrowOnError extends boolean = fals
  */
 export const getTournamentsTournamentsGet = <ThrowOnError extends boolean = false>(
   options?: Options<GetTournamentsTournamentsGetData, ThrowOnError>,
-) =>
+): RequestResult<
+  GetTournamentsTournamentsGetResponses,
+  GetTournamentsTournamentsGetErrors,
+  ThrowOnError
+> =>
   (options?.client ?? client).get<
     GetTournamentsTournamentsGetResponses,
     GetTournamentsTournamentsGetErrors,
@@ -343,7 +500,11 @@ export const getTournamentsTournamentsGet = <ThrowOnError extends boolean = fals
  */
 export const createTournamentTournamentsPost = <ThrowOnError extends boolean = false>(
   options: Options<CreateTournamentTournamentsPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateTournamentTournamentsPostResponses,
+  CreateTournamentTournamentsPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateTournamentTournamentsPostResponses,
     CreateTournamentTournamentsPostErrors,
@@ -364,7 +525,11 @@ export const createTournamentTournamentsPost = <ThrowOnError extends boolean = f
  */
 export const deleteTournamentTournamentsTournamentIdDelete = <ThrowOnError extends boolean = false>(
   options: Options<DeleteTournamentTournamentsTournamentIdDeleteData, ThrowOnError>,
-) =>
+): RequestResult<
+  DeleteTournamentTournamentsTournamentIdDeleteResponses,
+  DeleteTournamentTournamentsTournamentIdDeleteErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).delete<
     DeleteTournamentTournamentsTournamentIdDeleteResponses,
     DeleteTournamentTournamentsTournamentIdDeleteErrors,
@@ -381,7 +546,11 @@ export const deleteTournamentTournamentsTournamentIdDelete = <ThrowOnError exten
  */
 export const getTournamentTournamentsTournamentIdGet = <ThrowOnError extends boolean = false>(
   options: Options<GetTournamentTournamentsTournamentIdGetData, ThrowOnError>,
-) =>
+): RequestResult<
+  GetTournamentTournamentsTournamentIdGetResponses,
+  GetTournamentTournamentsTournamentIdGetErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     GetTournamentTournamentsTournamentIdGetResponses,
     GetTournamentTournamentsTournamentIdGetErrors,
@@ -399,7 +568,11 @@ export const updateTournamentByIdTournamentsTournamentIdPut = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<UpdateTournamentByIdTournamentsTournamentIdPutData, ThrowOnError>,
-) =>
+): RequestResult<
+  UpdateTournamentByIdTournamentsTournamentIdPutResponses,
+  UpdateTournamentByIdTournamentsTournamentIdPutErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     UpdateTournamentByIdTournamentsTournamentIdPutResponses,
     UpdateTournamentByIdTournamentsTournamentIdPutErrors,
@@ -422,7 +595,11 @@ export const getAvailableInputsTournamentsTournamentIdAvailableInputsGet = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<GetAvailableInputsTournamentsTournamentIdAvailableInputsGetData, ThrowOnError>,
-) =>
+): RequestResult<
+  GetAvailableInputsTournamentsTournamentIdAvailableInputsGetResponses,
+  GetAvailableInputsTournamentsTournamentIdAvailableInputsGetErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     GetAvailableInputsTournamentsTournamentIdAvailableInputsGetResponses,
     GetAvailableInputsTournamentsTournamentIdAvailableInputsGetErrors,
@@ -443,7 +620,11 @@ export const changeStatusTournamentsTournamentIdChangeStatusPost = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<ChangeStatusTournamentsTournamentIdChangeStatusPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  ChangeStatusTournamentsTournamentIdChangeStatusPostResponses,
+  ChangeStatusTournamentsTournamentIdChangeStatusPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     ChangeStatusTournamentsTournamentIdChangeStatusPostResponses,
     ChangeStatusTournamentsTournamentIdChangeStatusPostErrors,
@@ -460,11 +641,385 @@ export const changeStatusTournamentsTournamentIdChangeStatusPost = <
   });
 
 /**
+ * Get Competitions
+ */
+export const getCompetitionsTournamentsTournamentIdCompetitionsGet = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<GetCompetitionsTournamentsTournamentIdCompetitionsGetData, ThrowOnError>,
+): RequestResult<
+  GetCompetitionsTournamentsTournamentIdCompetitionsGetResponses,
+  GetCompetitionsTournamentsTournamentIdCompetitionsGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    GetCompetitionsTournamentsTournamentIdCompetitionsGetResponses,
+    GetCompetitionsTournamentsTournamentIdCompetitionsGetErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    url: '/tournaments/{tournament_id}/competitions',
+    ...options,
+  });
+
+/**
+ * Create Competition Route
+ */
+export const createCompetitionRouteTournamentsTournamentIdCompetitionsPost = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<CreateCompetitionRouteTournamentsTournamentIdCompetitionsPostData, ThrowOnError>,
+): RequestResult<
+  CreateCompetitionRouteTournamentsTournamentIdCompetitionsPostResponses,
+  CreateCompetitionRouteTournamentsTournamentIdCompetitionsPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    CreateCompetitionRouteTournamentsTournamentIdCompetitionsPostResponses,
+    CreateCompetitionRouteTournamentsTournamentIdCompetitionsPostErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/competitions',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Delete Competition Route
+ */
+export const deleteCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdDelete = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    DeleteCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdDeleteData,
+    ThrowOnError
+  >,
+): RequestResult<
+  DeleteCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdDeleteResponses,
+  DeleteCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdDeleteErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    DeleteCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdDeleteResponses,
+    DeleteCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdDeleteErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/competitions/{competition_id}',
+    ...options,
+  });
+
+/**
+ * Get Competition By Id
+ */
+export const getCompetitionByIdTournamentsTournamentIdCompetitionsCompetitionIdGet = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    GetCompetitionByIdTournamentsTournamentIdCompetitionsCompetitionIdGetData,
+    ThrowOnError
+  >,
+): RequestResult<
+  GetCompetitionByIdTournamentsTournamentIdCompetitionsCompetitionIdGetResponses,
+  GetCompetitionByIdTournamentsTournamentIdCompetitionsCompetitionIdGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    GetCompetitionByIdTournamentsTournamentIdCompetitionsCompetitionIdGetResponses,
+    GetCompetitionByIdTournamentsTournamentIdCompetitionsCompetitionIdGetErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    url: '/tournaments/{tournament_id}/competitions/{competition_id}',
+    ...options,
+  });
+
+/**
+ * Update Competition Route
+ */
+export const updateCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdPut = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    UpdateCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdPutData,
+    ThrowOnError
+  >,
+): RequestResult<
+  UpdateCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdPutResponses,
+  UpdateCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdPutErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).put<
+    UpdateCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdPutResponses,
+    UpdateCompetitionRouteTournamentsTournamentIdCompetitionsCompetitionIdPutErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/competitions/{competition_id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Get Competition Disciplines
+ */
+export const getCompetitionDisciplinesTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesGet =
+  <ThrowOnError extends boolean = false>(
+    options: Options<
+      GetCompetitionDisciplinesTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesGetData,
+      ThrowOnError
+    >,
+  ): RequestResult<
+    GetCompetitionDisciplinesTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesGetResponses,
+    GetCompetitionDisciplinesTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesGetErrors,
+    ThrowOnError
+  > =>
+    (options.client ?? client).get<
+      GetCompetitionDisciplinesTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesGetResponses,
+      GetCompetitionDisciplinesTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesGetErrors,
+      ThrowOnError
+    >({
+      responseType: 'json',
+      url: '/tournaments/{tournament_id}/competitions/{competition_id}/disciplines',
+      ...options,
+    });
+
+/**
+ * Create Competition Discipline
+ */
+export const createCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesPost =
+  <ThrowOnError extends boolean = false>(
+    options: Options<
+      CreateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesPostData,
+      ThrowOnError
+    >,
+  ): RequestResult<
+    CreateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesPostResponses,
+    CreateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesPostErrors,
+    ThrowOnError
+  > =>
+    (options.client ?? client).post<
+      CreateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesPostResponses,
+      CreateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesPostErrors,
+      ThrowOnError
+    >({
+      responseType: 'json',
+      security: [{ scheme: 'bearer', type: 'http' }],
+      url: '/tournaments/{tournament_id}/competitions/{competition_id}/disciplines',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+/**
+ * Delete Competition Discipline
+ */
+export const deleteCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdDelete =
+  <ThrowOnError extends boolean = false>(
+    options: Options<
+      DeleteCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdDeleteData,
+      ThrowOnError
+    >,
+  ): RequestResult<
+    DeleteCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdDeleteResponses,
+    DeleteCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdDeleteErrors,
+    ThrowOnError
+  > =>
+    (options.client ?? client).delete<
+      DeleteCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdDeleteResponses,
+      DeleteCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdDeleteErrors,
+      ThrowOnError
+    >({
+      responseType: 'json',
+      security: [{ scheme: 'bearer', type: 'http' }],
+      url: '/tournaments/{tournament_id}/competitions/{competition_id}/disciplines/{discipline_id}',
+      ...options,
+    });
+
+/**
+ * Update Competition Discipline
+ */
+export const updateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdPut =
+  <ThrowOnError extends boolean = false>(
+    options: Options<
+      UpdateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdPutData,
+      ThrowOnError
+    >,
+  ): RequestResult<
+    UpdateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdPutResponses,
+    UpdateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdPutErrors,
+    ThrowOnError
+  > =>
+    (options.client ?? client).put<
+      UpdateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdPutResponses,
+      UpdateCompetitionDisciplineTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdPutErrors,
+      ThrowOnError
+    >({
+      responseType: 'json',
+      security: [{ scheme: 'bearer', type: 'http' }],
+      url: '/tournaments/{tournament_id}/competitions/{competition_id}/disciplines/{discipline_id}',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+/**
+ * Calculate Competition Results
+ */
+export const calculateCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdCalculatePost =
+  <ThrowOnError extends boolean = false>(
+    options: Options<
+      CalculateCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdCalculatePostData,
+      ThrowOnError
+    >,
+  ): RequestResult<
+    CalculateCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdCalculatePostResponses,
+    CalculateCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdCalculatePostErrors,
+    ThrowOnError
+  > =>
+    (options.client ?? client).post<
+      CalculateCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdCalculatePostResponses,
+      CalculateCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdCalculatePostErrors,
+      ThrowOnError
+    >({
+      responseType: 'json',
+      security: [{ scheme: 'bearer', type: 'http' }],
+      url: '/tournaments/{tournament_id}/competitions/{competition_id}/disciplines/{discipline_id}/calculate',
+      ...options,
+    });
+
+/**
+ * Get Competition Results
+ */
+export const getCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsGet =
+  <ThrowOnError extends boolean = false>(
+    options: Options<
+      GetCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsGetData,
+      ThrowOnError
+    >,
+  ): RequestResult<
+    GetCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsGetResponses,
+    GetCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsGetErrors,
+    ThrowOnError
+  > =>
+    (options.client ?? client).get<
+      GetCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsGetResponses,
+      GetCompetitionResultsTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsGetErrors,
+      ThrowOnError
+    >({
+      responseType: 'json',
+      url: '/tournaments/{tournament_id}/competitions/{competition_id}/disciplines/{discipline_id}/results',
+      ...options,
+    });
+
+/**
+ * Set Competition Result
+ */
+export const setCompetitionResultTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsPut =
+  <ThrowOnError extends boolean = false>(
+    options: Options<
+      SetCompetitionResultTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsPutData,
+      ThrowOnError
+    >,
+  ): RequestResult<
+    SetCompetitionResultTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsPutResponses,
+    SetCompetitionResultTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsPutErrors,
+    ThrowOnError
+  > =>
+    (options.client ?? client).put<
+      SetCompetitionResultTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsPutResponses,
+      SetCompetitionResultTournamentsTournamentIdCompetitionsCompetitionIdDisciplinesDisciplineIdResultsPutErrors,
+      ThrowOnError
+    >({
+      responseType: 'json',
+      security: [{ scheme: 'bearer', type: 'http' }],
+      url: '/tournaments/{tournament_id}/competitions/{competition_id}/disciplines/{discipline_id}/results',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+/**
+ * Get Competition Scoring
+ */
+export const getCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringGet = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    GetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringGetData,
+    ThrowOnError
+  >,
+): RequestResult<
+  GetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringGetResponses,
+  GetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    GetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringGetResponses,
+    GetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringGetErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    url: '/tournaments/{tournament_id}/competitions/{competition_id}/scoring',
+    ...options,
+  });
+
+/**
+ * Set Competition Scoring
+ */
+export const setCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringPut = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    SetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringPutData,
+    ThrowOnError
+  >,
+): RequestResult<
+  SetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringPutResponses,
+  SetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringPutErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).put<
+    SetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringPutResponses,
+    SetCompetitionScoringTournamentsTournamentIdCompetitionsCompetitionIdScoringPutErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/competitions/{competition_id}/scoring',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
  * Get Courts
  */
 export const getCourtsTournamentsTournamentIdCourtsGet = <ThrowOnError extends boolean = false>(
   options: Options<GetCourtsTournamentsTournamentIdCourtsGetData, ThrowOnError>,
-) =>
+): RequestResult<
+  GetCourtsTournamentsTournamentIdCourtsGetResponses,
+  GetCourtsTournamentsTournamentIdCourtsGetErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     GetCourtsTournamentsTournamentIdCourtsGetResponses,
     GetCourtsTournamentsTournamentIdCourtsGetErrors,
@@ -480,7 +1035,11 @@ export const getCourtsTournamentsTournamentIdCourtsGet = <ThrowOnError extends b
  */
 export const createCourtTournamentsTournamentIdCourtsPost = <ThrowOnError extends boolean = false>(
   options: Options<CreateCourtTournamentsTournamentIdCourtsPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateCourtTournamentsTournamentIdCourtsPostResponses,
+  CreateCourtTournamentsTournamentIdCourtsPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateCourtTournamentsTournamentIdCourtsPostResponses,
     CreateCourtTournamentsTournamentIdCourtsPostErrors,
@@ -503,7 +1062,11 @@ export const deleteCourtTournamentsTournamentIdCourtsCourtIdDelete = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<DeleteCourtTournamentsTournamentIdCourtsCourtIdDeleteData, ThrowOnError>,
-) =>
+): RequestResult<
+  DeleteCourtTournamentsTournamentIdCourtsCourtIdDeleteResponses,
+  DeleteCourtTournamentsTournamentIdCourtsCourtIdDeleteErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).delete<
     DeleteCourtTournamentsTournamentIdCourtsCourtIdDeleteResponses,
     DeleteCourtTournamentsTournamentIdCourtsCourtIdDeleteErrors,
@@ -522,7 +1085,11 @@ export const updateCourtByIdTournamentsTournamentIdCourtsCourtIdPut = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<UpdateCourtByIdTournamentsTournamentIdCourtsCourtIdPutData, ThrowOnError>,
-) =>
+): RequestResult<
+  UpdateCourtByIdTournamentsTournamentIdCourtsCourtIdPutResponses,
+  UpdateCourtByIdTournamentsTournamentIdCourtsCourtIdPutErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     UpdateCourtByIdTournamentsTournamentIdCourtsCourtIdPutResponses,
     UpdateCourtByIdTournamentsTournamentIdCourtsCourtIdPutErrors,
@@ -539,11 +1106,37 @@ export const updateCourtByIdTournamentsTournamentIdCourtsCourtIdPut = <
   });
 
 /**
+ * List Tournament Match Events
+ */
+export const listTournamentMatchEventsTournamentsTournamentIdEventsGet = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<ListTournamentMatchEventsTournamentsTournamentIdEventsGetData, ThrowOnError>,
+): RequestResult<
+  ListTournamentMatchEventsTournamentsTournamentIdEventsGetResponses,
+  ListTournamentMatchEventsTournamentsTournamentIdEventsGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    ListTournamentMatchEventsTournamentsTournamentIdEventsGetResponses,
+    ListTournamentMatchEventsTournamentsTournamentIdEventsGetErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    url: '/tournaments/{tournament_id}/events',
+    ...options,
+  });
+
+/**
  * Upload Logo
  */
 export const uploadLogoTournamentsTournamentIdLogoPost = <ThrowOnError extends boolean = false>(
   options: Options<UploadLogoTournamentsTournamentIdLogoPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  UploadLogoTournamentsTournamentIdLogoPostResponses,
+  UploadLogoTournamentsTournamentIdLogoPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     UploadLogoTournamentsTournamentIdLogoPostResponses,
     UploadLogoTournamentsTournamentIdLogoPostErrors,
@@ -565,7 +1158,11 @@ export const uploadLogoTournamentsTournamentIdLogoPost = <ThrowOnError extends b
  */
 export const createMatchTournamentsTournamentIdMatchesPost = <ThrowOnError extends boolean = false>(
   options: Options<CreateMatchTournamentsTournamentIdMatchesPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateMatchTournamentsTournamentIdMatchesPostResponses,
+  CreateMatchTournamentsTournamentIdMatchesPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateMatchTournamentsTournamentIdMatchesPostResponses,
     CreateMatchTournamentsTournamentIdMatchesPostErrors,
@@ -588,7 +1185,11 @@ export const deleteMatchTournamentsTournamentIdMatchesMatchIdDelete = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<DeleteMatchTournamentsTournamentIdMatchesMatchIdDeleteData, ThrowOnError>,
-) =>
+): RequestResult<
+  DeleteMatchTournamentsTournamentIdMatchesMatchIdDeleteResponses,
+  DeleteMatchTournamentsTournamentIdMatchesMatchIdDeleteErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).delete<
     DeleteMatchTournamentsTournamentIdMatchesMatchIdDeleteResponses,
     DeleteMatchTournamentsTournamentIdMatchesMatchIdDeleteErrors,
@@ -607,7 +1208,11 @@ export const updateMatchByIdTournamentsTournamentIdMatchesMatchIdPut = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<UpdateMatchByIdTournamentsTournamentIdMatchesMatchIdPutData, ThrowOnError>,
-) =>
+): RequestResult<
+  UpdateMatchByIdTournamentsTournamentIdMatchesMatchIdPutResponses,
+  UpdateMatchByIdTournamentsTournamentIdMatchesMatchIdPutErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     UpdateMatchByIdTournamentsTournamentIdMatchesMatchIdPutResponses,
     UpdateMatchByIdTournamentsTournamentIdMatchesMatchIdPutErrors,
@@ -616,6 +1221,168 @@ export const updateMatchByIdTournamentsTournamentIdMatchesMatchIdPut = <
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/tournaments/{tournament_id}/matches/{match_id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * List Match Events
+ */
+export const listMatchEventsTournamentsTournamentIdMatchesMatchIdEventsGet = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<ListMatchEventsTournamentsTournamentIdMatchesMatchIdEventsGetData, ThrowOnError>,
+): RequestResult<
+  ListMatchEventsTournamentsTournamentIdMatchesMatchIdEventsGetResponses,
+  ListMatchEventsTournamentsTournamentIdMatchesMatchIdEventsGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    ListMatchEventsTournamentsTournamentIdMatchesMatchIdEventsGetResponses,
+    ListMatchEventsTournamentsTournamentIdMatchesMatchIdEventsGetErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/matches/{match_id}/events',
+    ...options,
+  });
+
+/**
+ * Create Event
+ */
+export const createEventTournamentsTournamentIdMatchesMatchIdEventsPost = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<CreateEventTournamentsTournamentIdMatchesMatchIdEventsPostData, ThrowOnError>,
+): RequestResult<
+  CreateEventTournamentsTournamentIdMatchesMatchIdEventsPostResponses,
+  CreateEventTournamentsTournamentIdMatchesMatchIdEventsPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    CreateEventTournamentsTournamentIdMatchesMatchIdEventsPostResponses,
+    CreateEventTournamentsTournamentIdMatchesMatchIdEventsPostErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/matches/{match_id}/events',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Delete Event
+ */
+export const deleteEventTournamentsTournamentIdMatchesMatchIdEventsEventIdDelete = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    DeleteEventTournamentsTournamentIdMatchesMatchIdEventsEventIdDeleteData,
+    ThrowOnError
+  >,
+): RequestResult<
+  DeleteEventTournamentsTournamentIdMatchesMatchIdEventsEventIdDeleteResponses,
+  DeleteEventTournamentsTournamentIdMatchesMatchIdEventsEventIdDeleteErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    DeleteEventTournamentsTournamentIdMatchesMatchIdEventsEventIdDeleteResponses,
+    DeleteEventTournamentsTournamentIdMatchesMatchIdEventsEventIdDeleteErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/matches/{match_id}/events/{event_id}',
+    ...options,
+  });
+
+/**
+ * Update Event
+ */
+export const updateEventTournamentsTournamentIdMatchesMatchIdEventsEventIdPut = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    UpdateEventTournamentsTournamentIdMatchesMatchIdEventsEventIdPutData,
+    ThrowOnError
+  >,
+): RequestResult<
+  UpdateEventTournamentsTournamentIdMatchesMatchIdEventsEventIdPutResponses,
+  UpdateEventTournamentsTournamentIdMatchesMatchIdEventsEventIdPutErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).put<
+    UpdateEventTournamentsTournamentIdMatchesMatchIdEventsEventIdPutResponses,
+    UpdateEventTournamentsTournamentIdMatchesMatchIdEventsEventIdPutErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/matches/{match_id}/events/{event_id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Get Match Penalty Catalog
+ */
+export const getMatchPenaltyCatalogTournamentsTournamentIdMatchesMatchIdPenaltiesCatalogGet = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    GetMatchPenaltyCatalogTournamentsTournamentIdMatchesMatchIdPenaltiesCatalogGetData,
+    ThrowOnError
+  >,
+): RequestResult<
+  GetMatchPenaltyCatalogTournamentsTournamentIdMatchesMatchIdPenaltiesCatalogGetResponses,
+  GetMatchPenaltyCatalogTournamentsTournamentIdMatchesMatchIdPenaltiesCatalogGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    GetMatchPenaltyCatalogTournamentsTournamentIdMatchesMatchIdPenaltiesCatalogGetResponses,
+    GetMatchPenaltyCatalogTournamentsTournamentIdMatchesMatchIdPenaltiesCatalogGetErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/matches/{match_id}/penalties/catalog',
+    ...options,
+  });
+
+/**
+ * Transition Match Phase By Id
+ */
+export const transitionMatchPhaseByIdTournamentsTournamentIdMatchesMatchIdPhasePost = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    TransitionMatchPhaseByIdTournamentsTournamentIdMatchesMatchIdPhasePostData,
+    ThrowOnError
+  >,
+): RequestResult<
+  TransitionMatchPhaseByIdTournamentsTournamentIdMatchesMatchIdPhasePostResponses,
+  TransitionMatchPhaseByIdTournamentsTournamentIdMatchesMatchIdPhasePostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    TransitionMatchPhaseByIdTournamentsTournamentIdMatchesMatchIdPhasePostResponses,
+    TransitionMatchPhaseByIdTournamentsTournamentIdMatchesMatchIdPhasePostErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/matches/{match_id}/phase',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -633,7 +1400,11 @@ export const rescheduleMatchTournamentsTournamentIdMatchesMatchIdReschedulePost 
     RescheduleMatchTournamentsTournamentIdMatchesMatchIdReschedulePostData,
     ThrowOnError
   >,
-) =>
+): RequestResult<
+  RescheduleMatchTournamentsTournamentIdMatchesMatchIdReschedulePostResponses,
+  RescheduleMatchTournamentsTournamentIdMatchesMatchIdReschedulePostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     RescheduleMatchTournamentsTournamentIdMatchesMatchIdReschedulePostResponses,
     RescheduleMatchTournamentsTournamentIdMatchesMatchIdReschedulePostErrors,
@@ -661,7 +1432,11 @@ export const getNextStageRankingsTournamentsTournamentIdNextStageRankingsGet = <
     GetNextStageRankingsTournamentsTournamentIdNextStageRankingsGetData,
     ThrowOnError
   >,
-) =>
+): RequestResult<
+  GetNextStageRankingsTournamentsTournamentIdNextStageRankingsGetResponses,
+  GetNextStageRankingsTournamentsTournamentIdNextStageRankingsGetErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     GetNextStageRankingsTournamentsTournamentIdNextStageRankingsGetResponses,
     GetNextStageRankingsTournamentsTournamentIdNextStageRankingsGetErrors,
@@ -674,11 +1449,59 @@ export const getNextStageRankingsTournamentsTournamentIdNextStageRankingsGet = <
   });
 
 /**
+ * Get Overall Standings
+ */
+export const getOverallStandingsTournamentsTournamentIdOverallStandingsGet = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<GetOverallStandingsTournamentsTournamentIdOverallStandingsGetData, ThrowOnError>,
+): RequestResult<
+  GetOverallStandingsTournamentsTournamentIdOverallStandingsGetResponses,
+  GetOverallStandingsTournamentsTournamentIdOverallStandingsGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    GetOverallStandingsTournamentsTournamentIdOverallStandingsGetResponses,
+    GetOverallStandingsTournamentsTournamentIdOverallStandingsGetErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    url: '/tournaments/{tournament_id}/overall_standings',
+    ...options,
+  });
+
+/**
+ * Player Statistics
+ */
+export const playerStatisticsTournamentsTournamentIdPlayerStatisticsGet = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<PlayerStatisticsTournamentsTournamentIdPlayerStatisticsGetData, ThrowOnError>,
+): RequestResult<
+  PlayerStatisticsTournamentsTournamentIdPlayerStatisticsGetResponses,
+  PlayerStatisticsTournamentsTournamentIdPlayerStatisticsGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    PlayerStatisticsTournamentsTournamentIdPlayerStatisticsGetResponses,
+    PlayerStatisticsTournamentsTournamentIdPlayerStatisticsGetErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    url: '/tournaments/{tournament_id}/player_statistics',
+    ...options,
+  });
+
+/**
  * Get Players
  */
 export const getPlayersTournamentsTournamentIdPlayersGet = <ThrowOnError extends boolean = false>(
   options: Options<GetPlayersTournamentsTournamentIdPlayersGetData, ThrowOnError>,
-) =>
+): RequestResult<
+  GetPlayersTournamentsTournamentIdPlayersGetResponses,
+  GetPlayersTournamentsTournamentIdPlayersGetErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     GetPlayersTournamentsTournamentIdPlayersGetResponses,
     GetPlayersTournamentsTournamentIdPlayersGetErrors,
@@ -697,7 +1520,11 @@ export const createSinglePlayerTournamentsTournamentIdPlayersPost = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<CreateSinglePlayerTournamentsTournamentIdPlayersPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateSinglePlayerTournamentsTournamentIdPlayersPostResponses,
+  CreateSinglePlayerTournamentsTournamentIdPlayersPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateSinglePlayerTournamentsTournamentIdPlayersPostResponses,
     CreateSinglePlayerTournamentsTournamentIdPlayersPostErrors,
@@ -720,7 +1547,11 @@ export const deletePlayerTournamentsTournamentIdPlayersPlayerIdDelete = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<DeletePlayerTournamentsTournamentIdPlayersPlayerIdDeleteData, ThrowOnError>,
-) =>
+): RequestResult<
+  DeletePlayerTournamentsTournamentIdPlayersPlayerIdDeleteResponses,
+  DeletePlayerTournamentsTournamentIdPlayersPlayerIdDeleteErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).delete<
     DeletePlayerTournamentsTournamentIdPlayersPlayerIdDeleteResponses,
     DeletePlayerTournamentsTournamentIdPlayersPlayerIdDeleteErrors,
@@ -739,7 +1570,11 @@ export const updatePlayerByIdTournamentsTournamentIdPlayersPlayerIdPut = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<UpdatePlayerByIdTournamentsTournamentIdPlayersPlayerIdPutData, ThrowOnError>,
-) =>
+): RequestResult<
+  UpdatePlayerByIdTournamentsTournamentIdPlayersPlayerIdPutResponses,
+  UpdatePlayerByIdTournamentsTournamentIdPlayersPlayerIdPutErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     UpdatePlayerByIdTournamentsTournamentIdPlayersPlayerIdPutResponses,
     UpdatePlayerByIdTournamentsTournamentIdPlayersPlayerIdPutErrors,
@@ -756,13 +1591,44 @@ export const updatePlayerByIdTournamentsTournamentIdPlayersPlayerIdPut = <
   });
 
 /**
+ * Update Player Team
+ */
+export const updatePlayerTeamTournamentsTournamentIdPlayersPlayerIdTeamPut = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<UpdatePlayerTeamTournamentsTournamentIdPlayersPlayerIdTeamPutData, ThrowOnError>,
+): RequestResult<
+  UpdatePlayerTeamTournamentsTournamentIdPlayersPlayerIdTeamPutResponses,
+  UpdatePlayerTeamTournamentsTournamentIdPlayersPlayerIdTeamPutErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).put<
+    UpdatePlayerTeamTournamentsTournamentIdPlayersPlayerIdTeamPutResponses,
+    UpdatePlayerTeamTournamentsTournamentIdPlayersPlayerIdTeamPutErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/players/{player_id}/team',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
  * Create Multiple Players
  */
 export const createMultiplePlayersTournamentsTournamentIdPlayersMultiPost = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<CreateMultiplePlayersTournamentsTournamentIdPlayersMultiPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateMultiplePlayersTournamentsTournamentIdPlayersMultiPostResponses,
+  CreateMultiplePlayersTournamentsTournamentIdPlayersMultiPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateMultiplePlayersTournamentsTournamentIdPlayersMultiPostResponses,
     CreateMultiplePlayersTournamentsTournamentIdPlayersMultiPostErrors,
@@ -783,7 +1649,11 @@ export const createMultiplePlayersTournamentsTournamentIdPlayersMultiPost = <
  */
 export const getRankingsTournamentsTournamentIdRankingsGet = <ThrowOnError extends boolean = false>(
   options: Options<GetRankingsTournamentsTournamentIdRankingsGetData, ThrowOnError>,
-) =>
+): RequestResult<
+  GetRankingsTournamentsTournamentIdRankingsGetResponses,
+  GetRankingsTournamentsTournamentIdRankingsGetErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     GetRankingsTournamentsTournamentIdRankingsGetResponses,
     GetRankingsTournamentsTournamentIdRankingsGetErrors,
@@ -801,7 +1671,11 @@ export const createRankingTournamentsTournamentIdRankingsPost = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<CreateRankingTournamentsTournamentIdRankingsPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateRankingTournamentsTournamentIdRankingsPostResponses,
+  CreateRankingTournamentsTournamentIdRankingsPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateRankingTournamentsTournamentIdRankingsPostResponses,
     CreateRankingTournamentsTournamentIdRankingsPostErrors,
@@ -824,7 +1698,11 @@ export const deleteRankingTournamentsTournamentIdRankingsRankingIdDelete = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<DeleteRankingTournamentsTournamentIdRankingsRankingIdDeleteData, ThrowOnError>,
-) =>
+): RequestResult<
+  DeleteRankingTournamentsTournamentIdRankingsRankingIdDeleteResponses,
+  DeleteRankingTournamentsTournamentIdRankingsRankingIdDeleteErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).delete<
     DeleteRankingTournamentsTournamentIdRankingsRankingIdDeleteResponses,
     DeleteRankingTournamentsTournamentIdRankingsRankingIdDeleteErrors,
@@ -843,7 +1721,11 @@ export const updateRankingByIdTournamentsTournamentIdRankingsRankingIdPut = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<UpdateRankingByIdTournamentsTournamentIdRankingsRankingIdPutData, ThrowOnError>,
-) =>
+): RequestResult<
+  UpdateRankingByIdTournamentsTournamentIdRankingsRankingIdPutResponses,
+  UpdateRankingByIdTournamentsTournamentIdRankingsRankingIdPutErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     UpdateRankingByIdTournamentsTournamentIdRankingsRankingIdPutResponses,
     UpdateRankingByIdTournamentsTournamentIdRankingsRankingIdPutErrors,
@@ -864,7 +1746,11 @@ export const updateRankingByIdTournamentsTournamentIdRankingsRankingIdPut = <
  */
 export const createRoundTournamentsTournamentIdRoundsPost = <ThrowOnError extends boolean = false>(
   options: Options<CreateRoundTournamentsTournamentIdRoundsPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateRoundTournamentsTournamentIdRoundsPostResponses,
+  CreateRoundTournamentsTournamentIdRoundsPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateRoundTournamentsTournamentIdRoundsPostResponses,
     CreateRoundTournamentsTournamentIdRoundsPostErrors,
@@ -887,7 +1773,11 @@ export const deleteRoundTournamentsTournamentIdRoundsRoundIdDelete = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<DeleteRoundTournamentsTournamentIdRoundsRoundIdDeleteData, ThrowOnError>,
-) =>
+): RequestResult<
+  DeleteRoundTournamentsTournamentIdRoundsRoundIdDeleteResponses,
+  DeleteRoundTournamentsTournamentIdRoundsRoundIdDeleteErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).delete<
     DeleteRoundTournamentsTournamentIdRoundsRoundIdDeleteResponses,
     DeleteRoundTournamentsTournamentIdRoundsRoundIdDeleteErrors,
@@ -906,7 +1796,11 @@ export const updateRoundByIdTournamentsTournamentIdRoundsRoundIdPut = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<UpdateRoundByIdTournamentsTournamentIdRoundsRoundIdPutData, ThrowOnError>,
-) =>
+): RequestResult<
+  UpdateRoundByIdTournamentsTournamentIdRoundsRoundIdPutResponses,
+  UpdateRoundByIdTournamentsTournamentIdRoundsRoundIdPutErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     UpdateRoundByIdTournamentsTournamentIdRoundsRoundIdPutResponses,
     UpdateRoundByIdTournamentsTournamentIdRoundsRoundIdPutErrors,
@@ -929,7 +1823,11 @@ export const scheduleMatchesTournamentsTournamentIdScheduleMatchesPost = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<ScheduleMatchesTournamentsTournamentIdScheduleMatchesPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  ScheduleMatchesTournamentsTournamentIdScheduleMatchesPostResponses,
+  ScheduleMatchesTournamentsTournamentIdScheduleMatchesPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     ScheduleMatchesTournamentsTournamentIdScheduleMatchesPostResponses,
     ScheduleMatchesTournamentsTournamentIdScheduleMatchesPostErrors,
@@ -942,13 +1840,156 @@ export const scheduleMatchesTournamentsTournamentIdScheduleMatchesPost = <
   });
 
 /**
+ * List Tournament Sponsors
+ */
+export const listTournamentSponsorsTournamentsTournamentIdSponsorsGet = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<ListTournamentSponsorsTournamentsTournamentIdSponsorsGetData, ThrowOnError>,
+): RequestResult<
+  ListTournamentSponsorsTournamentsTournamentIdSponsorsGetResponses,
+  ListTournamentSponsorsTournamentsTournamentIdSponsorsGetErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).get<
+    ListTournamentSponsorsTournamentsTournamentIdSponsorsGetResponses,
+    ListTournamentSponsorsTournamentsTournamentIdSponsorsGetErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    url: '/tournaments/{tournament_id}/sponsors',
+    ...options,
+  });
+
+/**
+ * Create Tournament Sponsor Route
+ */
+export const createTournamentSponsorRouteTournamentsTournamentIdSponsorsPost = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    CreateTournamentSponsorRouteTournamentsTournamentIdSponsorsPostData,
+    ThrowOnError
+  >,
+): RequestResult<
+  CreateTournamentSponsorRouteTournamentsTournamentIdSponsorsPostResponses,
+  CreateTournamentSponsorRouteTournamentsTournamentIdSponsorsPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    CreateTournamentSponsorRouteTournamentsTournamentIdSponsorsPostResponses,
+    CreateTournamentSponsorRouteTournamentsTournamentIdSponsorsPostErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/sponsors',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Delete Tournament Sponsor Route
+ */
+export const deleteTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdDelete = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    DeleteTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdDeleteData,
+    ThrowOnError
+  >,
+): RequestResult<
+  DeleteTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdDeleteResponses,
+  DeleteTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdDeleteErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).delete<
+    DeleteTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdDeleteResponses,
+    DeleteTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdDeleteErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/sponsors/{sponsor_id}',
+    ...options,
+  });
+
+/**
+ * Update Tournament Sponsor Route
+ */
+export const updateTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdPut = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    UpdateTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdPutData,
+    ThrowOnError
+  >,
+): RequestResult<
+  UpdateTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdPutResponses,
+  UpdateTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdPutErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).put<
+    UpdateTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdPutResponses,
+    UpdateTournamentSponsorRouteTournamentsTournamentIdSponsorsSponsorIdPutErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/sponsors/{sponsor_id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Upload Tournament Sponsor Logo
+ */
+export const uploadTournamentSponsorLogoTournamentsTournamentIdSponsorsSponsorIdLogoPost = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    UploadTournamentSponsorLogoTournamentsTournamentIdSponsorsSponsorIdLogoPostData,
+    ThrowOnError
+  >,
+): RequestResult<
+  UploadTournamentSponsorLogoTournamentsTournamentIdSponsorsSponsorIdLogoPostResponses,
+  UploadTournamentSponsorLogoTournamentsTournamentIdSponsorsSponsorIdLogoPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    UploadTournamentSponsorLogoTournamentsTournamentIdSponsorsSponsorIdLogoPostResponses,
+    UploadTournamentSponsorLogoTournamentsTournamentIdSponsorsSponsorIdLogoPostErrors,
+    ThrowOnError
+  >({
+    ...formDataBodySerializer,
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/sponsors/{sponsor_id}/logo',
+    ...options,
+    headers: {
+      'Content-Type': null,
+      ...options.headers,
+    },
+  });
+
+/**
  * Create Stage Item
  */
 export const createStageItemTournamentsTournamentIdStageItemsPost = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<CreateStageItemTournamentsTournamentIdStageItemsPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateStageItemTournamentsTournamentIdStageItemsPostResponses,
+  CreateStageItemTournamentsTournamentIdStageItemsPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateStageItemTournamentsTournamentIdStageItemsPostResponses,
     CreateStageItemTournamentsTournamentIdStageItemsPostErrors,
@@ -974,7 +2015,11 @@ export const deleteStageItemTournamentsTournamentIdStageItemsStageItemIdDelete =
     DeleteStageItemTournamentsTournamentIdStageItemsStageItemIdDeleteData,
     ThrowOnError
   >,
-) =>
+): RequestResult<
+  DeleteStageItemTournamentsTournamentIdStageItemsStageItemIdDeleteResponses,
+  DeleteStageItemTournamentsTournamentIdStageItemsStageItemIdDeleteErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).delete<
     DeleteStageItemTournamentsTournamentIdStageItemsStageItemIdDeleteResponses,
     DeleteStageItemTournamentsTournamentIdStageItemsStageItemIdDeleteErrors,
@@ -996,7 +2041,11 @@ export const updateStageItemTournamentsTournamentIdStageItemsStageItemIdPut = <
     UpdateStageItemTournamentsTournamentIdStageItemsStageItemIdPutData,
     ThrowOnError
   >,
-) =>
+): RequestResult<
+  UpdateStageItemTournamentsTournamentIdStageItemsStageItemIdPutResponses,
+  UpdateStageItemTournamentsTournamentIdStageItemsStageItemIdPutErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     UpdateStageItemTournamentsTournamentIdStageItemsStageItemIdPutResponses,
     UpdateStageItemTournamentsTournamentIdStageItemsStageItemIdPutErrors,
@@ -1021,7 +2070,11 @@ export const updateStageItemInputTournamentsTournamentIdStageItemsStageItemIdInp
       UpdateStageItemInputTournamentsTournamentIdStageItemsStageItemIdInputsStageItemInputIdPutData,
       ThrowOnError
     >,
-  ) =>
+  ): RequestResult<
+    UpdateStageItemInputTournamentsTournamentIdStageItemsStageItemIdInputsStageItemInputIdPutResponses,
+    UpdateStageItemInputTournamentsTournamentIdStageItemsStageItemIdInputsStageItemInputIdPutErrors,
+    ThrowOnError
+  > =>
     (options.client ?? client).put<
       UpdateStageItemInputTournamentsTournamentIdStageItemsStageItemIdInputsStageItemInputIdPutResponses,
       UpdateStageItemInputTournamentsTournamentIdStageItemsStageItemIdInputsStageItemInputIdPutErrors,
@@ -1047,7 +2100,11 @@ export const startNextRoundTournamentsTournamentIdStageItemsStageItemIdStartNext
     StartNextRoundTournamentsTournamentIdStageItemsStageItemIdStartNextRoundPostData,
     ThrowOnError
   >,
-) =>
+): RequestResult<
+  StartNextRoundTournamentsTournamentIdStageItemsStageItemIdStartNextRoundPostResponses,
+  StartNextRoundTournamentsTournamentIdStageItemsStageItemIdStartNextRoundPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     StartNextRoundTournamentsTournamentIdStageItemsStageItemIdStartNextRoundPostResponses,
     StartNextRoundTournamentsTournamentIdStageItemsStageItemIdStartNextRoundPostErrors,
@@ -1073,7 +2130,11 @@ export const getMatchesToScheduleTournamentsTournamentIdStageItemsStageItemIdUpc
     GetMatchesToScheduleTournamentsTournamentIdStageItemsStageItemIdUpcomingMatchesGetData,
     ThrowOnError
   >,
-) =>
+): RequestResult<
+  GetMatchesToScheduleTournamentsTournamentIdStageItemsStageItemIdUpcomingMatchesGetResponses,
+  GetMatchesToScheduleTournamentsTournamentIdStageItemsStageItemIdUpcomingMatchesGetErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     GetMatchesToScheduleTournamentsTournamentIdStageItemsStageItemIdUpcomingMatchesGetResponses,
     GetMatchesToScheduleTournamentsTournamentIdStageItemsStageItemIdUpcomingMatchesGetErrors,
@@ -1090,7 +2151,11 @@ export const getMatchesToScheduleTournamentsTournamentIdStageItemsStageItemIdUpc
  */
 export const getStagesTournamentsTournamentIdStagesGet = <ThrowOnError extends boolean = false>(
   options: Options<GetStagesTournamentsTournamentIdStagesGetData, ThrowOnError>,
-) =>
+): RequestResult<
+  GetStagesTournamentsTournamentIdStagesGetResponses,
+  GetStagesTournamentsTournamentIdStagesGetErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     GetStagesTournamentsTournamentIdStagesGetResponses,
     GetStagesTournamentsTournamentIdStagesGetErrors,
@@ -1106,7 +2171,11 @@ export const getStagesTournamentsTournamentIdStagesGet = <ThrowOnError extends b
  */
 export const createStageTournamentsTournamentIdStagesPost = <ThrowOnError extends boolean = false>(
   options: Options<CreateStageTournamentsTournamentIdStagesPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateStageTournamentsTournamentIdStagesPostResponses,
+  CreateStageTournamentsTournamentIdStagesPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateStageTournamentsTournamentIdStagesPostResponses,
     CreateStageTournamentsTournamentIdStagesPostErrors,
@@ -1125,7 +2194,11 @@ export const activateNextStageTournamentsTournamentIdStagesActivatePost = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<ActivateNextStageTournamentsTournamentIdStagesActivatePostData, ThrowOnError>,
-) =>
+): RequestResult<
+  ActivateNextStageTournamentsTournamentIdStagesActivatePostResponses,
+  ActivateNextStageTournamentsTournamentIdStagesActivatePostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     ActivateNextStageTournamentsTournamentIdStagesActivatePostResponses,
     ActivateNextStageTournamentsTournamentIdStagesActivatePostErrors,
@@ -1148,7 +2221,11 @@ export const deleteStageTournamentsTournamentIdStagesStageIdDelete = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<DeleteStageTournamentsTournamentIdStagesStageIdDeleteData, ThrowOnError>,
-) =>
+): RequestResult<
+  DeleteStageTournamentsTournamentIdStagesStageIdDeleteResponses,
+  DeleteStageTournamentsTournamentIdStagesStageIdDeleteErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).delete<
     DeleteStageTournamentsTournamentIdStagesStageIdDeleteResponses,
     DeleteStageTournamentsTournamentIdStagesStageIdDeleteErrors,
@@ -1167,7 +2244,11 @@ export const updateStageTournamentsTournamentIdStagesStageIdPut = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<UpdateStageTournamentsTournamentIdStagesStageIdPutData, ThrowOnError>,
-) =>
+): RequestResult<
+  UpdateStageTournamentsTournamentIdStagesStageIdPutResponses,
+  UpdateStageTournamentsTournamentIdStagesStageIdPutErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     UpdateStageTournamentsTournamentIdStagesStageIdPutResponses,
     UpdateStageTournamentsTournamentIdStagesStageIdPutErrors,
@@ -1184,11 +2265,45 @@ export const updateStageTournamentsTournamentIdStagesStageIdPut = <
   });
 
 /**
+ * Create Youth Schedule
+ */
+export const createYouthScheduleTournamentsTournamentIdStagesStageIdYouthSchedulePost = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    CreateYouthScheduleTournamentsTournamentIdStagesStageIdYouthSchedulePostData,
+    ThrowOnError
+  >,
+): RequestResult<
+  CreateYouthScheduleTournamentsTournamentIdStagesStageIdYouthSchedulePostResponses,
+  CreateYouthScheduleTournamentsTournamentIdStagesStageIdYouthSchedulePostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    CreateYouthScheduleTournamentsTournamentIdStagesStageIdYouthSchedulePostResponses,
+    CreateYouthScheduleTournamentsTournamentIdStagesStageIdYouthSchedulePostErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/stages/{stage_id}/youth_schedule',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
  * Get Teams
  */
 export const getTeamsTournamentsTournamentIdTeamsGet = <ThrowOnError extends boolean = false>(
   options: Options<GetTeamsTournamentsTournamentIdTeamsGetData, ThrowOnError>,
-) =>
+): RequestResult<
+  GetTeamsTournamentsTournamentIdTeamsGetResponses,
+  GetTeamsTournamentsTournamentIdTeamsGetErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).get<
     GetTeamsTournamentsTournamentIdTeamsGetResponses,
     GetTeamsTournamentsTournamentIdTeamsGetErrors,
@@ -1204,7 +2319,11 @@ export const getTeamsTournamentsTournamentIdTeamsGet = <ThrowOnError extends boo
  */
 export const createTeamTournamentsTournamentIdTeamsPost = <ThrowOnError extends boolean = false>(
   options: Options<CreateTeamTournamentsTournamentIdTeamsPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateTeamTournamentsTournamentIdTeamsPostResponses,
+  CreateTeamTournamentsTournamentIdTeamsPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateTeamTournamentsTournamentIdTeamsPostResponses,
     CreateTeamTournamentsTournamentIdTeamsPostErrors,
@@ -1227,7 +2346,11 @@ export const deleteTeamTournamentsTournamentIdTeamsTeamIdDelete = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<DeleteTeamTournamentsTournamentIdTeamsTeamIdDeleteData, ThrowOnError>,
-) =>
+): RequestResult<
+  DeleteTeamTournamentsTournamentIdTeamsTeamIdDeleteResponses,
+  DeleteTeamTournamentsTournamentIdTeamsTeamIdDeleteErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).delete<
     DeleteTeamTournamentsTournamentIdTeamsTeamIdDeleteResponses,
     DeleteTeamTournamentsTournamentIdTeamsTeamIdDeleteErrors,
@@ -1246,7 +2369,11 @@ export const updateTeamByIdTournamentsTournamentIdTeamsTeamIdPut = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<UpdateTeamByIdTournamentsTournamentIdTeamsTeamIdPutData, ThrowOnError>,
-) =>
+): RequestResult<
+  UpdateTeamByIdTournamentsTournamentIdTeamsTeamIdPutResponses,
+  UpdateTeamByIdTournamentsTournamentIdTeamsTeamIdPutErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     UpdateTeamByIdTournamentsTournamentIdTeamsTeamIdPutResponses,
     UpdateTeamByIdTournamentsTournamentIdTeamsTeamIdPutErrors,
@@ -1269,7 +2396,11 @@ export const updateTeamLogoTournamentsTournamentIdTeamsTeamIdLogoPost = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<UpdateTeamLogoTournamentsTournamentIdTeamsTeamIdLogoPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  UpdateTeamLogoTournamentsTournamentIdTeamsTeamIdLogoPostResponses,
+  UpdateTeamLogoTournamentsTournamentIdTeamsTeamIdLogoPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     UpdateTeamLogoTournamentsTournamentIdTeamsTeamIdLogoPostResponses,
     UpdateTeamLogoTournamentsTournamentIdTeamsTeamIdLogoPostErrors,
@@ -1293,7 +2424,11 @@ export const createMultipleTeamsTournamentsTournamentIdTeamsMultiPost = <
   ThrowOnError extends boolean = false,
 >(
   options: Options<CreateMultipleTeamsTournamentsTournamentIdTeamsMultiPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  CreateMultipleTeamsTournamentsTournamentIdTeamsMultiPostResponses,
+  CreateMultipleTeamsTournamentsTournamentIdTeamsMultiPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     CreateMultipleTeamsTournamentsTournamentIdTeamsMultiPostResponses,
     CreateMultipleTeamsTournamentsTournamentIdTeamsMultiPostErrors,
@@ -1314,7 +2449,7 @@ export const createMultipleTeamsTournamentsTournamentIdTeamsMultiPost = <
  */
 export const getUserUsersMeGet = <ThrowOnError extends boolean = false>(
   options?: Options<GetUserUsersMeGetData, ThrowOnError>,
-) =>
+): RequestResult<GetUserUsersMeGetResponses, unknown, ThrowOnError> =>
   (options?.client ?? client).get<GetUserUsersMeGetResponses, unknown, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -1327,7 +2462,11 @@ export const getUserUsersMeGet = <ThrowOnError extends boolean = false>(
  */
 export const registerUserUsersRegisterPost = <ThrowOnError extends boolean = false>(
   options: Options<RegisterUserUsersRegisterPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  RegisterUserUsersRegisterPostResponses,
+  RegisterUserUsersRegisterPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     RegisterUserUsersRegisterPostResponses,
     RegisterUserUsersRegisterPostErrors,
@@ -1347,7 +2486,11 @@ export const registerUserUsersRegisterPost = <ThrowOnError extends boolean = fal
  */
 export const registerDemoUserUsersRegisterDemoPost = <ThrowOnError extends boolean = false>(
   options: Options<RegisterDemoUserUsersRegisterDemoPostData, ThrowOnError>,
-) =>
+): RequestResult<
+  RegisterDemoUserUsersRegisterDemoPostResponses,
+  RegisterDemoUserUsersRegisterDemoPostErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).post<
     RegisterDemoUserUsersRegisterDemoPostResponses,
     RegisterDemoUserUsersRegisterDemoPostErrors,
@@ -1367,7 +2510,7 @@ export const registerDemoUserUsersRegisterDemoPost = <ThrowOnError extends boole
  */
 export const getMeUsersUserIdGet = <ThrowOnError extends boolean = false>(
   options: Options<GetMeUsersUserIdGetData, ThrowOnError>,
-) =>
+): RequestResult<GetMeUsersUserIdGetResponses, GetMeUsersUserIdGetErrors, ThrowOnError> =>
   (options.client ?? client).get<
     GetMeUsersUserIdGetResponses,
     GetMeUsersUserIdGetErrors,
@@ -1384,7 +2527,11 @@ export const getMeUsersUserIdGet = <ThrowOnError extends boolean = false>(
  */
 export const updateUserDetailsUsersUserIdPut = <ThrowOnError extends boolean = false>(
   options: Options<UpdateUserDetailsUsersUserIdPutData, ThrowOnError>,
-) =>
+): RequestResult<
+  UpdateUserDetailsUsersUserIdPutResponses,
+  UpdateUserDetailsUsersUserIdPutErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     UpdateUserDetailsUsersUserIdPutResponses,
     UpdateUserDetailsUsersUserIdPutErrors,
@@ -1405,7 +2552,11 @@ export const updateUserDetailsUsersUserIdPut = <ThrowOnError extends boolean = f
  */
 export const putUserPasswordUsersUserIdPasswordPut = <ThrowOnError extends boolean = false>(
   options: Options<PutUserPasswordUsersUserIdPasswordPutData, ThrowOnError>,
-) =>
+): RequestResult<
+  PutUserPasswordUsersUserIdPasswordPutResponses,
+  PutUserPasswordUsersUserIdPasswordPutErrors,
+  ThrowOnError
+> =>
   (options.client ?? client).put<
     PutUserPasswordUsersUserIdPasswordPutResponses,
     PutUserPasswordUsersUserIdPasswordPutErrors,

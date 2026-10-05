@@ -1,7 +1,9 @@
 import { showNotification } from '@mantine/notifications';
 
-import { MatchBody, MatchCreateBodyFrontend, MatchRescheduleBody } from '@openapi';
+import { MatchCreateBodyFrontend, MatchRescheduleBody, MatchUpdateBody } from '@openapi';
 import { createAxios, handleRequestError } from './adapter';
+
+type MatchUpdateRequest = Partial<MatchUpdateBody> & Pick<MatchUpdateBody, 'round_id'>;
 
 export async function createMatch(tournament_id: number, match: MatchCreateBodyFrontend) {
   return createAxios()
@@ -15,7 +17,7 @@ export async function deleteMatch(tournament_id: number, match_id: number) {
     .catch((response: any) => handleRequestError(response));
 }
 
-export async function updateMatch(tournament_id: number, match_id: number, match: MatchBody) {
+export async function updateMatch(tournament_id: number, match_id: number, match: MatchUpdateRequest) {
   return createAxios()
     .put(`tournaments/${tournament_id}/matches/${match_id}`, match)
     .catch((response: any) => handleRequestError(response));
