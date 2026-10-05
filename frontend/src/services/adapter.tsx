@@ -10,6 +10,8 @@ import {
   ClubsResponse,
   CompetitionsResponse,
   CompetitionDisciplinesResponse,
+  CompetitionResultsResponse,
+  CompetitionScoringResponse,
   CourtsResponse,
   PlayersResponse,
   RankingsResponse,
@@ -303,4 +305,25 @@ export function getCompetitionDisciplines(
   competitionId: number,
 ): SWRResponse<CompetitionDisciplinesResponse> {
   return useSWR(`tournaments/${tournamentId}/competitions/${competitionId}/disciplines`, fetcher);
+}
+
+export function getCompetitionResults(
+  tournamentId: number,
+  competitionId: number,
+  disciplineId: number,
+): SWRResponse<CompetitionResultsResponse> {
+  return useSWR(
+    `tournaments/${tournamentId}/competitions/${competitionId}/disciplines/${disciplineId}/results`,
+    fetcher,
+    { refreshInterval: 5_000 },
+  );
+}
+
+export function getCompetitionScoring(
+  tournamentId: number,
+  competitionId: number,
+): SWRResponse<CompetitionScoringResponse> {
+  return useSWR(`tournaments/${tournamentId}/competitions/${competitionId}/scoring`, fetcher, {
+    refreshInterval: 5_000,
+  });
 }

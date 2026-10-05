@@ -4,6 +4,11 @@ import {
   CompetitionDisciplineBody,
   CompetitionResponse,
   CompetitionDisciplineResponse,
+  CompetitionResultBody,
+  CompetitionResultsResponse,
+  CompetitionRankedResultsResponse,
+  CompetitionScoringBody,
+  CompetitionScoringResponse,
 } from '@openapi';
 import { createAxios, handleRequestError } from './adapter';
 
@@ -70,6 +75,45 @@ export function deleteCompetitionDiscipline(
   return handleMutation(
     createAxios().delete(
       `tournaments/${tournamentId}/competitions/${competitionId}/disciplines/${disciplineId}`,
+    ),
+  );
+}
+
+export function saveCompetitionResult(
+  tournamentId: number,
+  competitionId: number,
+  disciplineId: number,
+  body: CompetitionResultBody,
+) {
+  return handleMutation(
+    createAxios().put<CompetitionResultsResponse>(
+      `tournaments/${tournamentId}/competitions/${competitionId}/disciplines/${disciplineId}/results`,
+      body,
+    ),
+  );
+}
+
+export function calculateCompetitionResults(
+  tournamentId: number,
+  competitionId: number,
+  disciplineId: number,
+) {
+  return handleMutation(
+    createAxios().post<CompetitionRankedResultsResponse>(
+      `tournaments/${tournamentId}/competitions/${competitionId}/disciplines/${disciplineId}/calculate`,
+    ),
+  );
+}
+
+export function saveCompetitionScoring(
+  tournamentId: number,
+  competitionId: number,
+  body: CompetitionScoringBody[],
+) {
+  return handleMutation(
+    createAxios().put<CompetitionScoringResponse>(
+      `tournaments/${tournamentId}/competitions/${competitionId}/scoring`,
+      body,
     ),
   );
 }

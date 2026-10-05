@@ -191,7 +191,11 @@ function CompetitionCard({
           </Group>
         </Group>
         {error && <Alert color="red">Die Competition konnte nicht gelöscht werden.</Alert>}
-        <CompetitionDisciplines tournamentId={tournamentId} competitionId={competition.id} />
+        <CompetitionDisciplines
+          tournamentId={tournamentId}
+          competitionId={competition.id}
+          mode="manage"
+        />
       </Stack>
     </Card>
   );
