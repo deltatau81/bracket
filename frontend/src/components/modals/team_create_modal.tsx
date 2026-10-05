@@ -1,4 +1,4 @@
-import { Button, Checkbox, Modal, MultiSelect, Tabs, TextInput } from '@mantine/core';
+import { Button, Checkbox, Modal, MultiSelect, Select, Tabs, TextInput } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { IconUser, IconUsers, IconUsersPlus } from '@tabler/icons-react';
 import { useState } from 'react';
@@ -7,24 +7,28 @@ import { SWRResponse } from 'swr';
 
 import SaveButton from '@components/buttons/save';
 import { MultiTeamsInput } from '@components/forms/player_create_csv_input';
-import { Player, TeamsWithPlayersResponse } from '@openapi';
-import { getPlayers } from '@services/adapter';
+import { Club, Player, TeamsWithPlayersResponse } from '@openapi';
+import { getClubs, getPlayers } from '@services/adapter';
 import { createTeam, createTeams } from '@services/team';
 
 function MultiTeamTab({
   tournament_id,
   swrTeamsResponse,
   setOpened,
+  clubs,
 }: {
   tournament_id: number;
   swrTeamsResponse: SWRResponse<TeamsWithPlayersResponse>;
   setOpened: any;
+  clubs: Club[];
 }) {
   const { t } = useTranslation();
   const form = useForm({
     initialValues: {
       names: '',
       active: true,
+      participant_club_id: null as string | null,
+      pairing_group: '',
     },
 
     validate: {
@@ -34,12 +38,35 @@ function MultiTeamTab({
   return (
     <form
       onSubmit={form.onSubmit(async (values) => {
-        await createTeams(tournament_id, values.names, values.active);
+        await createTeams(
+          tournament_id,
+          values.names,
+          values.active,
+          values.participant_club_id == null ? null : Number(values.participant_club_id),
+          values.pairing_group.trim() || null,
+        );
         await swrTeamsResponse.mutate();
         setOpened(false);
       })}
     >
       <MultiTeamsInput form={form} />
+
+      <Select
+        clearable
+        searchable
+        mt="md"
+        label="Club"
+        placeholder="Optional"
+        data={clubs.map((club) => ({ value: `${club.id}`, label: club.name }))}
+        {...form.getInputProps('participant_club_id')}
+      />
+
+      <TextInput
+        mt="md"
+        label="Pairing group"
+        placeholder="Optional"
+        {...form.getInputProps('pairing_group')}
+      />
 
       <Checkbox
         mt="md"
@@ -57,10 +84,12 @@ function SingleTeamTab({
   tournament_id,
   swrTeamsResponse,
   setOpened,
+  clubs,
 }: {
   tournament_id: number;
   swrTeamsResponse: SWRResponse<TeamsWithPlayersResponse>;
   setOpened: any;
+  clubs: Club[];
 }) {
   const { t } = useTranslation();
   const { data } = getPlayers(tournament_id, false);
@@ -70,6 +99,8 @@ function SingleTeamTab({
       name: '',
       active: true,
       player_ids: [],
+      participant_club_id: null as string | null,
+      pairing_group: '',
     },
     validate: {
       name: (value) => (value.length > 0 ? null : t('too_short_name_validation')),
@@ -78,7 +109,15 @@ function SingleTeamTab({
   return (
     <form
       onSubmit={form.onSubmit(async (values) => {
-        await createTeam(tournament_id, values.name, values.active, values.player_ids);
+        await createTeam(
+          tournament_id,
+          values.name,
+          values.active,
+          values.player_ids,
+          null,
+          values.participant_club_id == null ? null : Number(values.participant_club_id),
+          values.pairing_group.trim() || null,
+        );
         await swrTeamsResponse.mutate();
         setOpened(false);
       })}
@@ -94,6 +133,23 @@ function SingleTeamTab({
         mt="md"
         label={t('active_teams_checkbox_label')}
         {...form.getInputProps('active', { type: 'checkbox' })}
+      />
+
+      <Select
+        clearable
+        searchable
+        mt="md"
+        label="Club"
+        placeholder="Optional"
+        data={clubs.map((club) => ({ value: `${club.id}`, label: club.name }))}
+        {...form.getInputProps('participant_club_id')}
+      />
+
+      <TextInput
+        mt="md"
+        label="Pairing group"
+        placeholder="Optional"
+        {...form.getInputProps('pairing_group')}
       />
 
       <MultiSelect
@@ -122,6 +178,8 @@ export default function TeamCreateModal({
 }) {
   const { t } = useTranslation();
   const [opened, setOpened] = useState(false);
+  const clubsResponse = getClubs();
+  const clubs: Club[] = clubsResponse.data?.data ?? [];
   return (
     <>
       <Modal opened={opened} onClose={() => setOpened(false)} title="Create Team">
@@ -140,6 +198,7 @@ export default function TeamCreateModal({
               swrTeamsResponse={swrTeamsResponse}
               tournament_id={tournament_id}
               setOpened={setOpened}
+              clubs={clubs}
             />
           </Tabs.Panel>
 
@@ -148,6 +207,7 @@ export default function TeamCreateModal({
               swrTeamsResponse={swrTeamsResponse}
               tournament_id={tournament_id}
               setOpened={setOpened}
+              clubs={clubs}
             />
           </Tabs.Panel>
         </Tabs>

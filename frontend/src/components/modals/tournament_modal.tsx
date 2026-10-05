@@ -18,7 +18,15 @@ import { SWRResponse } from 'swr';
 
 import SaveButton from '@components/buttons/save';
 import { assert_not_none } from '@components/utils/assert';
-import { Club, Tournament, TournamentsResponse } from '@openapi';
+import {
+  Club,
+  HockeyAgeCategory,
+  HockeyMode,
+  HockeyRuleset,
+  Tournament,
+  TournamentCompetitionFormat,
+  TournamentsResponse,
+} from '@openapi';
 import { getBaseApiUrl, getClubs } from '@services/adapter';
 import { createTournament } from '@services/tournament';
 import dayjs from 'dayjs';
@@ -55,6 +63,11 @@ function GeneralTournamentForm({
       auto_assign_courts: true,
       duration_minutes: 10,
       margin_minutes: 5,
+      hockey_mode: 'COMPETITION' as HockeyMode,
+      competition_format: 'STANDARD' as TournamentCompetitionFormat,
+      ruleset: 'DEB' as HockeyRuleset,
+      age_category: 'U15' as HockeyAgeCategory,
+      ruleset_season: '2026/27',
     },
 
     validate: {
@@ -65,6 +78,12 @@ function GeneralTournamentForm({
         value != null && value > 0 ? null : t('duration_minutes_choose_title'),
       margin_minutes: (value) =>
         value != null && value > 0 ? null : t('margin_minutes_choose_title'),
+      ruleset_season: (value) => {
+        const match = /^(\d{4})\/(\d{2})$/.exec(value);
+        return match != null && Number(match[2]) === (Number(match[1]) + 1) % 100
+          ? null
+          : 'Regelsaison muss das Format YYYY/YY haben und fortlaufend sein';
+      },
     },
   });
 
@@ -81,6 +100,11 @@ function GeneralTournamentForm({
           values.start_time,
           values.duration_minutes,
           values.margin_minutes,
+          values.hockey_mode,
+          values.ruleset,
+          values.age_category,
+          values.ruleset_season,
+          values.competition_format,
         );
         await swrTournamentsResponse.mutate();
         setOpened(false);
@@ -102,6 +126,69 @@ function GeneralTournamentForm({
         limit={20}
         style={{ marginTop: 10 }}
         {...form.getInputProps('club_id')}
+      />
+
+      <Select
+        withAsterisk
+        label="Turniermodus"
+        description={
+          'Turnier mit Technikwettbewerb: 2 Halbzeiten + Penalty-Wertung + ' +
+          'Technikwettbewerb. Game + Shootout: ein Spiel + Shootout-Wertung. ' +
+          'Standard-Eishockey: 3 Drittel, später Overtime/Penalty nach Spielregeln.'
+        }
+        data={[
+          { value: 'COMPETITION', label: 'Turnier mit Technikwettbewerb' },
+          { value: 'GAME_SHOOTOUT', label: 'Game + Shootout' },
+          { value: 'STANDARD', label: 'Standard-Eishockey' },
+        ]}
+        mt="lg"
+        {...form.getInputProps('hockey_mode')}
+      />
+
+      <Select
+        withAsterisk
+        label="Turnierformat"
+        data={[
+          { value: 'STANDARD', label: 'Standard' },
+          { value: 'YOUTH_CLUB', label: 'U9/U11 Vereinswettbewerb' },
+        ]}
+        mt="lg"
+        {...form.getInputProps('competition_format')}
+      />
+
+      <Select
+        withAsterisk
+        label="Regelwerk"
+        data={[
+          { value: 'DEB', label: 'DEB' },
+          { value: 'IIHF', label: 'IIHF' },
+        ]}
+        mt="lg"
+        {...form.getInputProps('ruleset')}
+      />
+
+      <Select
+        withAsterisk
+        label="Altersklasse"
+        data={[
+          { value: 'U9', label: 'U9' },
+          { value: 'U11', label: 'U11' },
+          { value: 'U13', label: 'U13' },
+          { value: 'U15', label: 'U15' },
+          { value: 'U17', label: 'U17' },
+          { value: 'U20', label: 'U20' },
+          { value: 'SENIOR', label: 'Senioren' },
+        ]}
+        mt="lg"
+        {...form.getInputProps('age_category')}
+      />
+
+      <TextInput
+        withAsterisk
+        label="Regelsaison"
+        placeholder="2026/27"
+        mt="lg"
+        {...form.getInputProps('ruleset_season')}
       />
 
       <TextInput

@@ -136,6 +136,7 @@ function GeneralTournamentForm({
       auto_assign_courts: tournament.auto_assign_courts,
       duration_minutes: tournament.duration_minutes,
       margin_minutes: tournament.margin_minutes,
+      competition_format: tournament.competition_format,
     },
 
     validate: {
@@ -164,6 +165,7 @@ function GeneralTournamentForm({
           values.start_time.toISOString(),
           values.duration_minutes,
           values.margin_minutes,
+          values.competition_format,
         );
 
         await swrTournamentResponse.mutate();
@@ -186,6 +188,45 @@ function GeneralTournamentForm({
         mt="lg"
         {...form.getInputProps('club_id')}
       />
+
+      <TextInput
+        label="Turniermodus"
+        description={
+          'Der Modus wird nach der Turniererstellung nur angezeigt, da ein Wechsel ' +
+          'bestehende Spiele und Ereignisse ungültig machen könnte.'
+        }
+        value={
+          tournament.hockey_mode === 'STANDARD'
+            ? 'Standard-Eishockey'
+            : tournament.hockey_mode === 'GAME_SHOOTOUT'
+              ? 'Game + Shootout'
+              : 'Turnier mit Technikwettbewerb'
+        }
+        disabled
+        mt="lg"
+      />
+
+      <Select
+        withAsterisk
+        label="Turnierformat"
+        data={[
+          { value: 'STANDARD', label: 'Standard' },
+          { value: 'YOUTH_CLUB', label: 'U9/U11 Vereinswettbewerb' },
+        ]}
+        mt="lg"
+        {...form.getInputProps('competition_format')}
+      />
+
+      <TextInput label="Regelwerk" value={tournament.ruleset} disabled mt="lg" />
+
+      <TextInput
+        label="Altersklasse"
+        value={tournament.age_category === 'SENIOR' ? 'Senioren' : tournament.age_category}
+        disabled
+        mt="lg"
+      />
+
+      <TextInput label="Regelsaison" value={tournament.ruleset_season} disabled mt="lg" />
 
       <Fieldset legend={t('planning_of_matches_legend')} mt="lg" radius="md">
         <Text fz="sm">{t('planning_of_matches_description')}</Text>

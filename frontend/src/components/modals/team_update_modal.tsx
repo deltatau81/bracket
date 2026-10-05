@@ -6,6 +6,7 @@ import {
   Image,
   Modal,
   MultiSelect,
+  Select,
   TextInput,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
@@ -15,8 +16,14 @@ import { useTranslation } from 'react-i18next';
 import { SWRResponse } from 'swr';
 
 import { DropzoneButton } from '@components/utils/file_upload';
-import { FullTeamWithPlayers, Player, TeamsWithPlayersResponse } from '@openapi';
-import { getBaseApiUrl, getPlayers, removeTeamLogo, requestSucceeded } from '@services/adapter';
+import { Club, FullTeamWithPlayers, Player, TeamsWithPlayersResponse } from '@openapi';
+import {
+  getBaseApiUrl,
+  getClubs,
+  getPlayers,
+  removeTeamLogo,
+  requestSucceeded,
+} from '@services/adapter';
 import { updateTeam } from '@services/team';
 
 function TeamLogo({ team }: { team: FullTeamWithPlayers | null }) {
@@ -42,6 +49,8 @@ export default function TeamUpdateModal({
   const { t } = useTranslation();
   const { data } = getPlayers(tournament_id, false);
   const players: Player[] = data != null ? data.data.players : [];
+  const clubsResponse = getClubs();
+  const clubs: Club[] = clubsResponse.data?.data ?? [];
   const [opened, setOpened] = useState(false);
 
   const form = useForm({
@@ -49,6 +58,8 @@ export default function TeamUpdateModal({
       name: team.name,
       active: team.active,
       player_ids: team.players.map((player) => `${player.id}`),
+      participant_club_id: team.participant_club_id == null ? null : `${team.participant_club_id}`,
+      pairing_group: team.pairing_group ?? '',
     },
 
     validate: {
@@ -67,6 +78,9 @@ export default function TeamUpdateModal({
               values.name,
               values.active,
               values.player_ids,
+              null,
+              values.participant_club_id == null ? null : Number(values.participant_club_id),
+              values.pairing_group.trim() || null,
             );
             if (requestSucceeded(result)) {
               await swrTeamsResponse.mutate();
@@ -85,6 +99,23 @@ export default function TeamUpdateModal({
             mt="md"
             label={t('active_team_checkbox_label')}
             {...form.getInputProps('active', { type: 'checkbox' })}
+          />
+
+          <Select
+            clearable
+            searchable
+            mt="md"
+            label="Club"
+            placeholder="Optional"
+            data={clubs.map((club) => ({ value: `${club.id}`, label: club.name }))}
+            {...form.getInputProps('participant_club_id')}
+          />
+
+          <TextInput
+            mt="md"
+            label="Pairing group"
+            placeholder="Optional"
+            {...form.getInputProps('pairing_group')}
           />
 
           <MultiSelect
