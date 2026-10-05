@@ -17,7 +17,11 @@ export async function deleteMatch(tournament_id: number, match_id: number) {
     .catch((response: any) => handleRequestError(response));
 }
 
-export async function updateMatch(tournament_id: number, match_id: number, match: MatchUpdateRequest) {
+export async function updateMatch(
+  tournament_id: number,
+  match_id: number,
+  match: MatchUpdateRequest,
+) {
   return createAxios()
     .put(`tournaments/${tournament_id}/matches/${match_id}`, match)
     .catch((response: any) => handleRequestError(response));
