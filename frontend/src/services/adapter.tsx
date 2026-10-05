@@ -8,6 +8,8 @@ import { TournamentFilter } from '@components/utils/tournament';
 import { Pagination } from '@components/utils/util';
 import {
   ClubsResponse,
+  CompetitionsResponse,
+  CompetitionDisciplinesResponse,
   CourtsResponse,
   PlayersResponse,
   RankingsResponse,
@@ -290,4 +292,15 @@ export function checkForAuthError(response: any) {
         }
       });
   }
+}
+
+export function getCompetitions(tournamentId: number): SWRResponse<CompetitionsResponse> {
+  return useSWR(`tournaments/${tournamentId}/competitions`, fetcher);
+}
+
+export function getCompetitionDisciplines(
+  tournamentId: number,
+  competitionId: number,
+): SWRResponse<CompetitionDisciplinesResponse> {
+  return useSWR(`tournaments/${tournamentId}/competitions/${competitionId}/disciplines`, fetcher);
 }

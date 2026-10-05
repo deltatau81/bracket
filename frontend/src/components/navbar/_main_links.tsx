@@ -8,6 +8,7 @@ import {
   IconCalendar,
   IconDots,
   IconHome,
+  IconMedal,
   IconScoreboard,
   IconSettings,
   IconTrophy,
@@ -127,6 +128,11 @@ export function TournamentLinks({ tournament_id }: any) {
       icon: IconUsers,
       label: capitalize(t('teams_title')),
       link: `${tm_prefix}/teams`,
+    },
+    {
+      icon: IconMedal,
+      label: 'Technikwettbewerb',
+      link: `${tm_prefix}/competitions`,
     },
     {
       icon: IconCalendar,
