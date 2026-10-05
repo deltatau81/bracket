@@ -27,6 +27,9 @@ def test_elimination_input_updates() -> None:
         {matches[0].id, matches[1].id},
     )
 
+    # Only winners of finished matches may advance. The first two matches are
+    # finished, so their winners populate match 3. Match 3 itself is not yet
+    # finished, therefore no winner from it may advance to match 4 yet.
     assert updates == {
         matches[2].id: matches[2].model_copy(
             update={
@@ -39,9 +42,9 @@ def test_elimination_input_updates() -> None:
         matches[3].id: matches[3].model_copy(
             update={
                 "stage_item_input1_id": stage_item_inputs[3].id,
-                "stage_item_input2_id": stage_item_inputs[0].id,
+                "stage_item_input2_id": None,
                 "stage_item_input1": stage_item_inputs[3],
-                "stage_item_input2": stage_item_inputs[0],
+                "stage_item_input2": None,
             }
         ),
     }

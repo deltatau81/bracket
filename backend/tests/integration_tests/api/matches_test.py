@@ -8,6 +8,7 @@ from bracket.models.db.stage_item import StageType
 from bracket.models.db.stage_item_inputs import (
     StageItemInputInsertable,
 )
+from bracket.models.db.tournament import HockeyAgeCategory, HockeyRuleset
 from bracket.schema import matches
 from bracket.utils.db import fetch_one_parsed_certain
 from bracket.utils.dummy_records import (
@@ -81,6 +82,10 @@ async def test_create_match(
             HTTPMethod.POST, "matches", auth_context, json=body
         )
         assert response["data"]["id"], response
+        assert response["data"]["ruleset_override"] is None
+        assert response["data"]["age_category_override"] is None
+        assert response["data"]["ruleset_season_override"] is None
+        assert response["data"]["score_entry_source"] == "MANUAL"
 
         await assert_row_count_and_clear(matches, 1)
 
@@ -205,8 +210,10 @@ async def test_update_match(
         ) as match_inserted,
     ):
         body = {
-            "stage_item_input1_score": 42,
-            "stage_item_input2_score": 24,
+            "stage_item_input1_half1_score": 23,
+            "stage_item_input2_half1_score": 12,
+            "stage_item_input1_half2_score": 19,
+            "stage_item_input2_half2_score": 12,
             "round_id": round_inserted.id,
             "court_id": None,
         }
@@ -225,9 +232,131 @@ async def test_update_match(
             Match,
             query=matches.select().where(matches.c.id == match_inserted.id),
         )
-        assert updated_match.stage_item_input1_score == body["stage_item_input1_score"]
-        assert updated_match.stage_item_input2_score == body["stage_item_input2_score"]
+        assert updated_match.stage_item_input1_half1_score == 23
+        assert updated_match.stage_item_input2_half1_score == 12
+        assert updated_match.stage_item_input1_half2_score == 19
+        assert updated_match.stage_item_input2_half2_score == 12
+        assert updated_match.stage_item_input1_score == 42
+        assert updated_match.stage_item_input2_score == 24
         assert updated_match.court_id == body["court_id"]
+
+        override_body = {
+            "round_id": round_inserted.id,
+            "ruleset_override": "IIHF",
+            "age_category_override": "SENIOR",
+            "ruleset_season_override": "2029/30",
+        }
+        assert (
+            await send_tournament_request(
+                HTTPMethod.PUT,
+                f"matches/{match_inserted.id}",
+                auth_context,
+                None,
+                override_body,
+            )
+            == SUCCESS_RESPONSE
+        )
+
+        assert (
+            await send_tournament_request(
+                HTTPMethod.PUT,
+                f"matches/{match_inserted.id}",
+                auth_context,
+                None,
+                {"round_id": round_inserted.id, "age_category_override": "U20"},
+            )
+            == SUCCESS_RESPONSE
+        )
+        updated_match = await fetch_one_parsed_certain(
+            database,
+            Match,
+            query=matches.select().where(matches.c.id == match_inserted.id),
+        )
+        assert updated_match.ruleset_override == HockeyRuleset.IIHF
+        assert updated_match.age_category_override == HockeyAgeCategory.U20
+        assert updated_match.ruleset_season_override == "2029/30"
+
+        # Ordinary match updates that omit rule override fields must preserve
+        # the existing per-match overrides.
+        assert (
+            await send_tournament_request(
+                HTTPMethod.PUT,
+                f"matches/{match_inserted.id}",
+                auth_context,
+                None,
+                {
+                    "round_id": round_inserted.id,
+                    "stage_item_input1_half1_score": 2,
+                    "stage_item_input2_half1_score": 1,
+                    "stage_item_input1_half2_score": 3,
+                    "stage_item_input2_half2_score": 2,
+                },
+            )
+            == SUCCESS_RESPONSE
+        )
+        updated_match = await fetch_one_parsed_certain(
+            database,
+            Match,
+            query=matches.select().where(matches.c.id == match_inserted.id),
+        )
+        assert updated_match.ruleset_override == HockeyRuleset.IIHF
+        assert updated_match.age_category_override == HockeyAgeCategory.U20
+        assert updated_match.ruleset_season_override == "2029/30"
+        assert updated_match.stage_item_input1_score == 5
+        assert updated_match.stage_item_input2_score == 3
+
+        for invalid_body in (
+            {"ruleset_override": "NHL"},
+            {"age_category_override": "U18"},
+            {"ruleset_season_override": "2029/31"},
+        ):
+            response = await send_tournament_request(
+                HTTPMethod.PUT,
+                f"matches/{match_inserted.id}",
+                auth_context,
+                None,
+                {"round_id": round_inserted.id, **invalid_body},
+            )
+            assert "detail" in response
+
+        clear_body = {
+            "round_id": round_inserted.id,
+            "ruleset_override": None,
+            "age_category_override": None,
+            "ruleset_season_override": None,
+        }
+        assert (
+            await send_tournament_request(
+                HTTPMethod.PUT,
+                f"matches/{match_inserted.id}",
+                auth_context,
+                None,
+                clear_body,
+            )
+            == SUCCESS_RESPONSE
+        )
+        updated_match = await fetch_one_parsed_certain(
+            database,
+            Match,
+            query=matches.select().where(matches.c.id == match_inserted.id),
+        )
+        assert updated_match.ruleset_override is None
+        assert updated_match.age_category_override is None
+        assert updated_match.ruleset_season_override is None
+
+        assert (
+            await send_tournament_request(
+                HTTPMethod.PUT,
+                f"matches/{match_inserted.id}",
+                auth_context,
+                None,
+                {
+                    "round_id": round_inserted.id,
+                    "ruleset_season_override": "2099/00",
+                },
+            )
+            == SUCCESS_RESPONSE
+        )
 
         await assert_row_count_and_clear(matches, 1)
 
@@ -423,6 +552,8 @@ async def test_upcoming_matches_endpoint(
                             "created": "2022-01-11T04:32:11Z",
                             "name": team1_inserted.name,
                             "tournament_id": auth_context.tournament.id,
+                            "participant_club_id": None,
+                                "pairing_group": None,
                             "active": True,
                             "elo_score": "1150",
                             "swiss_score": "0",
@@ -449,6 +580,8 @@ async def test_upcoming_matches_endpoint(
                             "created": "2022-01-11T04:32:11Z",
                             "name": team2_inserted.name,
                             "tournament_id": auth_context.tournament.id,
+                            "participant_club_id": None,
+                                "pairing_group": None,
                             "active": True,
                             "elo_score": "1350",
                             "swiss_score": "0",
