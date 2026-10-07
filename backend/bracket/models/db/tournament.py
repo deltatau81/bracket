@@ -1,14 +1,15 @@
 import re
+from decimal import Decimal
 from enum import auto
 from typing import Annotated
 
 from heliclockter import datetime_utc
-from pydantic import AfterValidator, Field
+from pydantic import AfterValidator, ConfigDict, Field
 
 from bracket.models.db.shared import BaseModelORM
 from bracket.utils.id_types import ClubId, TournamentId
 from bracket.utils.pydantic import EmptyStrToNone
-from bracket.utils.types import EnumAutoStr
+from bracket.utils.types import EnumAutoStr, JsonDict
 
 
 class TournamentStatus(EnumAutoStr):
@@ -52,7 +53,24 @@ def validate_ruleset_season(value: str) -> str:
 RulesetSeason = Annotated[str, AfterValidator(validate_ruleset_season)]
 
 
-class TournamentInsertable(BaseModelORM):
+HockeyPoints = Annotated[Decimal, Field(ge=0, max_digits=8, decimal_places=2, allow_inf_nan=False)]
+
+
+class HockeyScoring(BaseModelORM):
+    """Tournament-wide points; game points apply to each half in COMPETITION."""
+
+    game_win_points: HockeyPoints = Decimal("2")
+    game_draw_points: HockeyPoints = Decimal("1")
+    game_loss_points: HockeyPoints = Decimal("0")
+    shootout_win_points: HockeyPoints = Decimal("1")
+    shootout_draw_points: HockeyPoints = Decimal("0.5")
+    shootout_loss_points: HockeyPoints = Decimal("0")
+
+
+HOCKEY_SCORING_FIELDS = tuple(HockeyScoring.model_fields)
+
+
+class TournamentInsertable(HockeyScoring):
     club_id: ClubId
     name: str
     created: datetime_utc
@@ -76,7 +94,17 @@ class Tournament(TournamentInsertable):
     id: TournamentId
 
 
-class TournamentUpdateBody(BaseModelORM):
+def optional_hockey_scoring_fields(schema: JsonDict) -> None:
+    # The project generator marks every field required. Scoring update fields
+    # must remain optional so omission preserves the current tournament values.
+    schema["required"] = [
+        field for field in schema.get("required", []) if field not in HOCKEY_SCORING_FIELDS
+    ]
+
+
+class TournamentUpdateBody(HockeyScoring):
+    model_config = ConfigDict(json_schema_extra=optional_hockey_scoring_fields)
+
     start_time: datetime_utc
     name: str
     dashboard_public: bool

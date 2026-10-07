@@ -4879,6 +4879,24 @@
             "title": "Duration Minutes",
             "type": "integer"
           },
+          "game_draw_points": {
+            "default": "1",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+            "title": "Game Draw Points",
+            "type": "string"
+          },
+          "game_loss_points": {
+            "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+            "title": "Game Loss Points",
+            "type": "string"
+          },
+          "game_win_points": {
+            "default": "2",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+            "title": "Game Win Points",
+            "type": "string"
+          },
           "hockey_mode": {
             "$ref": "#/components/schemas/HockeyMode",
             "default": "COMPETITION"
@@ -4920,6 +4938,24 @@
             "title": "Ruleset Season",
             "type": "string"
           },
+          "shootout_draw_points": {
+            "default": "0.5",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+            "title": "Shootout Draw Points",
+            "type": "string"
+          },
+          "shootout_loss_points": {
+            "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+            "title": "Shootout Loss Points",
+            "type": "string"
+          },
+          "shootout_win_points": {
+            "default": "1",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+            "title": "Shootout Win Points",
+            "type": "string"
+          },
           "start_time": {
             "format": "date-time",
             "title": "Start Time",
@@ -4931,6 +4967,12 @@
           }
         },
         "required": [
+          "game_win_points",
+          "game_draw_points",
+          "game_loss_points",
+          "shootout_win_points",
+          "shootout_draw_points",
+          "shootout_loss_points",
           "club_id",
           "name",
           "created",
@@ -4989,6 +5031,48 @@
             "title": "Duration Minutes",
             "type": "integer"
           },
+          "game_draw_points": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "1",
+            "title": "Game Draw Points"
+          },
+          "game_loss_points": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Game Loss Points"
+          },
+          "game_win_points": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "2",
+            "title": "Game Win Points"
+          },
           "hockey_mode": {
             "$ref": "#/components/schemas/HockeyMode",
             "default": "COMPETITION"
@@ -5014,6 +5098,48 @@
             "default": "2026/27",
             "title": "Ruleset Season",
             "type": "string"
+          },
+          "shootout_draw_points": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "0.5",
+            "title": "Shootout Draw Points"
+          },
+          "shootout_loss_points": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Shootout Loss Points"
+          },
+          "shootout_win_points": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "1",
+            "title": "Shootout Win Points"
           },
           "start_time": {
             "format": "date-time",
@@ -5349,6 +5475,48 @@
             "title": "Duration Minutes",
             "type": "integer"
           },
+          "game_draw_points": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "1",
+            "title": "Game Draw Points"
+          },
+          "game_loss_points": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Game Loss Points"
+          },
+          "game_win_points": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "2",
+            "title": "Game Win Points"
+          },
           "hockey_mode": {
             "anyOf": [
               {
@@ -5392,6 +5560,48 @@
               }
             ],
             "title": "Ruleset Season"
+          },
+          "shootout_draw_points": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "0.5",
+            "title": "Shootout Draw Points"
+          },
+          "shootout_loss_points": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Shootout Loss Points"
+          },
+          "shootout_win_points": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "1",
+            "title": "Shootout Win Points"
           },
           "start_time": {
             "format": "date-time",

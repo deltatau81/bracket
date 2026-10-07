@@ -160,7 +160,13 @@ async def sql_update_tournament(
             competition_format = COALESCE(:competition_format, competition_format),
             ruleset = COALESCE(:ruleset, ruleset),
             age_category = COALESCE(:age_category, age_category),
-            ruleset_season = COALESCE(:ruleset_season, ruleset_season)
+            ruleset_season = COALESCE(:ruleset_season, ruleset_season),
+            game_win_points = COALESCE(:game_win_points, game_win_points),
+            game_draw_points = COALESCE(:game_draw_points, game_draw_points),
+            game_loss_points = COALESCE(:game_loss_points, game_loss_points),
+            shootout_win_points = COALESCE(:shootout_win_points, shootout_win_points),
+            shootout_draw_points = COALESCE(:shootout_draw_points, shootout_draw_points),
+            shootout_loss_points = COALESCE(:shootout_loss_points, shootout_loss_points)
         WHERE tournaments.id = :tournament_id
         """
     await database.execute(
@@ -181,6 +187,24 @@ async def sql_update_tournament(
                 tournament.age_category.value if tournament.age_category is not None else None
             ),
             "ruleset_season": tournament.ruleset_season,
+            "game_win_points": tournament.game_win_points
+            if "game_win_points" in tournament.model_fields_set
+            else None,
+            "game_draw_points": tournament.game_draw_points
+            if "game_draw_points" in tournament.model_fields_set
+            else None,
+            "game_loss_points": tournament.game_loss_points
+            if "game_loss_points" in tournament.model_fields_set
+            else None,
+            "shootout_win_points": tournament.shootout_win_points
+            if "shootout_win_points" in tournament.model_fields_set
+            else None,
+            "shootout_draw_points": tournament.shootout_draw_points
+            if "shootout_draw_points" in tournament.model_fields_set
+            else None,
+            "shootout_loss_points": tournament.shootout_loss_points
+            if "shootout_loss_points" in tournament.model_fields_set
+            else None,
         },
     )
 
@@ -219,7 +243,13 @@ async def sql_create_tournament(tournament: TournamentBody) -> TournamentId:
             competition_format,
             ruleset,
             age_category,
-            ruleset_season
+            ruleset_season,
+            game_win_points,
+            game_draw_points,
+            game_loss_points,
+            shootout_win_points,
+            shootout_draw_points,
+            shootout_loss_points
         )
         VALUES (
             :name,
@@ -236,7 +266,13 @@ async def sql_create_tournament(tournament: TournamentBody) -> TournamentId:
             :competition_format,
             :ruleset,
             :age_category,
-            :ruleset_season
+            :ruleset_season,
+            :game_win_points,
+            :game_draw_points,
+            :game_loss_points,
+            :shootout_win_points,
+            :shootout_draw_points,
+            :shootout_loss_points
         )
         RETURNING id
         """

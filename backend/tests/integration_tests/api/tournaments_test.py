@@ -97,6 +97,12 @@ async def test_tournaments_endpoint(
                 "ruleset": "DEB",
                 "age_category": "U15",
                 "ruleset_season": "2026/27",
+                "game_win_points": "2.00",
+                "game_draw_points": "1.00",
+                "game_loss_points": "0.00",
+                "shootout_win_points": "1.00",
+                "shootout_draw_points": "0.50",
+                "shootout_loss_points": "0.00",
             }
         ],
     }
@@ -128,6 +134,12 @@ async def test_tournament_endpoint(
             "ruleset": "DEB",
             "age_category": "U15",
             "ruleset_season": "2026/27",
+            "game_win_points": "2.00",
+            "game_draw_points": "1.00",
+            "game_loss_points": "0.00",
+            "shootout_win_points": "1.00",
+            "shootout_draw_points": "0.50",
+            "shootout_loss_points": "0.00",
         },
     }
 

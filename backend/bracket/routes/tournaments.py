@@ -9,10 +9,14 @@ from starlette import status
 from bracket.config import config
 from bracket.database import database
 from bracket.logic.planning.matches import update_start_times_of_matches
+from bracket.logic.ranking.calculation import recalculate_ranking_for_stage_item
 from bracket.logic.subscriptions import check_requirement
 from bracket.logic.tournaments import get_tournament_logo_path, sql_delete_tournament_completely
 from bracket.models.db.ranking import RankingCreateBody
+from bracket.models.db.stage_item import StageType
 from bracket.models.db.tournament import (
+    HOCKEY_SCORING_FIELDS,
+    HockeyMode,
     Tournament,
     TournamentBody,
     TournamentChangeStatusBody,
@@ -31,6 +35,7 @@ from bracket.routes.models import SuccessResponse, TournamentResponse, Tournamen
 from bracket.routes.util import disallow_archived_tournament
 from bracket.schema import tournaments
 from bracket.sql.rankings import sql_create_ranking
+from bracket.sql.stages import get_full_tournament_details
 from bracket.sql.tournaments import (
     sql_create_tournament,
     sql_get_tournament,
@@ -109,11 +114,32 @@ async def update_tournament_by_id(
     _: UserPublic = Depends(user_authenticated_for_tournament_admin),
     tournament: Tournament = Depends(disallow_archived_tournament),
 ) -> SuccessResponse:
-    validate_immutable_tournament_fields(tournament, tournament_body)
-    with check_unique_constraint_violation({UniqueIndex.ix_tournaments_dashboard_endpoint}):
-        await sql_update_tournament(tournament_id, tournament_body)
+    async with database.transaction():
+        # Serialize tournament updates and compare against the current stored rules.
+        await database.fetch_one(
+            "SELECT id FROM tournaments WHERE id = :id FOR UPDATE",
+            values={"id": tournament_id},
+        )
+        current = await sql_get_tournament(tournament_id)
+        validate_immutable_tournament_fields(current, tournament_body)
+        scoring_changed = any(
+            field in tournament_body.model_fields_set
+            and getattr(tournament_body, field) != getattr(current, field)
+            for field in HOCKEY_SCORING_FIELDS
+        )
+        with check_unique_constraint_violation({UniqueIndex.ix_tournaments_dashboard_endpoint}):
+            await sql_update_tournament(tournament_id, tournament_body)
 
-    await update_start_times_of_matches(tournament_id)
+        if scoring_changed and current.hockey_mode in {
+            HockeyMode.COMPETITION,
+            HockeyMode.GAME_SHOOTOUT,
+        }:
+            for stage in await get_full_tournament_details(tournament_id):
+                for stage_item in stage.stage_items:
+                    if stage_item.type is StageType.ROUND_ROBIN:
+                        await recalculate_ranking_for_stage_item(tournament_id, stage_item)
+
+        await update_start_times_of_matches(tournament_id)
     return SuccessResponse()
 
 

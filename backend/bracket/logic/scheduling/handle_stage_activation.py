@@ -100,6 +100,7 @@ async def get_team_rankings_lookup_for_tournament(
             stage_item,
             assert_some(await get_ranking_for_stage_item(tournament_id, stage_item.id)),
             tournament.hockey_mode,
+            tournament,
         )
         for stage_item_id, stage_item in stage_items.items()
     }

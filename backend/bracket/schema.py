@@ -43,6 +43,12 @@ tournaments = Table(
     Column("ruleset", String(20), nullable=False, server_default="DEB"),
     Column("age_category", String(20), nullable=False, server_default="U15"),
     Column("ruleset_season", String(7), nullable=False, server_default="2026/27"),
+    Column("game_win_points", Numeric(8, 2), nullable=False, server_default="2"),
+    Column("game_draw_points", Numeric(8, 2), nullable=False, server_default="1"),
+    Column("game_loss_points", Numeric(8, 2), nullable=False, server_default="0"),
+    Column("shootout_win_points", Numeric(8, 2), nullable=False, server_default="1"),
+    Column("shootout_draw_points", Numeric(8, 2), nullable=False, server_default="0.5"),
+    Column("shootout_loss_points", Numeric(8, 2), nullable=False, server_default="0"),
     Column("duration_minutes", Integer, nullable=False, server_default="15"),
     Column("margin_minutes", Integer, nullable=False, server_default="5"),
     Column(
@@ -63,6 +69,30 @@ tournaments = Table(
     CheckConstraint(
         "competition_format IN ('STANDARD', 'YOUTH_CLUB')",
         name="ck_tournaments_competition_format",
+    ),
+    CheckConstraint(
+        "game_win_points >= 0 AND game_win_points <= 999999.99",
+        name="ck_tournaments_game_win_points",
+    ),
+    CheckConstraint(
+        "game_draw_points >= 0 AND game_draw_points <= 999999.99",
+        name="ck_tournaments_game_draw_points",
+    ),
+    CheckConstraint(
+        "game_loss_points >= 0 AND game_loss_points <= 999999.99",
+        name="ck_tournaments_game_loss_points",
+    ),
+    CheckConstraint(
+        "shootout_win_points >= 0 AND shootout_win_points <= 999999.99",
+        name="ck_tournaments_shootout_win_points",
+    ),
+    CheckConstraint(
+        "shootout_draw_points >= 0 AND shootout_draw_points <= 999999.99",
+        name="ck_tournaments_shootout_draw_points",
+    ),
+    CheckConstraint(
+        "shootout_loss_points >= 0 AND shootout_loss_points <= 999999.99",
+        name="ck_tournaments_shootout_loss_points",
     ),
     CheckConstraint("ruleset IN ('DEB', 'IIHF')", name="ck_tournaments_ruleset"),
     CheckConstraint(
