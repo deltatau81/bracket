@@ -2505,6 +2505,18 @@ export type Tournament = {
    * Duration Minutes
    */
   duration_minutes: number;
+  /**
+   * Game Draw Points
+   */
+  game_draw_points: string;
+  /**
+   * Game Loss Points
+   */
+  game_loss_points: string;
+  /**
+   * Game Win Points
+   */
+  game_win_points: string;
   hockey_mode: HockeyMode;
   /**
    * Id
@@ -2531,6 +2543,18 @@ export type Tournament = {
    * Ruleset Season
    */
   ruleset_season: string;
+  /**
+   * Shootout Draw Points
+   */
+  shootout_draw_points: string;
+  /**
+   * Shootout Loss Points
+   */
+  shootout_loss_points: string;
+  /**
+   * Shootout Win Points
+   */
+  shootout_win_points: string;
   /**
    * Start Time
    */
@@ -2564,6 +2588,18 @@ export type TournamentBody = {
    * Duration Minutes
    */
   duration_minutes: number;
+  /**
+   * Game Draw Points
+   */
+  game_draw_points?: number | string;
+  /**
+   * Game Loss Points
+   */
+  game_loss_points?: number | string;
+  /**
+   * Game Win Points
+   */
+  game_win_points?: number | string;
   hockey_mode: HockeyMode;
   /**
    * Margin Minutes
@@ -2582,6 +2618,18 @@ export type TournamentBody = {
    * Ruleset Season
    */
   ruleset_season: string;
+  /**
+   * Shootout Draw Points
+   */
+  shootout_draw_points?: number | string;
+  /**
+   * Shootout Loss Points
+   */
+  shootout_loss_points?: number | string;
+  /**
+   * Shootout Win Points
+   */
+  shootout_win_points?: number | string;
   /**
    * Start Time
    */
@@ -2773,6 +2821,18 @@ export type TournamentUpdateBody = {
    * Duration Minutes
    */
   duration_minutes: number;
+  /**
+   * Game Draw Points
+   */
+  game_draw_points?: number | string;
+  /**
+   * Game Loss Points
+   */
+  game_loss_points?: number | string;
+  /**
+   * Game Win Points
+   */
+  game_win_points?: number | string;
   hockey_mode: HockeyMode | null;
   /**
    * Margin Minutes
@@ -2791,6 +2851,18 @@ export type TournamentUpdateBody = {
    * Ruleset Season
    */
   ruleset_season: string | null;
+  /**
+   * Shootout Draw Points
+   */
+  shootout_draw_points?: number | string;
+  /**
+   * Shootout Loss Points
+   */
+  shootout_loss_points?: number | string;
+  /**
+   * Shootout Win Points
+   */
+  shootout_win_points?: number | string;
   /**
    * Start Time
    */
