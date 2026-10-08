@@ -21,6 +21,7 @@ import {
   StagesWithStageItemsResponse,
   TeamsWithPlayersResponse,
   TournamentResponse,
+  TournamentOverallStandingsResponse,
   TournamentsResponse,
   UpcomingMatchesResponse,
   UserPublicResponse,
@@ -325,5 +326,14 @@ export function getCompetitionScoring(
 ): SWRResponse<CompetitionScoringResponse> {
   return useSWR(`tournaments/${tournamentId}/competitions/${competitionId}/scoring`, fetcher, {
     refreshInterval: 5_000,
+  });
+}
+
+export function getTournamentOverallStandings(
+  tournamentId: number,
+): SWRResponse<TournamentOverallStandingsResponse> {
+  return useSWR(`tournaments/${tournamentId}/overall_standings`, fetcher, {
+    refreshInterval: 5_000,
+    keepPreviousData: false,
   });
 }

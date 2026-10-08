@@ -1,6 +1,7 @@
 import {
   Alert,
   Badge,
+  Button,
   Card,
   Center,
   Flex,
@@ -20,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import CompetitionDisciplines, {
   CompetitionTeams,
 } from '@components/competition/competition_disciplines';
+import CombinedOverallStandings from '@components/competition/combined_overall_standings';
 import MatchModal from '@components/modals/match_modal';
 import { NoContent } from '@components/no_content/empty_table_info';
 import { Time, formatTime } from '@components/utils/datetime';
@@ -286,6 +288,7 @@ export default function ResultsPage() {
 
   const { t } = useTranslation();
   const { tournamentData } = getTournamentIdFromRouter();
+  const tournamentResponse = getTournamentById(tournamentData.id);
   const swrStagesResponse = getStages(tournamentData.id);
   const swrCourtsResponse = getCourts(tournamentData.id);
 
@@ -294,8 +297,7 @@ export default function ResultsPage() {
     : [];
   const matchesLookup = responseIsValid(swrStagesResponse) ? getMatchLookup(swrStagesResponse) : [];
 
-  if (!responseIsValid(swrStagesResponse)) return null;
-  if (!responseIsValid(swrCourtsResponse)) return null;
+  const hockeyDataValid = responseIsValid(swrStagesResponse) && responseIsValid(swrCourtsResponse);
 
   function openMatchModal(matchToOpen: MatchWithDetails) {
     setMatch(matchToOpen);
@@ -311,24 +313,51 @@ export default function ResultsPage() {
 
   return (
     <TournamentLayout tournament_id={tournamentData.id}>
-      <MatchModal
-        swrStagesResponse={swrStagesResponse}
-        swrUpcomingMatchesResponse={null}
-        tournamentData={tournamentData}
-        match={match}
-        opened={modalOpened}
-        setOpened={modalSetOpenedAndUpdateMatch}
-        round={null}
-      />
-      <Title>{t('results_title')}</Title>
-      <Center mt="1rem">
-        <Schedule
-          t={t}
-          matchesLookup={matchesLookup}
-          stageItemsLookup={stageItemsLookup}
-          openMatchModal={openMatchModal}
+      {hockeyDataValid && (
+        <MatchModal
+          swrStagesResponse={swrStagesResponse}
+          swrUpcomingMatchesResponse={null}
+          tournamentData={tournamentData}
+          match={match}
+          opened={modalOpened}
+          setOpened={modalSetOpenedAndUpdateMatch}
+          round={null}
         />
-      </Center>
+      )}
+      <Title>{t('results_title')}</Title>
+      {tournamentResponse.data ? (
+        <CombinedOverallStandings
+          key={tournamentData.id}
+          tournamentId={tournamentData.id}
+          competitionFormat={tournamentResponse.data.data.competition_format}
+        />
+      ) : tournamentResponse.error ? (
+        <Alert color="red">
+          {t('overall_standings_error')}
+          <Button
+            variant="light"
+            onClick={() => {
+              void tournamentResponse.mutate().catch(() => {
+                // SWR exposes retry failures through its error state.
+              });
+            }}
+          >
+            {t('overall_standings_retry')}
+          </Button>
+        </Alert>
+      ) : (
+        <Loader aria-label={t('overall_standings_loading')} />
+      )}
+      {hockeyDataValid && (
+        <Center mt="1rem">
+          <Schedule
+            t={t}
+            matchesLookup={matchesLookup}
+            stageItemsLookup={stageItemsLookup}
+            openMatchModal={openMatchModal}
+          />
+        </Center>
+      )}
       <CompetitionResults key={tournamentData.id} tournamentId={tournamentData.id} />
     </TournamentLayout>
   );

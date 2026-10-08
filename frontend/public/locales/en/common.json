@@ -272,5 +272,19 @@
     "win_distribution_text_draws": "draws",
     "win_distribution_text_losses": "losses",
     "win_distribution_text_win": "wins",
-    "win_points_input_label": "Points for a win"
+    "win_points_input_label": "Points for a win",
+    "overall_standings_title": "Combined overall standings",
+    "overall_standings_place": "Place",
+    "overall_standings_team": "Team",
+    "overall_standings_club": "Club",
+    "overall_standings_hockey_points": "Hockey points",
+    "overall_standings_competition_points": "Competition points",
+    "overall_standings_total_points": "Total points",
+    "overall_standings_empty": "No results available",
+    "overall_standings_error": "Overall standings could not be loaded",
+    "overall_standings_retry": "Try again",
+    "overall_standings_link": "View overall standings",
+    "overall_standings_unknown_team": "Unknown team #{{id}}",
+    "overall_standings_unknown_club": "Unknown club #{{id}}",
+    "overall_standings_loading": "Loading overall standings"
 }

@@ -17,6 +17,8 @@ import { useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import dayjs from 'dayjs';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import PreloadLink from '@components/utils/link';
 import { SWRResponse } from 'swr';
 import CompetitionDisciplines from '@components/competition/competition_disciplines';
 import { getTournamentIdFromRouter } from '@components/utils/util';
@@ -201,6 +203,7 @@ function CompetitionCard({
   );
 }
 export default function CompetitionsPage() {
+  const { t } = useTranslation();
   const { tournamentData } = getTournamentIdFromRouter();
   const response = getCompetitions(tournamentData.id);
   return (
@@ -211,6 +214,14 @@ export default function CompetitionsPage() {
           <CompetitionCreateModal tournamentId={tournamentData.id} response={response} />
         )}
       </Group>
+      <Button
+        component={PreloadLink}
+        href={`/tournaments/${tournamentData.id}/results`}
+        variant="light"
+        mb="md"
+      >
+        {t('overall_standings_link')}
+      </Button>
       {response.error ? (
         <Alert color="red">Die Competitions konnten nicht geladen werden.</Alert>
       ) : !response.data ? (

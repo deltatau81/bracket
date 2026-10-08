@@ -272,5 +272,19 @@
     "win_distribution_text_draws": "zeichnet",
     "win_distribution_text_losses": "Niederlagen",
     "win_distribution_text_win": "Siege",
-    "win_points_input_label": "Punkte für einen Sieg"
+    "win_points_input_label": "Punkte für einen Sieg",
+    "overall_standings_title": "Kombinierte Gesamtwertung",
+    "overall_standings_place": "Platz",
+    "overall_standings_team": "Mannschaft",
+    "overall_standings_club": "Verein",
+    "overall_standings_hockey_points": "Hockey-Punkte",
+    "overall_standings_competition_points": "Competition-Punkte",
+    "overall_standings_total_points": "Gesamtpunkte",
+    "overall_standings_empty": "Keine Ergebnisse vorhanden",
+    "overall_standings_error": "Gesamtwertung konnte nicht geladen werden",
+    "overall_standings_retry": "Erneut versuchen",
+    "overall_standings_link": "Gesamtwertung anzeigen",
+    "overall_standings_unknown_team": "Unbekannte Mannschaft #{{id}}",
+    "overall_standings_unknown_club": "Unbekannter Verein #{{id}}",
+    "overall_standings_loading": "Gesamtwertung wird geladen"
 }

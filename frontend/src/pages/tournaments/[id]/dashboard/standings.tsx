@@ -4,6 +4,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { SWRResponse } from 'swr';
 
+import CombinedOverallStandings from '@components/competition/combined_overall_standings';
 import { DashboardFooter } from '@components/dashboard/footer';
 import { DoubleHeader, getTournamentHeadTitle } from '@components/dashboard/layout';
 import { NoContent } from '@components/no_content/empty_table_info';
@@ -75,20 +76,25 @@ export default function DashboardStandingsPage() {
 
   setTitle(getTournamentHeadTitle(tournamentDataFull));
 
-  if (swrStagesResponse.isLoading) {
-    return <TableSkeletonTwoColumns />;
-  }
-
   return (
     <>
       <DoubleHeader tournamentData={tournamentDataFull} />
       <Container mt="1rem" px="0rem">
         <Container style={{ width: '100%' }} px="sm">
-          <StandingsContent
-            swrStagesResponse={swrStagesResponse}
-            fontSizeInPixels={16}
-            maxTeamsToDisplay={100}
+          <CombinedOverallStandings
+            key={tournamentDataFull.id}
+            tournamentId={tournamentDataFull.id}
+            competitionFormat={tournamentDataFull.competition_format}
           />
+          {swrStagesResponse.isLoading ? (
+            <TableSkeletonTwoColumns />
+          ) : (
+            <StandingsContent
+              swrStagesResponse={swrStagesResponse}
+              fontSizeInPixels={16}
+              maxTeamsToDisplay={100}
+            />
+          )}
         </Container>
       </Container>
       <DashboardFooter />
