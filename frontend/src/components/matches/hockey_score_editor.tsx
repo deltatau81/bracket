@@ -1,6 +1,6 @@
 import { Alert, Button, Grid, NumberInput, Stack, Text, Title } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSWRConfig } from 'swr';
 
@@ -59,6 +59,7 @@ export default function HockeyScoreEditor({
   refreshMatch,
   onSaved,
   onSavingChange,
+  onDirtyChange,
 }: {
   tournament: Tournament;
   match: MatchWithDetails;
@@ -66,6 +67,7 @@ export default function HockeyScoreEditor({
   refreshMatch: () => Promise<unknown>;
   onSaved: () => void;
   onSavingChange: (saving: boolean) => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const { t } = useTranslation();
   const { mutate } = useSWRConfig();
@@ -83,6 +85,20 @@ export default function HockeyScoreEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const savingRef = useRef(false);
+  const previousMatch = useRef(match);
+  useEffect(() => {
+    const previous = previousMatch.current;
+    if (previous === match) return;
+    const pristine = fields.every((field) => form.values[field] === previous[field]);
+    if (pristine) {
+      form.setValues(Object.fromEntries(fields.map((field) => [field, match[field]])));
+      onDirtyChange?.(false);
+    } else {
+      // Preserve local inputs even when fresh server scores differ.
+      onDirtyChange?.(true);
+    }
+    previousMatch.current = match;
+  }, [match]);
   const events = match.score_entry_source === 'EVENTS';
   const readOnly = events || tournament.status === 'ARCHIVED';
   async function save(values: typeof form.values) {
@@ -144,12 +160,34 @@ export default function HockeyScoreEditor({
                     required
                     disabled={saving || readOnly}
                     {...form.getInputProps(field)}
+                    onChange={(value) => {
+                      form.setFieldValue(field, value);
+                      onDirtyChange?.(
+                        fields.some(
+                          (candidate) =>
+                            (candidate === field ? value : form.values[candidate]) !==
+                            match[candidate],
+                        ),
+                      );
+                    }}
                   />
                 </Grid.Col>
               ))}
             </Grid>
           </Stack>
         ))}
+        {!readOnly && onDirtyChange && (
+          <Button
+            variant="default"
+            disabled={saving}
+            onClick={() => {
+              form.setValues(Object.fromEntries(fields.map((field) => [field, match[field]])));
+              onDirtyChange(false);
+            }}
+          >
+            {t('hockey_phase_discard')}
+          </Button>
+        )}
         {!readOnly && (
           <Button type="submit" loading={saving} disabled={saving}>
             {t('save_button')}

@@ -1,6 +1,12 @@
 import { showNotification } from '@mantine/notifications';
 
-import { MatchCreateBodyFrontend, MatchRescheduleBody, MatchUpdateBody } from '@openapi';
+import {
+  MatchCreateBodyFrontend,
+  MatchRescheduleBody,
+  MatchUpdateBody,
+  MatchPhaseAction,
+  SingleMatchResponse,
+} from '@openapi';
 import { createAxios, handleRequestError } from './adapter';
 
 type MatchUpdateRequest = Partial<MatchUpdateBody> & Pick<MatchUpdateBody, 'round_id'>;
@@ -54,4 +60,17 @@ export async function scheduleMatches(tournament_id: number) {
   return createAxios()
     .post(`tournaments/${tournament_id}/schedule_matches`)
     .catch((response: any) => handleRequestError(response));
+}
+
+export async function transitionMatchPhase(
+  tournamentId: number,
+  matchId: number,
+  action: MatchPhaseAction,
+) {
+  return createAxios()
+    .post<SingleMatchResponse>(`tournaments/${tournamentId}/matches/${matchId}/phase`, { action })
+    .catch((error: Parameters<typeof handleRequestError>[0]) => {
+      handleRequestError(error);
+      throw error;
+    });
 }

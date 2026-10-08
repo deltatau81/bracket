@@ -13,16 +13,22 @@ import {
   Text,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SWRResponse } from 'swr';
 
+import HockeyPhaseControl from '@components/matches/hockey_phase_control';
 import HockeyScoreEditor from '@components/matches/hockey_score_editor';
 import { getTournamentById, getUser } from '@services/adapter';
 import DeleteButton from '@components/buttons/delete';
 import { formatMatchInput1, formatMatchInput2 } from '@components/utils/match';
 import { TournamentMinimal } from '@components/utils/tournament';
-import { MatchWithDetails, RoundWithMatches, StagesWithStageItemsResponse } from '@openapi';
+import {
+  MatchWithDetails,
+  RoundWithMatches,
+  StagesWithStageItemsResponse,
+  Tournament,
+} from '@openapi';
 import { getMatchLookup, getStageItemLookup } from '@services/lookups';
 import { deleteMatch, updateMatch } from '@services/match';
 
@@ -244,6 +250,61 @@ function MatchModalForm({
   );
 }
 
+function HockeyMatchSession({
+  tournament,
+  match,
+  teamNames,
+  refreshMatch,
+  setOpened,
+  setSaving,
+  saving,
+  children,
+  onDirtyChange,
+}: {
+  tournament: Tournament;
+  match: MatchWithDetails;
+  teamNames: [string, string];
+  refreshMatch: () => Promise<MatchWithDetails | undefined>;
+  setOpened: (opened: boolean) => void;
+  setSaving: (saving: boolean) => void;
+  saving: boolean;
+  children: React.ReactNode;
+  onDirtyChange: (dirty: boolean) => void;
+}) {
+  const [currentMatch, setCurrentMatch] = useState(match);
+  const [dirty, setDirty] = useState(false);
+  const dirtyRef = useRef(false);
+  useEffect(() => () => onDirtyChange(false), []);
+  return (
+    <Stack>
+      <HockeyPhaseControl
+        tournament={tournament}
+        match={currentMatch}
+        dirty={dirty}
+        busy={saving}
+        refreshMatch={refreshMatch}
+        onMatchUpdated={(updated) => setCurrentMatch((previous) => ({ ...previous, ...updated }))}
+        hasUnsavedChanges={() => dirtyRef.current}
+        onSavingChange={setSaving}
+      />
+      <HockeyScoreEditor
+        tournament={tournament}
+        match={currentMatch}
+        teamNames={teamNames}
+        refreshMatch={refreshMatch}
+        onSaved={() => setOpened(false)}
+        onSavingChange={setSaving}
+        onDirtyChange={(value) => {
+          dirtyRef.current = value;
+          setDirty(value);
+          onDirtyChange(value);
+        }}
+      />
+      {children}
+    </Stack>
+  );
+}
+
 export default function MatchModal({
   tournamentData,
   match,
@@ -265,20 +326,31 @@ export default function MatchModal({
   const tournament = getTournamentById(tournamentData.id);
   const user = getUser();
   const [saving, setSaving] = useState(false);
+  const [dirtyScores, setDirtyScores] = useState(false);
+  const scoreDirtyRef = useRef(false);
   const configurationError = tournament.error || user.error;
   const stageItemsLookup = getStageItemLookup(swrStagesResponse);
   const matchesLookup = swrStagesResponse.data ? getMatchLookup(swrStagesResponse) : {};
   const hockey = tournament.data?.data.hockey_mode !== 'STANDARD';
   const scorer = user.data?.data.account_type === 'SCORER';
   async function refreshMatch() {
-    await swrStagesResponse.mutate();
+    const stages = await swrStagesResponse.mutate();
     if (swrUpcomingMatchesResponse != null) await swrUpcomingMatchesResponse.mutate();
+    return stages?.data
+      .flatMap((stage) =>
+        stage.stage_items.flatMap((item) => item.rounds.flatMap((round) => round.matches)),
+      )
+      .find((candidate) => candidate.id === match?.id);
   }
   return (
     <Modal
       opened={opened}
       onClose={() => {
-        if (!saving) setOpened(false);
+        if (
+          !saving &&
+          (!scoreDirtyRef.current || window.confirm(t('hockey_phase_discard_confirm')))
+        )
+          setOpened(false);
       }}
       title={t('edit_match_modal_title')}
       closeOnClickOutside={!saving}
@@ -290,40 +362,46 @@ export default function MatchModal({
         <Loader />
       ) : !match || !opened ? null : hockey ? (
         <fieldset disabled={saving} style={{ border: 0, padding: 0, margin: 0 }}>
-          <Stack>
-            <HockeyScoreEditor
-              key={`${tournamentData.id}:${match.id}`}
-              tournament={tournament.data.data}
-              match={match}
-              teamNames={[
-                formatMatchInput1(t, stageItemsLookup, matchesLookup, match),
-                formatMatchInput2(t, stageItemsLookup, matchesLookup, match),
-              ]}
-              refreshMatch={refreshMatch}
-              onSaved={() => setOpened(false)}
-              onSavingChange={setSaving}
-            />
+          <HockeyMatchSession
+            key={`${tournamentData.id}:${match.id}`}
+            tournament={tournament.data.data}
+            match={match}
+            teamNames={[
+              formatMatchInput1(t, stageItemsLookup, matchesLookup, match),
+              formatMatchInput2(t, stageItemsLookup, matchesLookup, match),
+            ]}
+            refreshMatch={refreshMatch}
+            setOpened={setOpened}
+            setSaving={setSaving}
+            saving={saving}
+            onDirtyChange={(value) => {
+              scoreDirtyRef.current = value;
+              setDirtyScores(value);
+            }}
+          >
             {!scorer && tournament.data.data.status !== 'ARCHIVED' && (
-              <Accordion>
-                <Accordion.Item value="settings">
-                  <Accordion.Control>{t('hockey_score_match_settings')}</Accordion.Control>
-                  <Accordion.Panel>
-                    <MatchModalForm
-                      key={match.id}
-                      administrativeOnly
-                      onSavingChange={setSaving}
-                      swrStagesResponse={swrStagesResponse}
-                      swrUpcomingMatchesResponse={swrUpcomingMatchesResponse}
-                      tournamentData={tournamentData}
-                      match={match}
-                      setOpened={setOpened}
-                      round={round}
-                    />
-                  </Accordion.Panel>
-                </Accordion.Item>
-              </Accordion>
+              <fieldset disabled={dirtyScores} style={{ border: 0, padding: 0, margin: 0 }}>
+                <Accordion>
+                  <Accordion.Item value="settings">
+                    <Accordion.Control>{t('hockey_score_match_settings')}</Accordion.Control>
+                    <Accordion.Panel>
+                      <MatchModalForm
+                        key={match.id}
+                        administrativeOnly
+                        onSavingChange={setSaving}
+                        swrStagesResponse={swrStagesResponse}
+                        swrUpcomingMatchesResponse={swrUpcomingMatchesResponse}
+                        tournamentData={tournamentData}
+                        match={match}
+                        setOpened={setOpened}
+                        round={round}
+                      />
+                    </Accordion.Panel>
+                  </Accordion.Item>
+                </Accordion>
+              </fieldset>
             )}
-          </Stack>
+          </HockeyMatchSession>
         </fieldset>
       ) : (
         <fieldset

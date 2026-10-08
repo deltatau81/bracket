@@ -14,6 +14,7 @@ function load(file, dependencies) {
     }).outputText,
     {
       module,
+      window: { confirm: () => false },
       exports: module.exports,
       require(name) {
         assert.ok(name in dependencies, `Unexpected dependency ${name}`);
@@ -83,6 +84,7 @@ function harness({
   requestError = null,
   refreshError = null,
   pending = null,
+  onDirtyChange,
 } = {}) {
   const requests = [],
     notifications = [],
@@ -106,6 +108,7 @@ function harness({
     },
   });
   const react = {
+    useEffect: (effect) => effect(),
     useRef: (current) => ({ current }),
     useState: (initial) => {
       const index = states.length;
@@ -122,6 +125,12 @@ function harness({
     form = {
       values: { ...options.initialValues },
       validate: options.validate,
+      setFieldValue: (field, value) => {
+        form.values[field] = value;
+      },
+      setValues: (values) => {
+        form.values = values;
+      },
       getInputProps: (field) => ({ name: field, value: form.values[field] }),
       onSubmit: (callback) => () => callback(form.values),
     };
@@ -151,6 +160,7 @@ function harness({
       closed++;
     },
     onSavingChange: (value) => saving.push(value),
+    onDirtyChange,
   });
   return {
     editor,
@@ -315,6 +325,7 @@ function modalHarness({
   const h = harness({ requestError });
   const component = load('src/components/modals/match_modal.tsx', {
     ...h.shared,
+    '@components/matches/hockey_phase_control': { default: 'HockeyPhaseControl' },
     '@components/matches/hockey_score_editor': { default: 'HockeyScoreEditor' },
     '@services/adapter': {
       getTournamentById: () => ({
@@ -337,7 +348,7 @@ function modalHarness({
     },
   });
   const closes = [];
-  const tree = component.default({
+  let tree = component.default({
     tournamentData: { id: 7 },
     match,
     swrStagesResponse: { data: stageData ? { data: [] } : undefined, mutate: async () => {} },
@@ -346,6 +357,14 @@ function modalHarness({
     setOpened: (value) => closes.push(value),
     round: null,
   });
+  function expand(node) {
+    if (Array.isArray(node)) return node.map(expand);
+    if (!node || typeof node !== 'object') return node;
+    if (typeof node.type === 'function' && node.type.name === 'HockeyMatchSession')
+      return expand(node.type(node.props));
+    return { ...node, props: { ...node.props, children: expand(node.props?.children) } };
+  }
+  tree = expand(tree);
   return { ...h, tree, closes };
 }
 test('STANDARD retains original score and match settings form', () => {
@@ -387,4 +406,31 @@ test('missing configuration reports error and does not invent a mode', () => {
 test('opening hockey dialog without loaded stage data does not call unsafe match lookup', () => {
   const h = modalHarness({ mode: 'COMPETITION', stageData: false });
   assert.ok(nodes(h.tree).some((node) => node.type === 'HockeyScoreEditor'));
+});
+
+test('local edits report dirty state; explicit discard restores stored scores without a request', () => {
+  const dirty = [];
+  const h = harness({ onDirtyChange: (value) => dirty.push(value) });
+  const input = nodes(h.tree).find((node) => node.type === 'NumberInput');
+  input.props.onChange('');
+  assert.equal(dirty.at(-1), true);
+  input.props.onChange(0);
+  assert.equal(dirty.at(-1), true);
+  nodes(h.tree)
+    .find((node) => node.type === 'Button' && node.props.children === 'hockey_phase_discard')
+    .props.onClick();
+  assert.equal(dirty.at(-1), false);
+  assert.equal(h.form.values.stage_item_input1_half1_score, 5);
+  assert.equal(h.requests.length, 0);
+});
+
+test('closing a dialog with dirty scores requires explicit discard confirmation', () => {
+  const h = modalHarness({ mode: 'COMPETITION' });
+  const editor = nodes(h.tree).find((node) => node.type === 'HockeyScoreEditor');
+  editor.props.onDirtyChange(true);
+  h.tree.props.onClose();
+  assert.deepEqual(h.closes, []);
+  editor.props.onDirtyChange(false);
+  h.tree.props.onClose();
+  assert.deepEqual(h.closes, [false]);
 });
