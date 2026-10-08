@@ -144,7 +144,8 @@ async def youth_club_game_score_uses_events(match_id: MatchId) -> bool:
         query="""
             SELECT stage_items.is_youth_club_group
                 AND tournaments.competition_format = 'YOUTH_CLUB'
-                AND tournaments.hockey_mode = 'GAME_SHOOTOUT' AS uses_events
+                AND tournaments.hockey_mode = 'GAME_SHOOTOUT'
+                AND matches.score_entry_source IS DISTINCT FROM 'MANUAL' AS uses_events
             FROM matches
             JOIN rounds ON rounds.id = matches.round_id
             JOIN stage_items ON stage_items.id = rounds.stage_item_id
@@ -189,6 +190,7 @@ async def recalculate_youth_club_game_score(match_id: MatchId) -> bool:
             AND stage_items.is_youth_club_group
             AND tournaments.competition_format = 'YOUTH_CLUB'
             AND tournaments.hockey_mode = 'GAME_SHOOTOUT'
+            AND matches.score_entry_source IS DISTINCT FROM 'MANUAL'
             RETURNING matches.id
         """,
         values={"match_id": match_id},

@@ -237,7 +237,8 @@ async def update_match_by_id(
     __: Tournament = Depends(disallow_archived_tournament),
     match: Match = Depends(match_dependency),
 ) -> SuccessResponse:
-    validate_match_update_permissions(user, match, match_body)
+    tournament = await sql_get_tournament(tournament_id)
+    validate_match_update_permissions(user, match, match_body, tournament.hockey_mode)
     await check_foreign_keys_belong_to_tournament(match_body, tournament_id)
 
     if match_body.status is not None:
@@ -251,8 +252,6 @@ async def update_match_by_id(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Invalid match status transition: {match.status} -> {match_body.status}",
             )
-
-    tournament = await sql_get_tournament(tournament_id)
 
     try:
         if user.account_type is UserAccountType.SCORER:

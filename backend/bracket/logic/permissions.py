@@ -3,6 +3,7 @@ from starlette import status
 
 from bracket.models.db.account import UserAccountType
 from bracket.models.db.match import Match, MatchBody
+from bracket.models.db.tournament import HockeyMode
 from bracket.models.db.user import UserPublic
 
 
@@ -21,6 +22,7 @@ def validate_match_update_permissions(
     user: UserPublic,
     match: Match,
     match_body: MatchBody,
+    hockey_mode: HockeyMode = HockeyMode.COMPETITION,
 ) -> None:
     if user.account_type is not UserAccountType.SCORER:
         return
@@ -31,7 +33,10 @@ def validate_match_update_permissions(
             detail="Scorer cannot move matches between rounds",
         )
 
-    forbidden_fields = match_body.model_fields_set - SCORER_MATCH_UPDATE_FIELDS
+    allowed_fields = SCORER_MATCH_UPDATE_FIELDS.copy()
+    if hockey_mode is HockeyMode.GAME_SHOOTOUT:
+        allowed_fields.update({"stage_item_input1_score", "stage_item_input2_score"})
+    forbidden_fields = match_body.model_fields_set - allowed_fields
 
     if forbidden_fields:
         raise HTTPException(

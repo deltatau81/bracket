@@ -11,6 +11,7 @@ from bracket.logic.penalty_catalog import (
     UnsupportedPenaltyCatalogError,
     get_penalty_catalog,
 )
+from bracket.logic.ranking.calculation import recalculate_ranking_for_stage_item
 from bracket.models.db.match import Match, MatchPhaseState, MatchStatus
 from bracket.models.db.match_event import (
     MatchEvent,
@@ -46,6 +47,8 @@ from bracket.sql.match_events import (
     youth_club_game_score_uses_events,
 )
 from bracket.sql.matches import sql_get_match
+from bracket.sql.rounds import get_round_by_id
+from bracket.sql.stage_items import get_stage_item
 from bracket.sql.tournaments import sql_get_tournament
 from bracket.utils.id_types import MatchEventId, MatchId, PlayerId, TournamentId
 
@@ -259,6 +262,12 @@ async def apply_goal_contribution(event: MatchEventBody, match_id: MatchId, delt
         )
 
 
+async def recalculate_event_ranking(tournament_id: TournamentId, match: Match) -> None:
+    round_ = await get_round_by_id(tournament_id, match.round_id)
+    stage_item = await get_stage_item(tournament_id, round_.stage_item_id)
+    await recalculate_ranking_for_stage_item(tournament_id, stage_item)
+
+
 @router.get(
     "/tournaments/{tournament_id}/events",
     response_model=MatchEventsResponse,
@@ -353,6 +362,8 @@ async def create_event(
             and await recalculate_youth_club_game_score(match_id)
         ):
             await apply_goal_contribution(created_event, match_id, 1)
+        if created_event.event_type is MatchEventType.GOAL:
+            await recalculate_event_ranking(tournament_id, match)
 
     return SingleMatchEventResponse(data=created_event)
 
@@ -404,6 +415,11 @@ async def update_event(
             await recalculate_youth_club_game_score(match_id)
         elif old_contribution != new_contribution:
             await apply_goal_contribution(event_body, match_id, 1)
+        if old_contribution != new_contribution and (
+            old_event.event_type is MatchEventType.GOAL
+            or event_body.event_type is MatchEventType.GOAL
+        ):
+            await recalculate_event_ranking(tournament_id, match)
 
     assert event is not None
     return SingleMatchEventResponse(data=event)
@@ -422,6 +438,7 @@ async def delete_event(
 ) -> SuccessResponse:
     await validate_match_and_team(tournament_id, match_id)
     event = await event_or_404(match_id, event_id)
+    match = await sql_get_match(match_id)
     async with database.transaction():
         youth_game_goal = (
             event.event_type is MatchEventType.GOAL
@@ -433,6 +450,8 @@ async def delete_event(
         deleted = await delete_match_event(match_id, event_id)
         if youth_game_goal:
             await recalculate_youth_club_game_score(match_id)
+        if event.event_type is MatchEventType.GOAL:
+            await recalculate_event_ranking(tournament_id, match)
     if not deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

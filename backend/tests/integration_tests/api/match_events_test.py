@@ -657,9 +657,11 @@ async def test_game_shootout_goal_score_reconciliation(
         )
 
 
+@pytest.mark.parametrize("source", [MatchScoreEntrySource.EVENTS, None])
 @pytest.mark.asyncio(loop_scope="session")
 async def test_youth_club_game_score_is_recalculated_from_goal_events(
-    startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext
+    startup_and_shutdown_uvicorn_server: None, auth_context: AuthContext,
+    source: MatchScoreEntrySource | None,
 ) -> None:
     await database.execute(
         tournaments.update().where(tournaments.c.id == auth_context.tournament.id),
@@ -676,7 +678,7 @@ async def test_youth_club_game_score_is_recalculated_from_goal_events(
         ) as context:
             await database.execute(
                 matches.update().where(matches.c.id == context["match"].id),
-                values={"score_entry_source": MatchScoreEntrySource.MANUAL.value},
+                values={"score_entry_source": source.value if source is not None else None},
             )
             body = goal_body(context) | {
                 "period": "GAME",
@@ -763,7 +765,7 @@ async def test_youth_club_game_score_is_recalculated_from_goal_events(
             assert (
                 match.stage_item_input1_penalty_score,
                 match.stage_item_input2_penalty_score,
-            ) == (3, 1)
+            ) == (4, 1)
 
             await set_match_state(
                 context,
