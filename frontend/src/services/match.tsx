@@ -21,10 +21,14 @@ export async function updateMatch(
   tournament_id: number,
   match_id: number,
   match: MatchUpdateRequest,
+  propagateError = false,
 ) {
   return createAxios()
     .put(`tournaments/${tournament_id}/matches/${match_id}`, match)
-    .catch((response: any) => handleRequestError(response));
+    .catch((error: Parameters<typeof handleRequestError>[0]) => {
+      handleRequestError(error);
+      if (propagateError) throw error;
+    });
 }
 
 export async function rescheduleMatch(

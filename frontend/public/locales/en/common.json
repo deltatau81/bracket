@@ -286,5 +286,17 @@
     "overall_standings_link": "View overall standings",
     "overall_standings_unknown_team": "Unknown team #{{id}}",
     "overall_standings_unknown_club": "Unknown club #{{id}}",
-    "overall_standings_loading": "Loading overall standings"
+    "overall_standings_loading": "Loading overall standings",
+    "hockey_score_game": "Game",
+    "hockey_score_half1": "First half",
+    "hockey_score_half2": "Second half",
+    "hockey_score_shootout": "Shootout",
+    "hockey_score_invalid": "Enter a non-negative whole number.",
+    "hockey_score_unknown_capture": "Stored scores are shown. A stored 0 does not indicate whether a result has been confirmed.",
+    "hockey_score_events": "These scores are managed through match events and cannot be edited manually.",
+    "hockey_score_archived": "This tournament is archived. Scores are read-only.",
+    "hockey_score_save_error": "Scores could not be saved. Please try again.",
+    "hockey_score_refresh_error": "Scores were saved, but refreshed data could not be loaded. Reopen the match to check the saved result.",
+    "hockey_score_config_error": "Tournament settings or user information could not be loaded.",
+    "hockey_score_match_settings": "Match settings"
 }

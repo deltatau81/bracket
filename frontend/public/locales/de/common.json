@@ -286,5 +286,17 @@
     "overall_standings_link": "Gesamtwertung anzeigen",
     "overall_standings_unknown_team": "Unbekannte Mannschaft #{{id}}",
     "overall_standings_unknown_club": "Unbekannter Verein #{{id}}",
-    "overall_standings_loading": "Gesamtwertung wird geladen"
+    "overall_standings_loading": "Gesamtwertung wird geladen",
+    "hockey_score_game": "Spiel",
+    "hockey_score_half1": "1. Halbzeit",
+    "hockey_score_half2": "2. Halbzeit",
+    "hockey_score_shootout": "Penaltyschie\u00dfen",
+    "hockey_score_invalid": "Bitte eine nichtnegative ganze Zahl eingeben.",
+    "hockey_score_unknown_capture": "Gespeicherte Ergebnisse werden angezeigt. Eine gespeicherte 0 sagt nicht aus, ob ein Ergebnis bereits best\u00e4tigt wurde.",
+    "hockey_score_events": "Diese Tore werden \u00fcber Spielereignisse verwaltet und k\u00f6nnen nicht manuell bearbeitet werden.",
+    "hockey_score_archived": "Dieses Turnier ist archiviert. Ergebnisse sind nur lesbar.",
+    "hockey_score_save_error": "Ergebnisse konnten nicht gespeichert werden. Bitte erneut versuchen.",
+    "hockey_score_refresh_error": "Ergebnisse wurden gespeichert, aber aktualisierte Daten konnten nicht geladen werden. Spiel erneut \u00f6ffnen, um das gespeicherte Ergebnis zu pr\u00fcfen.",
+    "hockey_score_config_error": "Turniereinstellungen oder Benutzerinformationen konnten nicht geladen werden.",
+    "hockey_score_match_settings": "Spieleinstellungen"
 }

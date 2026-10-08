@@ -1,9 +1,24 @@
-import { Button, Center, Checkbox, Divider, Grid, Modal, NumberInput, Text } from '@mantine/core';
+import {
+  Accordion,
+  Alert,
+  Loader,
+  Stack,
+  Button,
+  Center,
+  Checkbox,
+  Divider,
+  Grid,
+  Modal,
+  NumberInput,
+  Text,
+} from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SWRResponse } from 'swr';
 
+import HockeyScoreEditor from '@components/matches/hockey_score_editor';
+import { getTournamentById, getUser } from '@services/adapter';
 import DeleteButton from '@components/buttons/delete';
 import { formatMatchInput1, formatMatchInput2 } from '@components/utils/match';
 import { TournamentMinimal } from '@components/utils/tournament';
@@ -45,6 +60,8 @@ function MatchModalForm({
   swrUpcomingMatchesResponse,
   setOpened,
   round,
+  administrativeOnly = false,
+  onSavingChange,
 }: {
   tournamentData: TournamentMinimal;
   match: MatchWithDetails | null;
@@ -52,12 +69,17 @@ function MatchModalForm({
   swrUpcomingMatchesResponse: SWRResponse | null;
   setOpened: any;
   round: RoundWithMatches | null;
+  administrativeOnly?: boolean;
+  onSavingChange: (saving: boolean) => void;
 }) {
   if (match == null) {
     return null;
   }
 
   const { t } = useTranslation();
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const savingRef = useRef(false);
   const form = useForm({
     initialValues: {
       stage_item_input1_score: match.stage_item_input1_score,
@@ -93,34 +115,58 @@ function MatchModalForm({
     <>
       <form
         onSubmit={form.onSubmit(async (values) => {
-          const updatedMatch = {
-            id: match.id,
-            round_id: match.round_id,
-            stage_item_input1_score: values.stage_item_input1_score,
-            stage_item_input2_score: values.stage_item_input2_score,
-            court_id: match.court_id || null,
-            custom_duration_minutes: customDurationEnabled ? values.custom_duration_minutes : null,
-            custom_margin_minutes: customMarginEnabled ? values.custom_margin_minutes : null,
-          };
-          await updateMatch(tournamentData.id, match.id, updatedMatch);
-          await swrStagesResponse.mutate();
-          if (swrUpcomingMatchesResponse != null) await swrUpcomingMatchesResponse.mutate();
-          setOpened(false);
+          if (savingRef.current) return;
+          savingRef.current = true;
+          setSaving(true);
+          onSavingChange(true);
+          setSaveError(false);
+          try {
+            const updatedMatch = {
+              id: match.id,
+              round_id: match.round_id,
+              ...(!administrativeOnly
+                ? {
+                    stage_item_input1_score: values.stage_item_input1_score,
+                    stage_item_input2_score: values.stage_item_input2_score,
+                  }
+                : {}),
+              court_id: match.court_id || null,
+              custom_duration_minutes: customDurationEnabled
+                ? values.custom_duration_minutes
+                : null,
+              custom_margin_minutes: customMarginEnabled ? values.custom_margin_minutes : null,
+            };
+            await updateMatch(tournamentData.id, match.id, updatedMatch, true);
+            await swrStagesResponse.mutate();
+            if (swrUpcomingMatchesResponse != null) await swrUpcomingMatchesResponse.mutate();
+            setOpened(false);
+          } catch {
+            setSaveError(true);
+          } finally {
+            savingRef.current = false;
+            setSaving(false);
+            onSavingChange(false);
+          }
         })}
       >
-        <NumberInput
-          withAsterisk
-          label={`${t('score_of_label')} ${team1Name}`}
-          placeholder={`${t('score_of_label')} ${team1Name}`}
-          {...form.getInputProps('stage_item_input1_score')}
-        />
-        <NumberInput
-          withAsterisk
-          mt="lg"
-          label={`${t('score_of_label')} ${team2Name}`}
-          placeholder={`${t('score_of_label')} ${team2Name}`}
-          {...form.getInputProps('stage_item_input2_score')}
-        />
+        {saveError && <Alert color="red">{t('hockey_score_save_error')}</Alert>}
+        {!administrativeOnly && (
+          <>
+            <NumberInput
+              withAsterisk
+              label={`${t('score_of_label')} ${team1Name}`}
+              placeholder={`${t('score_of_label')} ${team1Name}`}
+              {...form.getInputProps('stage_item_input1_score')}
+            />
+            <NumberInput
+              withAsterisk
+              mt="lg"
+              label={`${t('score_of_label')} ${team2Name}`}
+              placeholder={`${t('score_of_label')} ${team2Name}`}
+              {...form.getInputProps('stage_item_input2_score')}
+            />
+          </>
+        )}
         <Divider mt="lg" />
 
         <Text size="sm" mt="lg">
@@ -175,7 +221,14 @@ function MatchModalForm({
           </Grid.Col>
         </Grid>
 
-        <Button fullWidth style={{ marginTop: 20 }} color="green" type="submit">
+        <Button
+          fullWidth
+          style={{ marginTop: 20 }}
+          color="green"
+          type="submit"
+          loading={saving}
+          disabled={saving}
+        >
           {t('save_button')}
         </Button>
       </form>
@@ -209,19 +262,86 @@ export default function MatchModal({
   round: RoundWithMatches | null;
 }) {
   const { t } = useTranslation();
-
+  const tournament = getTournamentById(tournamentData.id);
+  const user = getUser();
+  const [saving, setSaving] = useState(false);
+  const configurationError = tournament.error || user.error;
+  const stageItemsLookup = getStageItemLookup(swrStagesResponse);
+  const matchesLookup = swrStagesResponse.data ? getMatchLookup(swrStagesResponse) : {};
+  const hockey = tournament.data?.data.hockey_mode !== 'STANDARD';
+  const scorer = user.data?.data.account_type === 'SCORER';
+  async function refreshMatch() {
+    await swrStagesResponse.mutate();
+    if (swrUpcomingMatchesResponse != null) await swrUpcomingMatchesResponse.mutate();
+  }
   return (
-    <>
-      <Modal opened={opened} onClose={() => setOpened(false)} title={t('edit_match_modal_title')}>
-        <MatchModalForm
-          swrStagesResponse={swrStagesResponse}
-          swrUpcomingMatchesResponse={swrUpcomingMatchesResponse}
-          tournamentData={tournamentData}
-          match={match}
-          setOpened={setOpened}
-          round={round}
-        />
-      </Modal>
-    </>
+    <Modal
+      opened={opened}
+      onClose={() => {
+        if (!saving) setOpened(false);
+      }}
+      title={t('edit_match_modal_title')}
+      closeOnClickOutside={!saving}
+      closeOnEscape={!saving}
+    >
+      {configurationError ? (
+        <Alert color="red">{t('hockey_score_config_error')}</Alert>
+      ) : !tournament.data || !user.data ? (
+        <Loader />
+      ) : !match || !opened ? null : hockey ? (
+        <fieldset disabled={saving} style={{ border: 0, padding: 0, margin: 0 }}>
+          <Stack>
+            <HockeyScoreEditor
+              key={`${tournamentData.id}:${match.id}`}
+              tournament={tournament.data.data}
+              match={match}
+              teamNames={[
+                formatMatchInput1(t, stageItemsLookup, matchesLookup, match),
+                formatMatchInput2(t, stageItemsLookup, matchesLookup, match),
+              ]}
+              refreshMatch={refreshMatch}
+              onSaved={() => setOpened(false)}
+              onSavingChange={setSaving}
+            />
+            {!scorer && tournament.data.data.status !== 'ARCHIVED' && (
+              <Accordion>
+                <Accordion.Item value="settings">
+                  <Accordion.Control>{t('hockey_score_match_settings')}</Accordion.Control>
+                  <Accordion.Panel>
+                    <MatchModalForm
+                      key={match.id}
+                      administrativeOnly
+                      onSavingChange={setSaving}
+                      swrStagesResponse={swrStagesResponse}
+                      swrUpcomingMatchesResponse={swrUpcomingMatchesResponse}
+                      tournamentData={tournamentData}
+                      match={match}
+                      setOpened={setOpened}
+                      round={round}
+                    />
+                  </Accordion.Panel>
+                </Accordion.Item>
+              </Accordion>
+            )}
+          </Stack>
+        </fieldset>
+      ) : (
+        <fieldset
+          disabled={saving || scorer || tournament.data.data.status === 'ARCHIVED'}
+          style={{ border: 0, padding: 0, margin: 0 }}
+        >
+          <MatchModalForm
+            key={match.id}
+            onSavingChange={setSaving}
+            swrStagesResponse={swrStagesResponse}
+            swrUpcomingMatchesResponse={swrUpcomingMatchesResponse}
+            tournamentData={tournamentData}
+            match={match}
+            setOpened={setOpened}
+            round={round}
+          />
+        </fieldset>
+      )}
+    </Modal>
   );
 }
