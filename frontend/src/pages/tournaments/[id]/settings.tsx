@@ -24,6 +24,7 @@ import { MdArchive } from 'react-icons/md';
 import { useNavigate } from 'react-router';
 import { SWRResponse } from 'swr';
 
+import HockeyScoringForm from '@components/forms/hockey_scoring';
 import { assert_not_none } from '@components/utils/assert';
 import { DropzoneButton } from '@components/utils/file_upload';
 import { GenericSkeletonThreeRows } from '@components/utils/skeletons';
@@ -402,11 +403,18 @@ export default function SettingsPage() {
 
   if (tournamentDataFull != null) {
     content = (
-      <GeneralTournamentForm
-        tournament={tournamentDataFull}
-        swrTournamentResponse={swrTournamentResponse}
-        clubs={clubs}
-      />
+      <>
+        <GeneralTournamentForm
+          tournament={tournamentDataFull}
+          swrTournamentResponse={swrTournamentResponse}
+          clubs={clubs}
+        />
+        <HockeyScoringForm
+          key={tournamentDataFull.id}
+          tournament={tournamentDataFull}
+          mutateTournament={() => swrTournamentResponse.mutate()}
+        />
+      </>
     );
   }
 

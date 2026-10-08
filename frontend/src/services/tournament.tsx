@@ -3,6 +3,7 @@ import {
   HockeyMode,
   HockeyRuleset,
   TournamentCompetitionFormat,
+  TournamentUpdateBody,
 } from '@openapi';
 import { Dayjs } from 'dayjs';
 
@@ -67,6 +68,15 @@ export async function updateTournament(
   duration_minutes: number,
   margin_minutes: number,
   competition_format: TournamentCompetitionFormat,
+  hockeyScoring?: Pick<
+    TournamentUpdateBody,
+    | 'game_win_points'
+    | 'game_draw_points'
+    | 'game_loss_points'
+    | 'shootout_win_points'
+    | 'shootout_draw_points'
+    | 'shootout_loss_points'
+  >,
 ) {
   return createAxios()
     .put(`tournaments/${tournament_id}`, {
@@ -79,6 +89,11 @@ export async function updateTournament(
       duration_minutes,
       margin_minutes,
       competition_format,
+      ...hockeyScoring,
     })
-    .catch((response: any) => handleRequestError(response));
+    .catch((error: Parameters<typeof handleRequestError>[0]) => {
+      handleRequestError(error);
+      // Preserve existing callers; the scoring form must not report failed saves as success.
+      if (hockeyScoring !== undefined) throw error;
+    });
 }
