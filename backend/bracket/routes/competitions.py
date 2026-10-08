@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from heliclockter import datetime_utc
 from starlette import status
 
+from bracket.config import config
 from bracket.models.db.competition import (
     CompetitionBody,
     CompetitionDisciplineBody,
@@ -56,7 +57,7 @@ from bracket.utils.id_types import (
      TournamentId,
 )
 from bracket.competition_logic import rank_results
-router = APIRouter()
+router = APIRouter(prefix=config.api_prefix)
 
 
 @router.get(

@@ -6,6 +6,7 @@ import aiofiles.os
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from starlette import status
 
+from bracket.config import config
 from bracket.models.db.tournament import Tournament
 from bracket.models.db.tournament_sponsor import (
     TournamentSponsorCreateBody,
@@ -34,7 +35,7 @@ from bracket.sql.tournament_sponsors import (
 from bracket.utils.id_types import TournamentId, TournamentSponsorId
 from bracket.utils.logging import logger
 
-router = APIRouter()
+router = APIRouter(prefix=config.api_prefix)
 MAX_SPONSOR_LOGO_SIZE = 5 * 1024 * 1024
 SPONSOR_LOGO_CONTENT_TYPES = {"image/jpeg", "image/png"}
 

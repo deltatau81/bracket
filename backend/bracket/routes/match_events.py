@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from heliclockter import datetime_utc
 from starlette import status
 
+from bracket.config import config
 from bracket.database import database
 from bracket.logic.match_rules import get_effective_match_rules
 from bracket.logic.penalty_catalog import (
@@ -48,7 +49,7 @@ from bracket.sql.matches import sql_get_match
 from bracket.sql.tournaments import sql_get_tournament
 from bracket.utils.id_types import MatchEventId, MatchId, PlayerId, TournamentId
 
-router = APIRouter()
+router = APIRouter(prefix=config.api_prefix)
 
 ALLOWED_EVENT_PERIODS = {
     HockeyMode.COMPETITION: {
