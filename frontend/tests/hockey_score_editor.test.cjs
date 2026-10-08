@@ -325,6 +325,7 @@ function modalHarness({
   const h = harness({ requestError });
   const component = load('src/components/modals/match_modal.tsx', {
     ...h.shared,
+    '@components/matches/hockey_goal_events': { default: 'HockeyGoalEvents' },
     '@components/matches/hockey_phase_control': { default: 'HockeyPhaseControl' },
     '@components/matches/hockey_score_editor': { default: 'HockeyScoreEditor' },
     '@services/adapter': {
@@ -433,4 +434,45 @@ test('closing a dialog with dirty scores requires explicit discard confirmation'
   editor.props.onDirtyChange(false);
   h.tree.props.onClose();
   assert.deepEqual(h.closes, [false]);
+});
+
+test('STANDARD does not mount the hockey event manager', () => {
+  const h = modalHarness();
+  assert.ok(!nodes(h.tree).some((node) => node.type === 'HockeyGoalEvents'));
+});
+test('modal shares synchronous score-draft guard with events and phases', () => {
+  const h = modalHarness({ mode: 'COMPETITION' });
+  const editor = nodes(h.tree).find((node) => node.type === 'HockeyScoreEditor');
+  const events = nodes(h.tree).find((node) => node.type === 'HockeyGoalEvents');
+  const phases = nodes(h.tree).find((node) => node.type === 'HockeyPhaseControl');
+  editor.props.onDirtyChange(true);
+  assert.equal(events.props.hasUnsavedScores(), true);
+  assert.equal(phases.props.hasUnsavedChanges(), true);
+  editor.props.onDirtyChange(false);
+  assert.equal(events.props.hasUnsavedScores(), false);
+});
+test('event draft blocks phase changes and modal close even when score editor reports pristine', () => {
+  const h = modalHarness({ mode: 'GAME_SHOOTOUT' });
+  const events = nodes(h.tree).find((node) => node.type === 'HockeyGoalEvents');
+  const editor = nodes(h.tree).find((node) => node.type === 'HockeyScoreEditor');
+  const phases = nodes(h.tree).find((node) => node.type === 'HockeyPhaseControl');
+  events.props.onDirtyChange(true);
+  editor.props.onDirtyChange(false);
+  assert.equal(phases.props.hasUnsavedChanges(), true);
+  h.tree.props.onClose();
+  assert.deepEqual(h.closes, []);
+  events.props.onDirtyChange(false);
+  h.tree.props.onClose();
+  assert.deepEqual(h.closes, [false]);
+});
+test('event request immediately locks other hockey mutations before rerender', () => {
+  const h = modalHarness({ mode: 'COMPETITION' });
+  const events = nodes(h.tree).find((node) => node.type === 'HockeyGoalEvents');
+  const phases = nodes(h.tree).find((node) => node.type === 'HockeyPhaseControl');
+  events.props.onSavingChange(true);
+  assert.equal(phases.props.hasUnsavedChanges(), true);
+  assert.equal(events.props.hasPendingRequest(), true);
+  assert.equal(events.props.hasUnsavedScores(), false);
+  events.props.onSavingChange(false);
+  assert.equal(phases.props.hasUnsavedChanges(), false);
 });

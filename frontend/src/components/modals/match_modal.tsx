@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SWRResponse } from 'swr';
 
+import HockeyGoalEvents from '@components/matches/hockey_goal_events';
 import HockeyPhaseControl from '@components/matches/hockey_phase_control';
 import HockeyScoreEditor from '@components/matches/hockey_score_editor';
 import { getTournamentById, getUser } from '@services/adapter';
@@ -274,32 +275,61 @@ function HockeyMatchSession({
   const [currentMatch, setCurrentMatch] = useState(match);
   const [dirty, setDirty] = useState(false);
   const dirtyRef = useRef(false);
+  const eventDirtyRef = useRef(false);
+  const requestRef = useRef(false);
+  const [eventDirty, setEventDirty] = useState(false);
+  function savingChanged(value: boolean) {
+    requestRef.current = value;
+    setSaving(value);
+  }
   useEffect(() => () => onDirtyChange(false), []);
   return (
     <Stack>
       <HockeyPhaseControl
         tournament={tournament}
         match={currentMatch}
-        dirty={dirty}
+        dirty={dirty || eventDirty}
         busy={saving}
         refreshMatch={refreshMatch}
         onMatchUpdated={(updated) => setCurrentMatch((previous) => ({ ...previous, ...updated }))}
-        hasUnsavedChanges={() => dirtyRef.current}
-        onSavingChange={setSaving}
+        hasUnsavedChanges={() => dirtyRef.current || eventDirtyRef.current || requestRef.current}
+        onSavingChange={savingChanged}
       />
-      <HockeyScoreEditor
+      <HockeyGoalEvents
         tournament={tournament}
         match={currentMatch}
-        teamNames={teamNames}
+        teams={[currentMatch.stage_item_input1, currentMatch.stage_item_input2].flatMap((input) =>
+          input && 'team' in input && input.team_id !== null
+            ? [{ id: input.team_id, name: input.team.name }]
+            : [],
+        )}
+        busy={saving}
+        hasUnsavedScores={() => dirtyRef.current}
+        hasPendingRequest={() => requestRef.current}
         refreshMatch={refreshMatch}
-        onSaved={() => setOpened(false)}
-        onSavingChange={setSaving}
+        onMatchUpdated={setCurrentMatch}
+        onSavingChange={savingChanged}
         onDirtyChange={(value) => {
-          dirtyRef.current = value;
-          setDirty(value);
-          onDirtyChange(value);
+          eventDirtyRef.current = value;
+          setEventDirty(value);
+          onDirtyChange(value || dirtyRef.current);
         }}
       />
+      <fieldset disabled={eventDirty} style={{ border: 0, padding: 0, margin: 0 }}>
+        <HockeyScoreEditor
+          tournament={tournament}
+          match={currentMatch}
+          teamNames={teamNames}
+          refreshMatch={refreshMatch}
+          onSaved={() => setOpened(false)}
+          onSavingChange={savingChanged}
+          onDirtyChange={(value) => {
+            dirtyRef.current = value;
+            setDirty(value);
+            onDirtyChange(value || eventDirtyRef.current);
+          }}
+        />
+      </fieldset>
       {children}
     </Stack>
   );
