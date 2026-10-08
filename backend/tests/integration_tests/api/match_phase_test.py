@@ -370,6 +370,16 @@ async def test_phase_endpoint_maps_stale_sql_result_to_conflict(
             }
         )
 
+        # The endpoint now rereads the match under the write lock.
+        await database.execute(
+            matches.update().where(matches.c.id == active_match.id),
+            values={
+                "status": active_match.status.value,
+                "active_period": active_match.active_period.value,
+                "phase_state": active_match.phase_state.value,
+            },
+        )
+
         async def stale_update(*args: object, **kwargs: object) -> None:
             return None
 

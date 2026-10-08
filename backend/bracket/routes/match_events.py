@@ -46,6 +46,7 @@ from bracket.sql.match_events import (
     update_match_event,
     youth_club_game_score_uses_events,
 )
+from bracket.sql.match_write import match_write_context
 from bracket.sql.matches import sql_get_match
 from bracket.sql.rounds import get_round_by_id
 from bracket.sql.stage_items import get_stage_item
@@ -148,11 +149,7 @@ def apply_penalty_snapshot(
         return event_body
 
     definition = next(
-        (
-            candidate
-            for candidate in catalog.penalties
-            if candidate.code == event_body.penalty_code
-        ),
+        (candidate for candidate in catalog.penalties if candidate.code == event_body.penalty_code),
         None,
     )
     if definition is None:
@@ -176,10 +173,7 @@ def apply_penalty_snapshot(
     if selected_type not in definition.allowed_penalty_types:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=(
-                f"Penalty type {selected_type.value} is not allowed for "
-                f"{definition.code}"
-            ),
+            detail=(f"Penalty type {selected_type.value} is not allowed for {definition.code}"),
         )
 
     if definition.code == "OTHER":
@@ -208,9 +202,7 @@ def apply_penalty_snapshot(
         )
 
     type_definition = next(
-        definition
-        for definition in catalog.penalty_types
-        if definition.type is selected_type
+        definition for definition in catalog.penalty_types if definition.type is selected_type
     )
     return event_body.model_copy(
         update={
@@ -227,10 +219,10 @@ def apply_penalty_snapshot(
 def validate_game_time(event_body: MatchEventBody, tournament: Tournament) -> None:
     if event_body.game_time_seconds is not None:
         return
-    if (
-        event_body.event_type is MatchEventType.GOAL
-        and tournament.hockey_mode in {HockeyMode.COMPETITION, HockeyMode.GAME_SHOOTOUT}
-    ):
+    if event_body.event_type is MatchEventType.GOAL and tournament.hockey_mode in {
+        HockeyMode.COMPETITION,
+        HockeyMode.GAME_SHOOTOUT,
+    }:
         return
     raise HTTPException(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -318,54 +310,53 @@ async def create_event(
     _: UserPublic = Depends(user_authenticated_for_tournament),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> SingleMatchEventResponse:
-    await validate_match_and_team(
-        tournament_id, match_id, event_body, validate_period=False
-    )
-    match = await sql_get_match(match_id)
-    if (
-        match.status is not MatchStatus.RUNNING
-        or match.phase_state is not MatchPhaseState.ACTIVE
-        or match.active_period is None
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="New match events require a running match with an active period",
-        )
-
-    tournament = await sql_get_tournament(tournament_id)
-    active_period = MatchEventPeriod(match.active_period.value)
-    if active_period not in ALLOWED_EVENT_PERIODS[tournament.hockey_mode]:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=(
-                f"Period {active_period.value} is not allowed for "
-                f"{tournament.hockey_mode.value} tournaments"
-            ),
-        )
-
-    event_body = event_body.model_copy(update={"period": active_period})
-    validate_game_time(event_body, tournament)
-    event_body = await apply_player_snapshots(event_body)
-    if event_body.event_type is MatchEventType.PENALTY and event_body.penalty_code is not None:
-        event_body = apply_penalty_snapshot(
-            event_body,
-            effective_penalty_catalog(match, tournament),
-        )
-    event = MatchEventInsertable(
-        **event_body.model_dump(), match_id=match_id, created=datetime_utc.now()
-    )
-    async with database.transaction():
-        created_event = await create_match_event(event)
-        if not (
-            created_event.event_type is MatchEventType.GOAL
-            and created_event.period is MatchEventPeriod.GAME
-            and await recalculate_youth_club_game_score(match_id)
+    async with match_write_context(tournament_id, match_id) as (_locked_tournament, _locked_match):
+        await validate_match_and_team(tournament_id, match_id, event_body, validate_period=False)
+        match = await sql_get_match(match_id)
+        if (
+            match.status is not MatchStatus.RUNNING
+            or match.phase_state is not MatchPhaseState.ACTIVE
+            or match.active_period is None
         ):
-            await apply_goal_contribution(created_event, match_id, 1)
-        if created_event.event_type is MatchEventType.GOAL:
-            await recalculate_event_ranking(tournament_id, match)
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="New match events require a running match with an active period",
+            )
 
-    return SingleMatchEventResponse(data=created_event)
+        tournament = await sql_get_tournament(tournament_id)
+        active_period = MatchEventPeriod(match.active_period.value)
+        if active_period not in ALLOWED_EVENT_PERIODS[tournament.hockey_mode]:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=(
+                    f"Period {active_period.value} is not allowed for "
+                    f"{tournament.hockey_mode.value} tournaments"
+                ),
+            )
+
+        event_body = event_body.model_copy(update={"period": active_period})
+        validate_game_time(event_body, tournament)
+        event_body = await apply_player_snapshots(event_body)
+        if event_body.event_type is MatchEventType.PENALTY and event_body.penalty_code is not None:
+            event_body = apply_penalty_snapshot(
+                event_body,
+                effective_penalty_catalog(match, tournament),
+            )
+        event = MatchEventInsertable(
+            **event_body.model_dump(), match_id=match_id, created=datetime_utc.now()
+        )
+        async with database.transaction():
+            created_event = await create_match_event(event)
+            if not (
+                created_event.event_type is MatchEventType.GOAL
+                and created_event.period is MatchEventPeriod.GAME
+                and await recalculate_youth_club_game_score(match_id)
+            ):
+                await apply_goal_contribution(created_event, match_id, 1)
+            if created_event.event_type is MatchEventType.GOAL:
+                await recalculate_event_ranking(tournament_id, match)
+
+        return SingleMatchEventResponse(data=created_event)
 
 
 @router.put(
@@ -380,49 +371,50 @@ async def update_event(
     _: UserPublic = Depends(user_authenticated_for_tournament),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> SingleMatchEventResponse:
-    await validate_match_and_team(tournament_id, match_id, event_body)
-    old_event = await event_or_404(match_id, event_id)
-    event_body = await apply_player_snapshots(event_body)
-    match = await sql_get_match(match_id)
-    tournament = await sql_get_tournament(tournament_id)
-    validate_game_time(event_body, tournament)
-    if event_body.event_type is MatchEventType.PENALTY and event_body.penalty_code is not None:
-        event_body = apply_penalty_snapshot(
-            event_body,
-            effective_penalty_catalog(match, tournament),
-        )
-    old_contribution = (old_event.event_type, old_event.team_id, old_event.period)
-    new_contribution = (event_body.event_type, event_body.team_id, event_body.period)
-    async with database.transaction():
-        youth_game_event_changed = (
-            old_contribution != new_contribution
-            and await youth_club_game_score_uses_events(match_id)
-            and (
-                (
-                    old_event.event_type is MatchEventType.GOAL
-                    and old_event.period is MatchEventPeriod.GAME
-                )
-                or (
-                    event_body.event_type is MatchEventType.GOAL
-                    and event_body.period is MatchEventPeriod.GAME
+    async with match_write_context(tournament_id, match_id) as (_locked_tournament, _locked_match):
+        await validate_match_and_team(tournament_id, match_id, event_body)
+        old_event = await event_or_404(match_id, event_id)
+        event_body = await apply_player_snapshots(event_body)
+        match = await sql_get_match(match_id)
+        tournament = await sql_get_tournament(tournament_id)
+        validate_game_time(event_body, tournament)
+        if event_body.event_type is MatchEventType.PENALTY and event_body.penalty_code is not None:
+            event_body = apply_penalty_snapshot(
+                event_body,
+                effective_penalty_catalog(match, tournament),
+            )
+        old_contribution = (old_event.event_type, old_event.team_id, old_event.period)
+        new_contribution = (event_body.event_type, event_body.team_id, event_body.period)
+        async with database.transaction():
+            youth_game_event_changed = (
+                old_contribution != new_contribution
+                and await youth_club_game_score_uses_events(match_id)
+                and (
+                    (
+                        old_event.event_type is MatchEventType.GOAL
+                        and old_event.period is MatchEventPeriod.GAME
+                    )
+                    or (
+                        event_body.event_type is MatchEventType.GOAL
+                        and event_body.period is MatchEventPeriod.GAME
+                    )
                 )
             )
-        )
-        if old_contribution != new_contribution and not youth_game_event_changed:
-            await apply_goal_contribution(old_event, match_id, -1)
-        event = await update_match_event(match_id, event_id, event_body)
-        if youth_game_event_changed:
-            await recalculate_youth_club_game_score(match_id)
-        elif old_contribution != new_contribution:
-            await apply_goal_contribution(event_body, match_id, 1)
-        if old_contribution != new_contribution and (
-            old_event.event_type is MatchEventType.GOAL
-            or event_body.event_type is MatchEventType.GOAL
-        ):
-            await recalculate_event_ranking(tournament_id, match)
+            if old_contribution != new_contribution and not youth_game_event_changed:
+                await apply_goal_contribution(old_event, match_id, -1)
+            event = await update_match_event(match_id, event_id, event_body)
+            if youth_game_event_changed:
+                await recalculate_youth_club_game_score(match_id)
+            elif old_contribution != new_contribution:
+                await apply_goal_contribution(event_body, match_id, 1)
+            if old_contribution != new_contribution and (
+                old_event.event_type is MatchEventType.GOAL
+                or event_body.event_type is MatchEventType.GOAL
+            ):
+                await recalculate_event_ranking(tournament_id, match)
 
-    assert event is not None
-    return SingleMatchEventResponse(data=event)
+        assert event is not None
+        return SingleMatchEventResponse(data=event)
 
 
 @router.delete(
@@ -436,25 +428,26 @@ async def delete_event(
     _: UserPublic = Depends(user_authenticated_for_tournament),
     __: Tournament = Depends(disallow_archived_tournament),
 ) -> SuccessResponse:
-    await validate_match_and_team(tournament_id, match_id)
-    event = await event_or_404(match_id, event_id)
-    match = await sql_get_match(match_id)
-    async with database.transaction():
-        youth_game_goal = (
-            event.event_type is MatchEventType.GOAL
-            and event.period is MatchEventPeriod.GAME
-            and await youth_club_game_score_uses_events(match_id)
-        )
-        if not youth_game_goal:
-            await apply_goal_contribution(event, match_id, -1)
-        deleted = await delete_match_event(match_id, event_id)
-        if youth_game_goal:
-            await recalculate_youth_club_game_score(match_id)
-        if event.event_type is MatchEventType.GOAL:
-            await recalculate_event_ranking(tournament_id, match)
-    if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Could not find match event with id {event_id}",
-        )
-    return SuccessResponse()
+    async with match_write_context(tournament_id, match_id) as (_locked_tournament, _locked_match):
+        await validate_match_and_team(tournament_id, match_id)
+        event = await event_or_404(match_id, event_id)
+        match = await sql_get_match(match_id)
+        async with database.transaction():
+            youth_game_goal = (
+                event.event_type is MatchEventType.GOAL
+                and event.period is MatchEventPeriod.GAME
+                and await youth_club_game_score_uses_events(match_id)
+            )
+            if not youth_game_goal:
+                await apply_goal_contribution(event, match_id, -1)
+            deleted = await delete_match_event(match_id, event_id)
+            if youth_game_goal:
+                await recalculate_youth_club_game_score(match_id)
+            if event.event_type is MatchEventType.GOAL:
+                await recalculate_event_ranking(tournament_id, match)
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Could not find match event with id {event_id}",
+            )
+        return SuccessResponse()

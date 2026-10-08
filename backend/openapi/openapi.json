@@ -853,6 +853,30 @@
         "title": "CreatedPlayerResponse",
         "type": "object"
       },
+      "DataResponse_ScoreSourceConfirmation_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ScoreSourceConfirmation"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[ScoreSourceConfirmation]",
+        "type": "object"
+      },
+      "DataResponse_ScoreSourcePreview_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ScoreSourcePreview"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "DataResponse[ScoreSourcePreview]",
+        "type": "object"
+      },
       "DemoUserToRegister": {
         "properties": {
           "captcha_token": {
@@ -3638,6 +3662,180 @@
           "matches"
         ],
         "title": "RoundWithMatches",
+        "type": "object"
+      },
+      "ScoreSourceConfirmBody": {
+        "additionalProperties": false,
+        "properties": {
+          "conflict_token": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Conflict Token",
+            "type": "string"
+          },
+          "target_source": {
+            "$ref": "#/components/schemas/MatchScoreEntrySource"
+          }
+        },
+        "required": [
+          "target_source",
+          "conflict_token"
+        ],
+        "title": "ScoreSourceConfirmBody",
+        "type": "object"
+      },
+      "ScoreSourceConfirmation": {
+        "properties": {
+          "active_source": {
+            "$ref": "#/components/schemas/MatchScoreEntrySource"
+          },
+          "current_scores": {
+            "items": {
+              "$ref": "#/components/schemas/SectionScores"
+            },
+            "title": "Current Scores",
+            "type": "array"
+          },
+          "match": {
+            "$ref": "#/components/schemas/Match"
+          }
+        },
+        "required": [
+          "match",
+          "active_source",
+          "current_scores"
+        ],
+        "title": "ScoreSourceConfirmation",
+        "type": "object"
+      },
+      "ScoreSourcePreview": {
+        "properties": {
+          "conflict_token": {
+            "title": "Conflict Token",
+            "type": "string"
+          },
+          "current_scores": {
+            "items": {
+              "$ref": "#/components/schemas/SectionScores"
+            },
+            "title": "Current Scores",
+            "type": "array"
+          },
+          "current_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MatchScoreEntrySource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "differences": {
+            "items": {
+              "$ref": "#/components/schemas/SectionScoreDifference"
+            },
+            "title": "Differences",
+            "type": "array"
+          },
+          "match_id": {
+            "title": "Match Id",
+            "type": "integer"
+          },
+          "rankings_may_change": {
+            "title": "Rankings May Change",
+            "type": "boolean"
+          },
+          "relevant_goal_count": {
+            "title": "Relevant Goal Count",
+            "type": "integer"
+          },
+          "resulting_scores": {
+            "items": {
+              "$ref": "#/components/schemas/SectionScores"
+            },
+            "title": "Resulting Scores",
+            "type": "array"
+          },
+          "scores_changed": {
+            "title": "Scores Changed",
+            "type": "boolean"
+          },
+          "target_source": {
+            "$ref": "#/components/schemas/MatchScoreEntrySource"
+          }
+        },
+        "required": [
+          "match_id",
+          "current_source",
+          "target_source",
+          "current_scores",
+          "resulting_scores",
+          "differences",
+          "relevant_goal_count",
+          "scores_changed",
+          "rankings_may_change",
+          "conflict_token"
+        ],
+        "title": "ScoreSourcePreview",
+        "type": "object"
+      },
+      "ScoreSourcePreviewBody": {
+        "additionalProperties": false,
+        "properties": {
+          "target_source": {
+            "$ref": "#/components/schemas/MatchScoreEntrySource"
+          }
+        },
+        "required": [
+          "target_source"
+        ],
+        "title": "ScoreSourcePreviewBody",
+        "type": "object"
+      },
+      "SectionScoreDifference": {
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/MatchPeriod"
+          },
+          "team1_difference": {
+            "title": "Team1 Difference",
+            "type": "integer"
+          },
+          "team2_difference": {
+            "title": "Team2 Difference",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "period",
+          "team1_difference",
+          "team2_difference"
+        ],
+        "title": "SectionScoreDifference",
+        "type": "object"
+      },
+      "SectionScores": {
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/MatchPeriod"
+          },
+          "team1_score": {
+            "title": "Team1 Score",
+            "type": "integer"
+          },
+          "team2_score": {
+            "title": "Team2 Score",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "period",
+          "team1_score",
+          "team2_score"
+        ],
+        "title": "SectionScores",
         "type": "object"
       },
       "SingleCourtResponse": {
@@ -8426,6 +8624,156 @@
           }
         ],
         "summary": "Reschedule Match",
+        "tags": [
+          "Matches"
+        ]
+      }
+    },
+    "/tournaments/{tournament_id}/matches/{match_id}/score-source/confirm": {
+      "post": {
+        "description": "Confirm exactly the previewed state; no automatic retry.\n\nSource, scores and existing stage-ranking updates commit together.\nA changed source, score, GOAL, phase or tournament configuration invalidates\nthe token (409). Same-source confirmations validate the token but never\nrecount scores. A token cannot be used for another match or target.\nDatabase failures roll back the entire operation.",
+        "operationId": "confirm_match_score_source_tournaments__tournament_id__matches__match_id__score_source_confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tournament_id",
+            "required": true,
+            "schema": {
+              "title": "Tournament Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "match_id",
+            "required": true,
+            "schema": {
+              "title": "Match Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScoreSourceConfirmBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_ScoreSourceConfirmation_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Tournament is archived"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Administrative permission required; SCORER is forbidden"
+          },
+          "404": {
+            "description": "Match does not belong to the specified tournament"
+          },
+          "409": {
+            "description": "Preview is stale; request a new preview"
+          },
+          "422": {
+            "description": "Invalid target/token or STANDARD tournament"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Confirm Match Score Source",
+        "tags": [
+          "Matches"
+        ]
+      }
+    },
+    "/tournaments/{tournament_id}/matches/{match_id}/score-source/preview": {
+      "post": {
+        "description": "Read-only preview; locks are released before responding.\n\nEVENTS fully recounts GOALs in GAME/HALF1/HALF2/SHOOTOUT as appropriate.\nMANUAL preserves scores. Existing events are never modified. An already\nactive target is a no-op. Null is allowed only as an existing source.",
+        "operationId": "preview_match_score_source_tournaments__tournament_id__matches__match_id__score_source_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tournament_id",
+            "required": true,
+            "schema": {
+              "title": "Tournament Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "match_id",
+            "required": true,
+            "schema": {
+              "title": "Match Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScoreSourcePreviewBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataResponse_ScoreSourcePreview_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "Tournament is archived"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Administrative permission required; SCORER is forbidden"
+          },
+          "404": {
+            "description": "Match does not belong to the specified tournament"
+          },
+          "409": {
+            "description": "Preview is stale; request a new preview"
+          },
+          "422": {
+            "description": "Invalid target/token or STANDARD tournament"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Preview Match Score Source",
         "tags": [
           "Matches"
         ]
