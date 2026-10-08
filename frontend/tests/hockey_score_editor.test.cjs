@@ -321,11 +321,35 @@ function modalHarness({
   requestError = null,
   loadError = false,
   stageData = true,
+  statefulSession = false,
 } = {}) {
   const h = harness({ requestError });
+  const sessionStates = [],
+    sessionRefs = [];
+  let cursor = 0,
+    refCursor = 0;
+  const sessionReact = {
+    useEffect: () => {},
+    useState(initial) {
+      const i = cursor++;
+      if (!(i in sessionStates)) sessionStates[i] = initial;
+      return [
+        sessionStates[i],
+        (next) => {
+          sessionStates[i] = typeof next === 'function' ? next(sessionStates[i]) : next;
+        },
+      ];
+    },
+    useRef(current) {
+      const i = refCursor++;
+      return sessionRefs[i] ?? (sessionRefs[i] = { current });
+    },
+  };
   const component = load('src/components/modals/match_modal.tsx', {
     ...h.shared,
+    react: statefulSession ? sessionReact : h.shared.react,
     '@components/matches/hockey_goal_events': { default: 'HockeyGoalEvents' },
+    '@components/matches/hockey_score_source_control': { default: 'HockeyScoreSourceControl' },
     '@components/matches/hockey_phase_control': { default: 'HockeyPhaseControl' },
     '@components/matches/hockey_score_editor': { default: 'HockeyScoreEditor' },
     '@services/adapter': {
@@ -358,6 +382,13 @@ function modalHarness({
     setOpened: (value) => closes.push(value),
     round: null,
   });
+  const sessionNode = nodes(tree).find(
+    (node) => typeof node.type === 'function' && node.type.name === 'HockeyMatchSession',
+  );
+  function renderSession() {
+    cursor = refCursor = 0;
+    return sessionNode.type(sessionNode.props);
+  }
   function expand(node) {
     if (Array.isArray(node)) return node.map(expand);
     if (!node || typeof node !== 'object') return node;
@@ -365,8 +396,11 @@ function modalHarness({
       return expand(node.type(node.props));
     return { ...node, props: { ...node.props, children: expand(node.props?.children) } };
   }
-  tree = expand(tree);
-  return { ...h, tree, closes };
+  if (statefulSession) {
+    sessionStates.length = sessionRefs.length = 0;
+    tree = renderSession();
+  } else tree = expand(tree);
+  return { ...h, tree, closes, renderSession };
 }
 test('STANDARD retains original score and match settings form', () => {
   const h = modalHarness();
@@ -476,3 +510,124 @@ test('event request immediately locks other hockey mutations before rerender', (
   events.props.onSavingChange(false);
   assert.equal(phases.props.hasUnsavedChanges(), false);
 });
+
+test('STANDARD does not mount score source control', () => {
+  assert.ok(!nodes(modalHarness().tree).some((node) => node.type === 'HockeyScoreSourceControl'));
+});
+test('modal passes existing user role to source control', () => {
+  for (const role of ['REGULAR', 'ADMIN', 'SCORER', 'DEMO']) {
+    const h = modalHarness({ mode: 'COMPETITION', role });
+    assert.equal(
+      nodes(h.tree).find((node) => node.type === 'HockeyScoreSourceControl').props.role,
+      role,
+    );
+  }
+});
+test('manual score draft and event draft both synchronously block source switch', () => {
+  const h = modalHarness({ mode: 'COMPETITION' });
+  const source = nodes(h.tree).find((node) => node.type === 'HockeyScoreSourceControl');
+  for (const type of ['HockeyScoreEditor', 'HockeyGoalEvents']) {
+    const child = nodes(h.tree).find((node) => node.type === type);
+    child.props.onDirtyChange(true);
+    assert.equal(source.props.hasBlockedChanges(), true);
+    child.props.onDirtyChange(false);
+    assert.equal(source.props.hasBlockedChanges(), false);
+  }
+});
+test('source selection blocks phase and event actions and dialog close', () => {
+  const h = modalHarness({ mode: 'COMPETITION' });
+  const source = nodes(h.tree).find((node) => node.type === 'HockeyScoreSourceControl');
+  const events = nodes(h.tree).find((node) => node.type === 'HockeyGoalEvents');
+  const editor = nodes(h.tree).find((node) => node.type === 'HockeyScoreEditor');
+  const phases = nodes(h.tree).find((node) => node.type === 'HockeyPhaseControl');
+  source.props.onDirtyChange(true);
+  editor.props.onDirtyChange(false);
+  events.props.onDirtyChange(false);
+  assert.equal(phases.props.hasUnsavedChanges(), true);
+  assert.equal(events.props.hasPendingRequest(), true);
+  assert.equal(source.props.hasBlockedChanges(), false);
+  h.tree.props.onClose();
+  assert.deepEqual(h.closes, []);
+  source.props.onDirtyChange(false);
+  assert.equal(phases.props.hasUnsavedChanges(), false);
+  assert.equal(events.props.hasPendingRequest(), false);
+  h.tree.props.onClose();
+  assert.deepEqual(h.closes, [false]);
+});
+test('source requests and other child requests share immediate mutation lock', () => {
+  const h = modalHarness({ mode: 'GAME_SHOOTOUT' });
+  const source = nodes(h.tree).find((node) => node.type === 'HockeyScoreSourceControl');
+  const events = nodes(h.tree).find((node) => node.type === 'HockeyGoalEvents');
+  const phases = nodes(h.tree).find((node) => node.type === 'HockeyPhaseControl');
+  source.props.onSavingChange(true);
+  assert.equal(phases.props.hasUnsavedChanges(), true);
+  assert.equal(events.props.hasPendingRequest(), true);
+  source.props.onSavingChange(false);
+  assert.equal(phases.props.hasUnsavedChanges(), false);
+  events.props.onSavingChange(true);
+  assert.equal(source.props.hasBlockedChanges(), true);
+  events.props.onSavingChange(false);
+  assert.equal(source.props.hasBlockedChanges(), false);
+});
+
+test('administrative settings request immediately blocks source and dialog close', () => {
+  const h = modalHarness({ mode: 'COMPETITION' });
+  const source = nodes(h.tree).find((node) => node.type === 'HockeyScoreSourceControl');
+  const settings = nodes(h.tree).find(
+    (node) => typeof node.type === 'function' && node.type.name === 'MatchModalForm',
+  );
+  settings.props.onSavingChange(true);
+  assert.equal(source.props.hasBlockedChanges(), true);
+  h.tree.props.onClose();
+  assert.deepEqual(h.closes, []);
+  settings.props.onSavingChange(false);
+  assert.equal(source.props.hasBlockedChanges(), false);
+});
+
+test('source selection disables manual editor and remains locked until cancelled', () => {
+  const h = modalHarness({ mode: 'COMPETITION', statefulSession: true });
+  const source = nodes(h.tree).find((node) => node.type === 'HockeyScoreSourceControl');
+  source.props.onDirtyChange(true);
+  let tree = h.renderSession();
+  const fieldset = nodes(tree).find((node) => node.type === 'fieldset');
+  assert.equal(fieldset.props.disabled, true);
+  assert.equal(nodes(tree).find((node) => node.type === 'HockeyPhaseControl').props.dirty, true);
+  source.props.onDirtyChange(false);
+  tree = h.renderSession();
+  assert.equal(nodes(tree).find((node) => node.type === 'fieldset').props.disabled, false);
+});
+for (const target of ['MANUAL', 'EVENTS']) {
+  test(
+    'confirmed source updates all hockey children and preserves match details: ' + target,
+    () => {
+      const h = modalHarness({ mode: 'COMPETITION', statefulSession: true });
+      const source = nodes(h.tree).find((node) => node.type === 'HockeyScoreSourceControl');
+      source.props.onMatchUpdated({
+        id: match.id,
+        score_entry_source: target,
+        stage_item_input1_half1_score: 12,
+      });
+      const tree = h.renderSession();
+      for (const type of [
+        'HockeyScoreEditor',
+        'HockeyGoalEvents',
+        'HockeyPhaseControl',
+        'HockeyScoreSourceControl',
+      ]) {
+        const child = nodes(tree).find((node) => node.type === type);
+        assert.equal(child.props.match.score_entry_source, target);
+        assert.equal(child.props.match.stage_item_input1_half1_score, 12);
+        assert.equal(child.props.match.court_id, match.court_id);
+      }
+      const editorRecord = nodes(tree).find((node) => node.type === 'HockeyScoreEditor').props
+        .match;
+      const editor = harness({ record: editorRecord });
+      assert.equal(
+        nodes(editor.tree)
+          .filter((node) => node.type === 'NumberInput')
+          .every((node) => node.props.disabled),
+        target === 'EVENTS',
+      );
+    },
+  );
+}

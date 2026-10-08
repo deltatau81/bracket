@@ -483,6 +483,20 @@ export type CreatedPlayerResponse = {
 };
 
 /**
+ * DataResponse[ScoreSourceConfirmation]
+ */
+export type DataResponseScoreSourceConfirmation = {
+  data: ScoreSourceConfirmation;
+};
+
+/**
+ * DataResponse[ScoreSourcePreview]
+ */
+export type DataResponseScoreSourcePreview = {
+  data: ScoreSourcePreview;
+};
+
+/**
  * DemoUserToRegister
  */
 export type DemoUserToRegister = {
@@ -1774,6 +1788,106 @@ export type RoundWithMatches = {
    * Stage Item Id
    */
   stage_item_id: number;
+};
+
+/**
+ * ScoreSourceConfirmBody
+ */
+export type ScoreSourceConfirmBody = {
+  /**
+   * Conflict Token
+   */
+  conflict_token: string;
+  target_source: MatchScoreEntrySource;
+};
+
+/**
+ * ScoreSourceConfirmation
+ */
+export type ScoreSourceConfirmation = {
+  active_source: MatchScoreEntrySource;
+  /**
+   * Current Scores
+   */
+  current_scores: Array<SectionScores>;
+  match: Match;
+};
+
+/**
+ * ScoreSourcePreview
+ */
+export type ScoreSourcePreview = {
+  /**
+   * Conflict Token
+   */
+  conflict_token: string;
+  /**
+   * Current Scores
+   */
+  current_scores: Array<SectionScores>;
+  current_source: MatchScoreEntrySource | null;
+  /**
+   * Differences
+   */
+  differences: Array<SectionScoreDifference>;
+  /**
+   * Match Id
+   */
+  match_id: number;
+  /**
+   * Rankings May Change
+   */
+  rankings_may_change: boolean;
+  /**
+   * Relevant Goal Count
+   */
+  relevant_goal_count: number;
+  /**
+   * Resulting Scores
+   */
+  resulting_scores: Array<SectionScores>;
+  /**
+   * Scores Changed
+   */
+  scores_changed: boolean;
+  target_source: MatchScoreEntrySource;
+};
+
+/**
+ * ScoreSourcePreviewBody
+ */
+export type ScoreSourcePreviewBody = {
+  target_source: MatchScoreEntrySource;
+};
+
+/**
+ * SectionScoreDifference
+ */
+export type SectionScoreDifference = {
+  period: MatchPeriod;
+  /**
+   * Team1 Difference
+   */
+  team1_difference: number;
+  /**
+   * Team2 Difference
+   */
+  team2_difference: number;
+};
+
+/**
+ * SectionScores
+ */
+export type SectionScores = {
+  period: MatchPeriod;
+  /**
+   * Team1 Score
+   */
+  team1_score: number;
+  /**
+   * Team2 Score
+   */
+  team2_score: number;
 };
 
 /**
@@ -4610,6 +4724,118 @@ export type RescheduleMatchTournamentsTournamentIdMatchesMatchIdReschedulePostRe
 
 export type RescheduleMatchTournamentsTournamentIdMatchesMatchIdReschedulePostResponse =
   RescheduleMatchTournamentsTournamentIdMatchesMatchIdReschedulePostResponses[keyof RescheduleMatchTournamentsTournamentIdMatchesMatchIdReschedulePostResponses];
+
+export type ConfirmMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourceConfirmPostData =
+  {
+    body: ScoreSourceConfirmBody;
+    path: {
+      /**
+       * Tournament Id
+       */
+      tournament_id: number;
+      /**
+       * Match Id
+       */
+      match_id: number;
+    };
+    query?: never;
+    url: '/tournaments/{tournament_id}/matches/{match_id}/score-source/confirm';
+  };
+
+export type ConfirmMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourceConfirmPostErrors =
+  {
+    /**
+     * Tournament is archived
+     */
+    400: unknown;
+    /**
+     * Authentication required
+     */
+    401: unknown;
+    /**
+     * Administrative permission required; SCORER is forbidden
+     */
+    403: unknown;
+    /**
+     * Match does not belong to the specified tournament
+     */
+    404: unknown;
+    /**
+     * Preview is stale; request a new preview
+     */
+    409: unknown;
+    /**
+     * Invalid target/token or STANDARD tournament
+     */
+    422: unknown;
+  };
+
+export type ConfirmMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourceConfirmPostResponses =
+  {
+    /**
+     * Successful Response
+     */
+    200: DataResponseScoreSourceConfirmation;
+  };
+
+export type ConfirmMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourceConfirmPostResponse =
+  ConfirmMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourceConfirmPostResponses[keyof ConfirmMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourceConfirmPostResponses];
+
+export type PreviewMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourcePreviewPostData =
+  {
+    body: ScoreSourcePreviewBody;
+    path: {
+      /**
+       * Tournament Id
+       */
+      tournament_id: number;
+      /**
+       * Match Id
+       */
+      match_id: number;
+    };
+    query?: never;
+    url: '/tournaments/{tournament_id}/matches/{match_id}/score-source/preview';
+  };
+
+export type PreviewMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourcePreviewPostErrors =
+  {
+    /**
+     * Tournament is archived
+     */
+    400: unknown;
+    /**
+     * Authentication required
+     */
+    401: unknown;
+    /**
+     * Administrative permission required; SCORER is forbidden
+     */
+    403: unknown;
+    /**
+     * Match does not belong to the specified tournament
+     */
+    404: unknown;
+    /**
+     * Preview is stale; request a new preview
+     */
+    409: unknown;
+    /**
+     * Invalid target/token or STANDARD tournament
+     */
+    422: unknown;
+  };
+
+export type PreviewMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourcePreviewPostResponses =
+  {
+    /**
+     * Successful Response
+     */
+    200: DataResponseScoreSourcePreview;
+  };
+
+export type PreviewMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourcePreviewPostResponse =
+  PreviewMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourcePreviewPostResponses[keyof PreviewMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourcePreviewPostResponses];
 
 export type GetNextStageRankingsTournamentsTournamentIdNextStageRankingsGetData = {
   body?: never;

@@ -20,6 +20,9 @@ import type {
   ChangeStatusTournamentsTournamentIdChangeStatusPostData,
   ChangeStatusTournamentsTournamentIdChangeStatusPostErrors,
   ChangeStatusTournamentsTournamentIdChangeStatusPostResponses,
+  ConfirmMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourceConfirmPostData,
+  ConfirmMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourceConfirmPostErrors,
+  ConfirmMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourceConfirmPostResponses,
   CreateClubUserClubsClubIdUsersPostData,
   CreateClubUserClubsClubIdUsersPostErrors,
   CreateClubUserClubsClubIdUsersPostResponses,
@@ -196,6 +199,9 @@ import type {
   PlayerStatisticsTournamentsTournamentIdPlayerStatisticsGetData,
   PlayerStatisticsTournamentsTournamentIdPlayerStatisticsGetErrors,
   PlayerStatisticsTournamentsTournamentIdPlayerStatisticsGetResponses,
+  PreviewMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourcePreviewPostData,
+  PreviewMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourcePreviewPostErrors,
+  PreviewMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourcePreviewPostResponses,
   PutUserPasswordUsersUserIdPasswordPutData,
   PutUserPasswordUsersUserIdPasswordPutErrors,
   PutUserPasswordUsersUserIdPasswordPutResponses,
@@ -1413,6 +1419,80 @@ export const rescheduleMatchTournamentsTournamentIdMatchesMatchIdReschedulePost 
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/tournaments/{tournament_id}/matches/{match_id}/reschedule',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Confirm Match Score Source
+ *
+ * Confirm exactly the previewed state; no automatic retry.
+ *
+ * Source, scores and existing stage-ranking updates commit together.
+ * A changed source, score, GOAL, phase or tournament configuration invalidates
+ * the token (409). Same-source confirmations validate the token but never
+ * recount scores. A token cannot be used for another match or target.
+ * Database failures roll back the entire operation.
+ */
+export const confirmMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourceConfirmPost = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    ConfirmMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourceConfirmPostData,
+    ThrowOnError
+  >,
+): RequestResult<
+  ConfirmMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourceConfirmPostResponses,
+  ConfirmMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourceConfirmPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    ConfirmMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourceConfirmPostResponses,
+    ConfirmMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourceConfirmPostErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/matches/{match_id}/score-source/confirm',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+/**
+ * Preview Match Score Source
+ *
+ * Read-only preview; locks are released before responding.
+ *
+ * EVENTS fully recounts GOALs in GAME/HALF1/HALF2/SHOOTOUT as appropriate.
+ * MANUAL preserves scores. Existing events are never modified. An already
+ * active target is a no-op. Null is allowed only as an existing source.
+ */
+export const previewMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourcePreviewPost = <
+  ThrowOnError extends boolean = false,
+>(
+  options: Options<
+    PreviewMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourcePreviewPostData,
+    ThrowOnError
+  >,
+): RequestResult<
+  PreviewMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourcePreviewPostResponses,
+  PreviewMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourcePreviewPostErrors,
+  ThrowOnError
+> =>
+  (options.client ?? client).post<
+    PreviewMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourcePreviewPostResponses,
+    PreviewMatchScoreSourceTournamentsTournamentIdMatchesMatchIdScoreSourcePreviewPostErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/tournaments/{tournament_id}/matches/{match_id}/score-source/preview',
     ...options,
     headers: {
       'Content-Type': 'application/json',

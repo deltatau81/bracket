@@ -20,6 +20,7 @@ import { SWRResponse } from 'swr';
 import HockeyGoalEvents from '@components/matches/hockey_goal_events';
 import HockeyPhaseControl from '@components/matches/hockey_phase_control';
 import HockeyScoreEditor from '@components/matches/hockey_score_editor';
+import HockeyScoreSourceControl from '@components/matches/hockey_score_source_control';
 import { getTournamentById, getUser } from '@services/adapter';
 import DeleteButton from '@components/buttons/delete';
 import { formatMatchInput1, formatMatchInput2 } from '@components/utils/match';
@@ -29,6 +30,7 @@ import {
   RoundWithMatches,
   StagesWithStageItemsResponse,
   Tournament,
+  UserAccountType,
 } from '@openapi';
 import { getMatchLookup, getStageItemLookup } from '@services/lookups';
 import { deleteMatch, updateMatch } from '@services/match';
@@ -252,6 +254,8 @@ function MatchModalForm({
 }
 
 function HockeyMatchSession({
+  role,
+  hasPendingRequest,
   tournament,
   match,
   teamNames,
@@ -262,6 +266,8 @@ function HockeyMatchSession({
   children,
   onDirtyChange,
 }: {
+  role: UserAccountType;
+  hasPendingRequest: () => boolean;
   tournament: Tournament;
   match: MatchWithDetails;
   teamNames: [string, string];
@@ -276,6 +282,8 @@ function HockeyMatchSession({
   const [dirty, setDirty] = useState(false);
   const dirtyRef = useRef(false);
   const eventDirtyRef = useRef(false);
+  const sourceDirtyRef = useRef(false);
+  const [sourceDirty, setSourceDirty] = useState(false);
   const requestRef = useRef(false);
   const [eventDirty, setEventDirty] = useState(false);
   function savingChanged(value: boolean) {
@@ -285,14 +293,38 @@ function HockeyMatchSession({
   useEffect(() => () => onDirtyChange(false), []);
   return (
     <Stack>
+      <HockeyScoreSourceControl
+        tournament={tournament}
+        match={currentMatch}
+        role={role}
+        teamNames={teamNames}
+        busy={saving}
+        hasBlockedChanges={() =>
+          dirtyRef.current || eventDirtyRef.current || requestRef.current || hasPendingRequest()
+        }
+        refreshMatch={refreshMatch}
+        onMatchUpdated={(updated) => setCurrentMatch((previous) => ({ ...previous, ...updated }))}
+        onSavingChange={savingChanged}
+        onDirtyChange={(value) => {
+          sourceDirtyRef.current = value;
+          setSourceDirty(value);
+          onDirtyChange(value || dirtyRef.current || eventDirtyRef.current);
+        }}
+      />
       <HockeyPhaseControl
         tournament={tournament}
         match={currentMatch}
-        dirty={dirty || eventDirty}
+        dirty={dirty || eventDirty || sourceDirty}
         busy={saving}
         refreshMatch={refreshMatch}
         onMatchUpdated={(updated) => setCurrentMatch((previous) => ({ ...previous, ...updated }))}
-        hasUnsavedChanges={() => dirtyRef.current || eventDirtyRef.current || requestRef.current}
+        hasUnsavedChanges={() =>
+          dirtyRef.current ||
+          eventDirtyRef.current ||
+          sourceDirtyRef.current ||
+          requestRef.current ||
+          hasPendingRequest()
+        }
         onSavingChange={savingChanged}
       />
       <HockeyGoalEvents
@@ -305,17 +337,19 @@ function HockeyMatchSession({
         )}
         busy={saving}
         hasUnsavedScores={() => dirtyRef.current}
-        hasPendingRequest={() => requestRef.current}
+        hasPendingRequest={() =>
+          requestRef.current || sourceDirtyRef.current || hasPendingRequest()
+        }
         refreshMatch={refreshMatch}
         onMatchUpdated={setCurrentMatch}
         onSavingChange={savingChanged}
         onDirtyChange={(value) => {
           eventDirtyRef.current = value;
           setEventDirty(value);
-          onDirtyChange(value || dirtyRef.current);
+          onDirtyChange(value || dirtyRef.current || sourceDirtyRef.current);
         }}
       />
-      <fieldset disabled={eventDirty} style={{ border: 0, padding: 0, margin: 0 }}>
+      <fieldset disabled={eventDirty || sourceDirty} style={{ border: 0, padding: 0, margin: 0 }}>
         <HockeyScoreEditor
           tournament={tournament}
           match={currentMatch}
@@ -326,7 +360,7 @@ function HockeyMatchSession({
           onDirtyChange={(value) => {
             dirtyRef.current = value;
             setDirty(value);
-            onDirtyChange(value || eventDirtyRef.current);
+            onDirtyChange(value || eventDirtyRef.current || sourceDirtyRef.current);
           }}
         />
       </fieldset>
@@ -358,6 +392,11 @@ export default function MatchModal({
   const [saving, setSaving] = useState(false);
   const [dirtyScores, setDirtyScores] = useState(false);
   const scoreDirtyRef = useRef(false);
+  const pendingRequestRef = useRef(false);
+  function savingChanged(value: boolean) {
+    pendingRequestRef.current = value;
+    setSaving(value);
+  }
   const configurationError = tournament.error || user.error;
   const stageItemsLookup = getStageItemLookup(swrStagesResponse);
   const matchesLookup = swrStagesResponse.data ? getMatchLookup(swrStagesResponse) : {};
@@ -378,6 +417,7 @@ export default function MatchModal({
       onClose={() => {
         if (
           !saving &&
+          !pendingRequestRef.current &&
           (!scoreDirtyRef.current || window.confirm(t('hockey_phase_discard_confirm')))
         )
           setOpened(false);
@@ -395,6 +435,8 @@ export default function MatchModal({
           <HockeyMatchSession
             key={`${tournamentData.id}:${match.id}`}
             tournament={tournament.data.data}
+            role={user.data.data.account_type}
+            hasPendingRequest={() => pendingRequestRef.current}
             match={match}
             teamNames={[
               formatMatchInput1(t, stageItemsLookup, matchesLookup, match),
@@ -402,7 +444,7 @@ export default function MatchModal({
             ]}
             refreshMatch={refreshMatch}
             setOpened={setOpened}
-            setSaving={setSaving}
+            setSaving={savingChanged}
             saving={saving}
             onDirtyChange={(value) => {
               scoreDirtyRef.current = value;
@@ -418,7 +460,7 @@ export default function MatchModal({
                       <MatchModalForm
                         key={match.id}
                         administrativeOnly
-                        onSavingChange={setSaving}
+                        onSavingChange={savingChanged}
                         swrStagesResponse={swrStagesResponse}
                         swrUpcomingMatchesResponse={swrUpcomingMatchesResponse}
                         tournamentData={tournamentData}
