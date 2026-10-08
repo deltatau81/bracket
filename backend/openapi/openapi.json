@@ -5188,6 +5188,28 @@
       },
       "TournamentOverallStanding": {
         "properties": {
+          "club_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Club Id"
+          },
+          "club_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Club Name"
+          },
           "competition_points": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Competition Points",
@@ -5199,12 +5221,26 @@
             "type": "string"
           },
           "team_id": {
-            "title": "Team Id",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Id"
           },
           "team_name": {
-            "title": "Team Name",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Name"
           },
           "total_points": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -5215,6 +5251,8 @@
         "required": [
           "team_id",
           "team_name",
+          "club_id",
+          "club_name",
           "game_points",
           "competition_points",
           "total_points"

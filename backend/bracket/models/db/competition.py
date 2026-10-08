@@ -6,6 +6,7 @@ from pydantic import Field
 
 from bracket.models.db.shared import BaseModelORM
 from bracket.utils.id_types import (
+    ClubId,
     CompetitionDisciplineId,
     CompetitionId,
     CompetitionPairingId,
@@ -117,8 +118,10 @@ class CompetitionStanding(BaseModelORM):
 
 
 class TournamentOverallStanding(BaseModelORM):
-    team_id: TeamId
-    team_name: str
+    team_id: TeamId | None = None
+    team_name: str | None = None
+    club_id: ClubId | None = None
+    club_name: str | None = None
     game_points: Decimal
     competition_points: Decimal
     total_points: Decimal

@@ -1,6 +1,7 @@
 from sqlalchemy import Numeric, cast, func, select
 
 from bracket.database import database
+from bracket.logic.ranking.overall_standings import aggregate_club_standings
 from bracket.models.db.competition import (
     Competition,
     CompetitionBody,
@@ -15,7 +16,9 @@ from bracket.models.db.competition import (
     CompetitionResultInsertable,
     TournamentOverallStanding,
 )
+from bracket.models.db.tournament import TournamentCompetitionFormat
 from bracket.schema import (
+    clubs,
     competition_disciplines,
     competition_scoring,
     competitions,
@@ -23,6 +26,7 @@ from bracket.schema import (
     stage_item_inputs,
     teams,
 )
+from bracket.sql.tournaments import sql_get_tournament
 from bracket.utils.db import fetch_all_parsed, fetch_one_parsed
 from bracket.utils.id_types import (
     CompetitionDisciplineId,
@@ -373,10 +377,13 @@ async def get_tournament_overall_standings(
         select(
             teams.c.id.label("team_id"),
             teams.c.name.label("team_name"),
+            clubs.c.id.label("club_id"),
+            clubs.c.name.label("club_name"),
             game_points.label("game_points"),
             competition_points.label("competition_points"),
             total_points.label("total_points"),
         )
+        .outerjoin(clubs, clubs.c.id == teams.c.participant_club_id)
         .outerjoin(game_totals, game_totals.c.team_id == teams.c.id)
         .outerjoin(
             competition_totals,
@@ -391,8 +398,8 @@ async def get_tournament_overall_standings(
         )
     )
 
-    return await fetch_all_parsed(
-        database,
-        TournamentOverallStanding,
-        query,
-    )
+    tournament = await sql_get_tournament(tournament_id)
+    standings = await fetch_all_parsed(database, TournamentOverallStanding, query)
+    if tournament.competition_format is TournamentCompetitionFormat.YOUTH_CLUB:
+        return aggregate_club_standings(standings)
+    return standings

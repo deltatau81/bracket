@@ -2653,6 +2653,14 @@ export type TournamentCompetitionFormat = 'STANDARD' | 'YOUTH_CLUB';
  */
 export type TournamentOverallStanding = {
   /**
+   * Club Id
+   */
+  club_id: number | null;
+  /**
+   * Club Name
+   */
+  club_name: string | null;
+  /**
    * Competition Points
    */
   competition_points: string;
@@ -2663,11 +2671,11 @@ export type TournamentOverallStanding = {
   /**
    * Team Id
    */
-  team_id: number;
+  team_id: number | null;
   /**
    * Team Name
    */
-  team_name: string;
+  team_name: string | null;
   /**
    * Total Points
    */
